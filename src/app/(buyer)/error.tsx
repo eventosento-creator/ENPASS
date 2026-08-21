@@ -1,0 +1,2 @@
+"use client";
+export default function BuyerError({ reset }: { reset: () => void }) { return <main className="container-shell grid min-h-screen place-items-center"><section className="text-center"><h1 className="text-2xl font-black">Algo interrumpió la reserva</h1><p className="mt-2 text-neutral-500">No se realizó ningún cobro.</p><button className="btn btn-primary mt-5" onClick={reset}>Intentar nuevamente</button></section></main>; }
