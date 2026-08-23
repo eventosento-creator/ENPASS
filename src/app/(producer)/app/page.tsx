@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, CalendarDays, CalendarPlus, Ticket } from "lucide-react";
+import { ArrowRight, CalendarDays, CalendarPlus, CircleDollarSign, Clock3, Ticket } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { createClient } from "@/shared/database/server";
 import { formatCompactEventDate } from "@/shared/lib/format";
@@ -15,20 +15,22 @@ export default async function DashboardPage() {
   if (!organization) redirect("/app/onboarding");
   const supabase = await createClient();
   const now = new Date().toISOString();
-  const [{ data: events }, { data: venues }, { data: holds }] = await Promise.all([
+  const [{ data: events }, { data: venues }, { data: holds }, { data: metricsData }] = await Promise.all([
     supabase.from("events").select("*").eq("organization_id", organization.id).order("starts_at").limit(4),
     supabase.from("venues").select("*").eq("organization_id", organization.id),
     supabase.from("ticket_holds").select("event_id, quantity").eq("organization_id", organization.id).eq("status", "active").gt("expires_at", now),
+    supabase.rpc("get_dashboard_sales_metrics", { target_organization: organization.id }),
   ]);
   const venueById = new Map((venues ?? []).map(venue => [venue.id, venue]));
   const reservationsByEvent = (holds ?? []).reduce<Record<string, number>>((totals, hold) => ({ ...totals, [hold.event_id]: (totals[hold.event_id] ?? 0) + hold.quantity }), {});
   const upcoming = (events ?? []).filter(event => new Date(event.starts_at) > new Date() && !["cancelled", "finished"].includes(event.status));
   const nextEvent = upcoming[0];
   const otherEvents = upcoming.slice(1, 4);
+  const metrics = metricsData?.[0] ?? { confirmed_orders: 0, confirmed_tickets: 0, pending_reservations: 0 };
   return <>
     <div className="flex items-end justify-between gap-4"><div><p className="text-sm text-neutral-500">Tu organización</p><h1 className="page-title mt-1">{organization.name}</h1></div><Link aria-label="Nueva fecha" className="btn btn-primary" href="/app/events/new"><CalendarPlus size={18}/><span className="hidden sm:inline">Nueva fecha</span></Link></div>
     <section className="mt-10"><p className="eyebrow">Tu próxima fecha</p>{nextEvent ? <NextEvent event={nextEvent} venue={venueById.get(nextEvent.venue_id)} reserved={reservationsByEvent[nextEvent.id] ?? 0}/> : <div className="mt-4"><EmptyState icon={CalendarDays} title="No hay fechas próximas" description="Creá una fecha y empezá a compartirla." action={<Link className="btn btn-primary" href="/app/events/new">Crear fecha</Link>}/></div>}</section>
-    {nextEvent && <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3"><Metric icon={<Ticket size={17}/>} label="Reservas activas" value={String(reservationsByEvent[nextEvent.id] ?? 0)}/><Metric icon={<span className="text-sm font-black">%</span>} label="Ocupación" value={`${Math.round(((reservationsByEvent[nextEvent.id] ?? 0) / nextEvent.capacity) * 100)}%`}/><Metric icon={<CalendarDays size={17}/>} label="Próximas fechas" value={String(upcoming.length)} className="col-span-2 sm:col-span-1"/></section>}
+    <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3"><Metric icon={<CircleDollarSign size={17}/>} label="Ventas confirmadas" value={String(metrics.confirmed_orders)}/><Metric icon={<Ticket size={17}/>} label="Entradas confirmadas" value={String(metrics.confirmed_tickets)}/><Metric icon={<Clock3 size={17}/>} label="Reservas pendientes" value={String(metrics.pending_reservations)} className="col-span-2 sm:col-span-1"/></section>
     {otherEvents.length > 0 && <section className="mt-12"><div className="flex items-center justify-between"><h2 className="section-title">Después de esta noche</h2><Link className="text-sm text-neutral-500 hover:text-white" href="/app/events">Ver todas</Link></div><div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{otherEvents.map(event => <EventCard key={event.id} event={event} venue={venueById.get(event.venue_id)} reserved={reservationsByEvent[event.id] ?? 0}/>)}</div></section>}
   </>;
 }

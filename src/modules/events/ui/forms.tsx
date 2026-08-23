@@ -11,7 +11,7 @@ export function EventForm({ organizationId, venues }: { organizationId: string; 
   const [preview, setPreview] = useState<string | null>(null);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   function previewFile(file?: File) { if (preview) URL.revokeObjectURL(preview); setPreview(file ? URL.createObjectURL(file) : null); }
-  return <form action={action} className="mt-8 grid gap-6" encType="multipart/form-data">
+  return <form action={action} className="mt-8 grid gap-6">
     <input type="hidden" name="organizationId" value={organizationId}/>
     <label className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.4rem] border border-dashed border-white/15 bg-[#111114] sm:aspect-[16/7]">
       {preview ? <div role="img" aria-label="Vista previa del flyer" className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${preview}")` }}/> : <div className="grid h-full place-items-center p-6 text-center"><div><span className="text-3xl">✦</span><p className="mt-3 font-bold">Subí el flyer</p><p className="mt-1 text-xs text-neutral-500">JPG, PNG o WebP · hasta 5 MB</p></div></div>}
@@ -52,5 +52,5 @@ export function TicketTypeEditForm({ organizationId, eventId, ticketType }: { or
 
 export function EventCoverUpload({ organizationId, eventId }: { organizationId: string; eventId: string }) {
   const [state, action] = useActionState(replaceEventCover, {});
-  return <form action={action} className="grid gap-3" encType="multipart/form-data"><input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="eventId" value={eventId}/><label className="btn btn-secondary cursor-pointer"><span>Reemplazar flyer</span><input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required/></label><SubmitButton className="btn btn-ghost">Guardar imagen</SubmitButton><ActionMessage message={state.error}/></form>;
+  return <form action={action} className="grid gap-3"><input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="eventId" value={eventId}/><label className="btn btn-secondary cursor-pointer"><span>Reemplazar flyer</span><input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required/></label><SubmitButton className="btn btn-ghost">Guardar imagen</SubmitButton><ActionMessage message={state.error}/></form>;
 }

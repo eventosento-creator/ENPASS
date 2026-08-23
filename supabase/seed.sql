@@ -20,8 +20,8 @@ values (
   'email', now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
-insert into public.organizations (id, name, slug, service_fee_bps)
-values ('22222222-2222-4222-8222-222222222222', 'Club Demo', 'club-demo', 800)
+insert into public.organizations (id, name, slug, service_fee_bps, platform_fee_bps)
+values ('22222222-2222-4222-8222-222222222222', 'Club Demo', 'club-demo', 800, 800)
 on conflict (id) do nothing;
 
 insert into public.organization_members (organization_id, user_id, role)
@@ -82,4 +82,73 @@ on conflict (id) do nothing;
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, starts_at, status, capacity, currency, created_by)
 values ('44444444-4444-4444-8444-444444444445', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Fecha en preparación', 'fecha-en-preparacion', 'Borrador para probar estados de gestión.', now() + interval '21 days', 'draft', 400, 'ARS', '11111111-1111-4111-8111-111111111111')
+on conflict (id) do nothing;
+
+-- Controlled local fixture for FASE 2B. Opening /order/2b2b... lazily emits exactly
+-- three Tickets and sends their secure access link to Mailpit. It never exists in cloud.
+insert into public.customers (id, organization_id, first_name, last_name, email, phone)
+values (
+  '2b000000-0000-4000-8000-000000000001',
+  '22222222-2222-4222-8222-222222222222',
+  'Elias',
+  'González',
+  'buyer@nightlife.local',
+  '+5492615550101'
+) on conflict (id) do nothing;
+
+insert into public.orders (
+  id, public_id, organization_id, event_id, customer_id, channel, status,
+  subtotal_amount, service_fee_amount, total_amount, currency, expires_at
+) values (
+  '2b000000-0000-4000-8000-000000000002',
+  '2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b',
+  '22222222-2222-4222-8222-222222222222',
+  '44444444-4444-4444-8444-444444444444',
+  '2b000000-0000-4000-8000-000000000001',
+  'ticket_web',
+  'paid',
+  4200000,
+  336000,
+  4536000,
+  'ARS',
+  now() + interval '10 minutes'
+) on conflict (id) do nothing;
+
+insert into public.order_items (
+  id, organization_id, order_id, ticket_type_id, item_name,
+  quantity, unit_price_amount, line_total_amount, currency
+) values
+  (
+    '2b000000-0000-4000-8000-000000000011',
+    '22222222-2222-4222-8222-222222222222',
+    '2b000000-0000-4000-8000-000000000002',
+    '55555555-5555-4555-8555-555555555552',
+    'Preventa 2', 2, 1300000, 2600000, 'ARS'
+  ),
+  (
+    '2b000000-0000-4000-8000-000000000012',
+    '22222222-2222-4222-8222-222222222222',
+    '2b000000-0000-4000-8000-000000000002',
+    '55555555-5555-4555-8555-555555555553',
+    'General', 1, 1600000, 1600000, 'ARS'
+  )
+on conflict (id) do nothing;
+
+insert into public.ticket_holds (
+  id, organization_id, event_id, ticket_type_id, order_id, quantity, status, expires_at
+) values
+  (
+    '2b000000-0000-4000-8000-000000000021',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    '55555555-5555-4555-8555-555555555552',
+    '2b000000-0000-4000-8000-000000000002', 2, 'consumed', now() + interval '10 minutes'
+  ),
+  (
+    '2b000000-0000-4000-8000-000000000022',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    '55555555-5555-4555-8555-555555555553',
+    '2b000000-0000-4000-8000-000000000002', 1, 'consumed', now() + interval '10 minutes'
+  )
 on conflict (id) do nothing;
