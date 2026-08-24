@@ -6,3 +6,8 @@ export function safeProducerPath(value: FormDataEntryValue | string | null | und
   if (!isAppRoute || value.includes("\\")) return fallback;
   return value as Route;
 }
+
+export function safeAuthPath(value: string | null | undefined, fallback: Route = "/app"): Route {
+  if (value === "/actualizar-clave") return value;
+  return safeProducerPath(value, fallback);
+}

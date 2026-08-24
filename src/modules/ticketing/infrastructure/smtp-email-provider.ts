@@ -13,6 +13,7 @@ export class SmtpEmailProvider implements EmailProvider {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      auth: config.auth,
     });
   }
 
@@ -73,10 +74,13 @@ function smtpConfig() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT);
   const from = process.env.SMTP_FROM;
+  const user = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASSWORD;
   if (!host || !Number.isInteger(port) || port < 1 || !from) {
     throw new Error("SMTP_NOT_CONFIGURED");
   }
-  return { host, port, from, secure: process.env.SMTP_SECURE === "true" };
+  if (Boolean(user) !== Boolean(password)) throw new Error("SMTP_AUTH_INCOMPLETE");
+  return { host, port, from, secure: process.env.SMTP_SECURE === "true", auth: user && password ? { user, pass: password } : undefined };
 }
 
 function emailFrame(content: string) {

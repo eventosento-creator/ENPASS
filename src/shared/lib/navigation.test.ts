@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeProducerPath } from "./navigation";
+import { safeAuthPath, safeProducerPath } from "./navigation";
 
 describe("safeProducerPath", () => {
   it("preserves valid producer intent", () => {
@@ -12,5 +12,15 @@ describe("safeProducerPath", () => {
     expect(safeProducerPath("//example.com/app")).toBe("/app");
     expect(safeProducerPath("/application/admin")).toBe("/app");
     expect(safeProducerPath("/app\\evil")).toBe("/app");
+  });
+});
+
+describe("safeAuthPath", () => {
+  it("allows the password recovery destination", () => {
+    expect(safeAuthPath("/actualizar-clave")).toBe("/actualizar-clave");
+  });
+
+  it("keeps rejecting external redirects", () => {
+    expect(safeAuthPath("https://example.com/actualizar-clave")).toBe("/app");
   });
 });
