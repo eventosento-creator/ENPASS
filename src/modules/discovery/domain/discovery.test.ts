@@ -46,6 +46,6 @@ describe("starting price", () => {
       { price_amount: 1000000, active: true, sale_open: false, available_quantity: 20 },
       { price_amount: 1300000, active: true, sale_open: true, available_quantity: 10 },
       { price_amount: 1600000, active: true, sale_open: true, available_quantity: 30 },
-    ])).toBe(1300000);
+    ])).toBe(0);
   });
 });

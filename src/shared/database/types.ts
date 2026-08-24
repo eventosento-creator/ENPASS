@@ -431,6 +431,7 @@ export interface Database {
       set_event_table_active: { Args: { target_table: string; target_active: boolean }; Returns: undefined };
       get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean }[] };
       get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean }[] };
+      complete_free_order: { Args: { target_order_public_id: string }; Returns: string };
       disconnect_payment_account: { Args: { target_organization: string }; Returns: undefined };
       prepare_payment_attempt: { Args: { target_order_public_id: string }; Returns: { payment_id: string; payment_public_id: string; payment_account_id: string; reused: boolean }[] };
       set_payment_checkout: { Args: { target_payment_public_id: string; target_preference_id: string; target_checkout_url: string; target_sandbox_checkout_url: string | null }; Returns: undefined };

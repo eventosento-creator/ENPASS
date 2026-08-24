@@ -6,7 +6,7 @@ import { CalendarDays, Home, Settings } from "lucide-react";
 
 const items = [
   { href: "/app", label: "Inicio", icon: Home },
-  { href: "/app/events", label: "Eventos", icon: CalendarDays },
+  { href: "/app/events", label: "Mis eventos", icon: CalendarDays },
   { href: "/app/settings", label: "Ajustes", icon: Settings },
 ] as const;
 

@@ -40,7 +40,7 @@ export function filterDiscoveryEvents(events: DiscoveryEvent[], filters: Discove
 }
 
 export function getStartingPrice(types: Array<{ price_amount: number; active: boolean; sale_open: boolean; available_quantity: number; publicly_available?: boolean }>) {
-  const prices = types.filter(type => type.publicly_available !== false && type.active && type.sale_open && type.available_quantity > 0 && type.price_amount > 0).map(type => type.price_amount);
+  const prices = types.filter(type => type.publicly_available !== false && type.active && type.sale_open && type.available_quantity > 0 && type.price_amount >= 0).map(type => type.price_amount);
   return prices.length ? Math.min(...prices) : null;
 }
 
