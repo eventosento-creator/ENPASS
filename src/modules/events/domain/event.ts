@@ -7,6 +7,18 @@ export const eventInputSchema = z.object({
   requireDocument: z.coerce.boolean().default(false),
 });
 
+export const eventUpdateSchema = z.object({
+  eventId: z.uuid(),
+  venueId: z.uuid(),
+  name: z.string().trim().min(2).max(140),
+  description: z.string().trim().max(4000).default(""),
+  startsAt: z.iso.datetime({ local: true }),
+  doorsOpenAt: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.iso.datetime({ local: true }).optional()),
+  endsAt: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.iso.datetime({ local: true }).optional()),
+  capacity: z.coerce.number().int().positive().max(100000),
+  requireDocument: z.coerce.boolean().default(false),
+});
+
 export const ticketTypeInputSchema = z.object({
   eventId: z.uuid(), organizationId: z.uuid(), name: z.string().trim().min(1).max(100),
   phaseName: z.string().trim().min(1).max(100),

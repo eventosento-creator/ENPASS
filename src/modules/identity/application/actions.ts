@@ -46,7 +46,11 @@ export async function sendMagicLink(_: ActionState, formData: FormData): Promise
   const callback = new URL(authCallback("/app"));
   callback.searchParams.set("next", nextPath);
   const { error } = await supabase.auth.signInWithOtp({ email: email.data, options: { emailRedirectTo: callback.toString() } });
-  return error ? { error: "No pudimos enviar el enlace." } : { success: "Te enviamos un enlace seguro. Revisá tu email." };
+  if (error) {
+    console.error(JSON.stringify({ level: "error", event: "auth.magic_link.failed", code: error.code, status: error.status }));
+    return { error: emailDeliveryError(error.code) };
+  }
+  return { success: "Te enviamos un enlace seguro. Revisá tu email." };
 }
 
 export async function requestPasswordReset(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -54,8 +58,17 @@ export async function requestPasswordReset(_: ActionState, formData: FormData): 
   if (!email.success) return { error: "Ingresá un email válido." };
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email.data, { redirectTo: authCallback("/actualizar-clave") });
-  if (error) return { error: "No pudimos enviar el enlace. Esperá unos minutos e intentá nuevamente." };
+  if (error) {
+    console.error(JSON.stringify({ level: "error", event: "auth.password_reset.failed", code: error.code, status: error.status }));
+    return { error: emailDeliveryError(error.code) };
+  }
   return { success: "Si existe una cuenta con ese email, vas a recibir un enlace para cambiar la contraseña." };
+}
+
+function emailDeliveryError(code?: string) {
+  if (code === "over_email_send_rate_limit") return "Esperá un minuto antes de pedir otro enlace.";
+  if (code === "unexpected_failure") return "El proveedor de email rechazó el envío. Por ahora ingresá con email y contraseña.";
+  return "No pudimos enviar el enlace. Esperá unos minutos e intentá nuevamente.";
 }
 
 export async function updatePassword(_: ActionState, formData: FormData): Promise<ActionState> {

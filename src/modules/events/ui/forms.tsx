@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { createEvent, createTicketType, replaceEventCover, updateTicketType } from "../application/actions";
+import { formatInTimeZone } from "date-fns-tz";
+import { createEvent, createTicketType, replaceEventCover, updateEvent, updateTicketType } from "../application/actions";
 import { ActionMessage } from "@/shared/ui/action-message";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import type { TicketType, Venue } from "@/shared/database/types";
+import type { Event, TicketType, Venue } from "@/shared/database/types";
 
 export function EventForm({ organizationId, venues }: { organizationId: string; venues: Venue[] }) {
   const [state, action] = useActionState(createEvent, {});
@@ -25,6 +26,30 @@ export function EventForm({ organizationId, venues }: { organizationId: string; 
       <details className="rounded-xl border border-white/[.07] p-4"><summary className="cursor-pointer text-sm font-bold text-neutral-400">Opciones del evento</summary><div className="mt-4 grid gap-4"><label className="label">Capacidad personalizada <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="capacity" type="number" min="1" placeholder="Usar capacidad del lugar"/></label><label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-24 resize-y" name="description" placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label><label className="flex items-center gap-3 text-sm text-neutral-400"><input type="checkbox" name="requireDocument" value="true"/> Solicitar DNI en el checkout</label></div></details>
     </div>
     <div className="md:col-start-2"><ActionMessage message={state.error}/></div><SubmitButton className="btn btn-primary min-h-14 md:col-start-2">Continuar a entradas</SubmitButton>
+  </form>;
+}
+
+export function EventEditForm({ event, venues, timezone }: { event: Event; venues: Venue[]; timezone: string }) {
+  const [state, action] = useActionState(updateEvent, {});
+  const localValue = (value: string | null) => value ? formatInTimeZone(value, timezone, "yyyy-MM-dd'T'HH:mm") : "";
+  return <form action={action} className="mt-8 grid gap-6">
+    <input type="hidden" name="eventId" value={event.id}/>
+    <div className="surface grid gap-5 p-5 sm:p-7">
+      <label className="label">Nombre<input className="field text-lg font-bold" name="name" defaultValue={event.name} required autoFocus/></label>
+      <label className="label">Lugar<select className="field" name="venueId" required defaultValue={event.venue_id}>{venues.map(venue => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
+      <label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-28 resize-y" name="description" defaultValue={event.description} placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="label">Inicio del evento<input className="field" name="startsAt" type="datetime-local" defaultValue={localValue(event.starts_at)} required/></label>
+        <label className="label">Apertura de puertas <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="doorsOpenAt" type="datetime-local" defaultValue={localValue(event.doors_open_at)}/></label>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="label">Cierre <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local" defaultValue={localValue(event.ends_at)}/></label>
+        <label className="label">Capacidad<input className="field" name="capacity" type="number" min="1" max="100000" defaultValue={event.capacity} required/></label>
+      </div>
+      <label className="flex min-h-11 items-center gap-3 text-sm text-neutral-300"><input type="checkbox" name="requireDocument" value="true" defaultChecked={event.require_document}/> Solicitar DNI en el checkout</label>
+    </div>
+    <ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/>
+    <SubmitButton className="btn btn-primary min-h-14" pendingLabel="Guardando cambios…">Guardar cambios</SubmitButton>
   </form>;
 }
 
