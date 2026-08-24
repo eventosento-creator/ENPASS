@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:56321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-local-placeholder
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+      APP_URL: http://127.0.0.1:3000
+      SUPABASE_SERVICE_ROLE_KEY: ci-local-placeholder
+      PAYMENT_CREDENTIALS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      TICKET_TOKEN_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      MERCADO_PAGO_SANDBOX: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx supabase start
+      - run: npx supabase db reset --local
+      - run: npm run test:db
+      - run: npx supabase db lint --local --schema public --level warning --fail-on warning

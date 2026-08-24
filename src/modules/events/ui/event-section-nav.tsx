@@ -1,10 +1,11 @@
 import Link from "next/link";
 
-export function EventSectionNav({ eventId, active }: { eventId: string; active: "summary" | "tickets" | "promoters" | "access" }) {
+export function EventSectionNav({ eventId, active }: { eventId: string; active: "summary" | "tickets" | "promoters" | "tables" | "access" }) {
   const items = [
     { href: `/app/events/${eventId}`, label: "Resumen", key: "summary" },
     { href: `/app/events/${eventId}#entradas`, label: "Entradas", key: "tickets" },
     { href: `/app/events/${eventId}/promoters`, label: "RRPP", key: "promoters" },
+    { href: `/app/events/${eventId}/tables`, label: "Mesas", key: "tables" },
     { href: `/app/events/${eventId}/access`, label: "Accesos", key: "access" },
   ] as const;
   return <nav aria-label="Secciones del evento" className="mt-7 flex gap-1 overflow-x-auto border-b border-white/[.07]">

@@ -86,10 +86,12 @@ export function canUseSupervisorTools(permission: ScannerPermission) {
   return permission === "supervisor";
 }
 
-export function getResultPresentation(response: Pick<CheckInResponse, "result" | "suggested_gate_name">): ResultPresentation {
+export function getResultPresentation(response: Pick<CheckInResponse, "result" | "suggested_gate_name"> & { max_entries?: number | null }): ResultPresentation {
   switch (response.result) {
     case "valid": return { tone: "success", title: "INGRESO VÁLIDO", detail: "Acceso registrado", durationMs: 1000 };
-    case "already_used": return { tone: "danger", title: "YA UTILIZADA", detail: "Esta entrada ya alcanzó su límite", durationMs: 1800 };
+    case "already_used": return response.max_entries && response.max_entries > 1
+      ? { tone: "danger", title: "CUPO COMPLETO", detail: `${response.max_entries} / ${response.max_entries} ingresos utilizados`, durationMs: 1800 }
+      : { tone: "danger", title: "YA UTILIZADA", detail: "Esta entrada ya alcanzó su límite", durationMs: 1800 };
     case "wrong_gate": return { tone: "danger", title: "PUERTA INCORRECTA", detail: response.suggested_gate_name ? `Dirigir a ${response.suggested_gate_name}` : "Revisá la puerta asignada", durationMs: 1800 };
     case "wrong_event": return { tone: "danger", title: "OTRO EVENTO", detail: "La entrada no corresponde a este evento", durationMs: 1800 };
     case "too_early": return { tone: "warning", title: "TODAVÍA NO VÁLIDA", detail: "La ventana de acceso aún no comenzó", durationMs: 1800 };

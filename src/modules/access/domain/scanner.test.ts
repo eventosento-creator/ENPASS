@@ -25,6 +25,12 @@ describe("scanner domain", () => {
     expect(getResultPresentation({ result: "already_used", suggested_gate_name: null }).durationMs).toBe(1800);
   });
 
+  it("presents a full group credential as capacity reached", () => {
+    expect(getResultPresentation({ result: "already_used", suggested_gate_name: null, max_entries: 8 })).toEqual({
+      tone: "danger", title: "CUPO COMPLETO", detail: "8 / 8 ingresos utilizados", durationMs: 1800,
+    });
+  });
+
   it("shows the accepted gate without exposing buyer details", () => {
     expect(getResultPresentation({ result: "wrong_gate", suggested_gate_name: "Acceso VIP" }).detail).toBe("Dirigir a Acceso VIP");
   });

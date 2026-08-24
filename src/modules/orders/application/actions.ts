@@ -8,7 +8,7 @@ import type { ActionState } from "@/modules/identity/application/actions";
 
 export async function createCheckout(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = checkoutSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Revisá tus datos y seleccioná al menos una entrada." };
+  if (!parsed.success) return { error: "Revisá tus datos y seleccioná al menos una opción." };
   const attributionSessionHash = await getPromoterAttributionSessionHash();
   const { data, error } = await createAdminClient().rpc("create_guest_checkout_attributed", {
     target_event: parsed.data.eventId, buyer_first_name: parsed.data.firstName, buyer_last_name: parsed.data.lastName,
@@ -16,6 +16,6 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
     selections: parsed.data.selections, target_attribution_session_hash: attributionSessionHash,
   });
   const order = data?.[0];
-  if (error || !order) return { error: "No pudimos reservar esas entradas. Es posible que ya no estén disponibles." };
+  if (error || !order) return { error: "No pudimos completar la reserva. Es posible que esa disponibilidad ya haya cambiado." };
   redirect(`/order/${order.order_public_id}`);
 }

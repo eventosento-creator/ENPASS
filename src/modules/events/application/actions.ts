@@ -163,6 +163,7 @@ export async function duplicateEvent(_: ActionState, formData: FormData): Promis
     target_slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
     target_starts_at: startsAt,
     preserve_promoters: formData.get("preservePromoters") === "on",
+    preserve_tables: formData.get("preserveTables") === "on",
   });
   if (error || !data) return { error: "No pudimos duplicar el evento." };
   revalidatePath("/app/events");

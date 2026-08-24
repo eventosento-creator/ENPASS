@@ -16,6 +16,9 @@ export function encryptTicketToken(value: string) {
 }
 
 export function decryptTicketToken(value: string) {
+  if (process.env.NODE_ENV === "development" && value.startsWith("dev:")) {
+    return value.slice(4);
+  }
   const [version, encodedIv, encodedTag, encodedCiphertext] = value.split(".");
   if (version !== VERSION || !encodedIv || !encodedTag || !encodedCiphertext) {
     throw new Error("Formato de token cifrado inválido.");

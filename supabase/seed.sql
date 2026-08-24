@@ -20,8 +20,8 @@ values (
   'email', now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
-insert into public.organizations (id, name, slug, service_fee_bps, platform_fee_bps)
-values ('22222222-2222-4222-8222-222222222222', 'Club Demo', 'club-demo', 800, 800)
+insert into public.organizations (id, name, slug, service_fee_bps, platform_fee_bps, table_service_fee_bps)
+values ('22222222-2222-4222-8222-222222222222', 'Club Demo', 'club-demo', 800, 800, 500)
 on conflict (id) do nothing;
 
 insert into public.organization_members (organization_id, user_id, role)
@@ -29,11 +29,11 @@ values ('22222222-2222-4222-8222-222222222222', '11111111-1111-4111-8111-1111111
 on conflict do nothing;
 
 insert into public.venues (id, organization_id, name, address, city, province, capacity, timezone)
-values ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', 'Club Central', 'Av. España 2110', 'Mendoza', 'Mendoza', 600, 'America/Argentina/Mendoza')
+values ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', 'Club Central', 'Av. España 2110', 'Mendoza', 'Mendoza', 700, 'America/Argentina/Mendoza')
 on conflict (id) do nothing;
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, doors_open_at, status, capacity, currency, published_at, created_by)
-values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 600, 'ARS', now(), '11111111-1111-4111-8111-111111111111')
+values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 650, 'ARS', now(), '11111111-1111-4111-8111-111111111111')
 on conflict (id) do nothing;
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, status, capacity, currency, published_at, created_by)
@@ -249,19 +249,21 @@ insert into public.order_items (
   ('a3000000-0000-4000-8000-000000000045', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000034', '55555555-5555-4555-8555-555555555553', 'General', 1, 1600000, 1600000, 'ARS')
 on conflict (id) do nothing;
 
+-- Local-only QR fixtures use the explicit dev: format. The application accepts
+-- it only under NODE_ENV=development; production and staging require AES-GCM.
 insert into public.tickets (
   id, organization_id, event_id, order_id, order_item_id, ticket_type_id, customer_id,
   unit_index, status, holder_first_name, holder_last_name, max_entries, used_entries,
   valid_from, valid_until, sector, short_code, qr_token_hash, qr_token_encrypted, refunded_at
 ) values
-  ('a3000000-0000-4000-8000-000000000051', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Valentina', 'Demo', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NVAL-D1', encode(extensions.digest(convert_to('NLOS1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'UTF8'), 'sha256'), 'hex'), repeat('v', 40), null),
-  ('a3000000-0000-4000-8000-000000000052', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 2, 'valid', 'Ulises', 'Demo', 1, 1, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NUSE-D1', encode(extensions.digest(convert_to('NLOS1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', 'UTF8'), 'sha256'), 'hex'), repeat('u', 40), null),
-  ('a3000000-0000-4000-8000-000000000053', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 3, 'valid', 'Temprano', 'Demo', 1, 0, now() + interval '1 day', now() + interval '30 days', 'Pista', 'NEAR-D1', encode(extensions.digest(convert_to('NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', 'UTF8'), 'sha256'), 'hex'), repeat('e', 40), null),
-  ('a3000000-0000-4000-8000-000000000054', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 4, 'valid', 'Tarde', 'Demo', 1, 0, now() - interval '30 days', now() - interval '1 day', 'Pista', 'NLAT-D1', encode(extensions.digest(convert_to('NLOS1:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD', 'UTF8'), 'sha256'), 'hex'), repeat('l', 40), null),
-  ('a3000000-0000-4000-8000-000000000055', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 5, 'valid', 'Múltiple', 'Demo', 2, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NMUL-D1', encode(extensions.digest(convert_to('NLOS1:EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', 'UTF8'), 'sha256'), 'hex'), repeat('m', 40), null),
-  ('a3000000-0000-4000-8000-000000000056', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000042', '55555555-5555-4555-8555-555555555552', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Victoria', 'VIP', 1, 0, now() - interval '1 day', now() + interval '30 days', 'VIP', 'NVIP-D1', encode(extensions.digest(convert_to('NLOS1:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', 'UTF8'), 'sha256'), 'hex'), repeat('p', 40), null),
-  ('a3000000-0000-4000-8000-000000000057', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000032', 'a3000000-0000-4000-8000-000000000043', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000022', 1, 'refunded', 'Renata', 'Reembolso', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NREF-D1', encode(extensions.digest(convert_to('NLOS1:GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG', 'UTF8'), 'sha256'), 'hex'), repeat('r', 40), now()),
-  ('a3000000-0000-4000-8000-000000000058', '22222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777771', 'a3000000-0000-4000-8000-000000000033', 'a3000000-0000-4000-8000-000000000044', '99999999-9999-4999-8999-999999999911', 'a3000000-0000-4000-8000-000000000023', 1, 'valid', 'Olivia', 'Otro', 1, 0, now() - interval '1 day', now() + interval '30 days', 'General', 'NOTR-D1', encode(extensions.digest(convert_to('NLOS1:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH', 'UTF8'), 'sha256'), 'hex'), repeat('o', 40), null)
+  ('a3000000-0000-4000-8000-000000000051', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Valentina', 'Demo', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NVAL-D1', encode(extensions.digest(convert_to('NLOS1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', null),
+  ('a3000000-0000-4000-8000-000000000052', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 2, 'valid', 'Ulises', 'Demo', 1, 1, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NUSE-D1', encode(extensions.digest(convert_to('NLOS1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', null),
+  ('a3000000-0000-4000-8000-000000000053', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 3, 'valid', 'Temprano', 'Demo', 1, 0, now() + interval '1 day', now() + interval '30 days', 'Pista', 'NEAR-D1', encode(extensions.digest(convert_to('NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', null),
+  ('a3000000-0000-4000-8000-000000000054', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 4, 'valid', 'Tarde', 'Demo', 1, 0, now() - interval '30 days', now() - interval '1 day', 'Pista', 'NLAT-D1', encode(extensions.digest(convert_to('NLOS1:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD', null),
+  ('a3000000-0000-4000-8000-000000000055', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 5, 'valid', 'Múltiple', 'Demo', 2, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NMUL-D1', encode(extensions.digest(convert_to('NLOS1:EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', null),
+  ('a3000000-0000-4000-8000-000000000056', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000042', '55555555-5555-4555-8555-555555555552', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Victoria', 'VIP', 1, 0, now() - interval '1 day', now() + interval '30 days', 'VIP', 'NVIP-D1', encode(extensions.digest(convert_to('NLOS1:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', null),
+  ('a3000000-0000-4000-8000-000000000057', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000032', 'a3000000-0000-4000-8000-000000000043', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000022', 1, 'refunded', 'Renata', 'Reembolso', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NREF-D1', encode(extensions.digest(convert_to('NLOS1:GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG', now()),
+  ('a3000000-0000-4000-8000-000000000058', '22222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777771', 'a3000000-0000-4000-8000-000000000033', 'a3000000-0000-4000-8000-000000000044', '99999999-9999-4999-8999-999999999911', 'a3000000-0000-4000-8000-000000000023', 1, 'valid', 'Olivia', 'Otro', 1, 0, now() - interval '1 day', now() + interval '30 days', 'General', 'NOTR-D1', encode(extensions.digest(convert_to('NLOS1:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH', 'UTF8'), 'sha256'), 'hex'), 'dev:NLOS1:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH', null)
 on conflict (id) do nothing;
 
 insert into public.tickets (
@@ -279,7 +281,7 @@ insert into public.tickets (
   1, 'cancelled', 'Camila', 'Cancelada', 1, 0,
   now() - interval '1 day', now() + interval '30 days', 'Pista', 'NCAN-D1',
   encode(extensions.digest(convert_to('NLOS1:IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII', 'UTF8'), 'sha256'), 'hex'),
-  repeat('c', 40), now()
+  'dev:NLOS1:IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII', now()
 ) on conflict (id) do nothing;
 
 insert into public.checkins (
@@ -465,3 +467,81 @@ from generate_series(1, 3) visit_number;
 select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000501');
 select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000502');
 select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000503');
+
+-- FASE 5 local table fixtures. They demonstrate available, temporarily held,
+-- sold and disabled physical inventory without introducing a second checkout.
+insert into public.table_zones (
+  id, organization_id, event_id, name, description, sort_order, active
+) values
+  ('e5000000-0000-4000-8000-000000000101', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'VIP', 'Junto a cabina y acceso preferencial.', 0, true),
+  ('e5000000-0000-4000-8000-000000000102', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'Terraza', 'Sector exterior cubierto.', 1, true)
+on conflict (id) do nothing;
+
+insert into public.event_tables (
+  id, organization_id, event_id, table_zone_id, access_gate_id,
+  name, description, capacity, base_price_amount, currency,
+  service_fee_bps, active, sort_order
+) values
+  ('e5000000-0000-4000-8000-000000000201', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000101', 'a3000000-0000-4000-8000-000000000002', 'Mesa VIP 08', 'Vista directa a cabina.', 8, 24000000, 'ARS', 500, true, 0),
+  ('e5000000-0000-4000-8000-000000000202', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000101', 'a3000000-0000-4000-8000-000000000002', 'Mesa VIP 09', '', 8, 24000000, 'ARS', null, true, 1),
+  ('e5000000-0000-4000-8000-000000000203', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000101', 'a3000000-0000-4000-8000-000000000002', 'Mesa VIP 10', '', 8, 22000000, 'ARS', 500, true, 2),
+  ('e5000000-0000-4000-8000-000000000204', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000102', null, 'Terraza 01', '', 6, 18000000, 'ARS', null, false, 0)
+on conflict (id) do nothing;
+
+insert into public.table_entitlement_templates (
+  id, organization_id, event_id, event_table_id, entitlement_type,
+  name, quantity, sort_order
+) values
+  ('e5000000-0000-4000-8000-000000000301', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000201', 'drink', 'Botellas', 2, 0),
+  ('e5000000-0000-4000-8000-000000000302', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000201', 'generic', 'Energizantes', 8, 1),
+  ('e5000000-0000-4000-8000-000000000303', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000202', 'drink', 'Botellas', 2, 0),
+  ('e5000000-0000-4000-8000-000000000304', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000203', 'drink', 'Botellas', 1, 0)
+on conflict (id) do nothing;
+
+insert into public.customers (id, organization_id, first_name, last_name, email)
+values
+  ('e5000000-0000-4000-8000-000000000401', '22222222-2222-4222-8222-222222222222', 'Buyer', 'Mesa vendida', 'mesa-vendida@nightlife.local'),
+  ('e5000000-0000-4000-8000-000000000402', '22222222-2222-4222-8222-222222222222', 'Buyer', 'Mesa hold', 'mesa-hold@nightlife.local')
+on conflict (id) do nothing;
+
+insert into public.orders (
+  id, public_id, organization_id, event_id, customer_id, status,
+  subtotal_amount, service_fee_amount, total_amount, currency, expires_at,
+  promoter_id, event_promoter_id
+) values
+  ('e5000000-0000-4000-8000-000000000501', 'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e501', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000401', 'paid', 24000000, 1200000, 25200000, 'ARS', now() + interval '10 minutes', 'f4000000-0000-4000-8000-000000000001', 'f4000000-0000-4000-8000-000000000101'),
+  ('e5000000-0000-4000-8000-000000000502', 'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e502', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000402', 'pending', 22000000, 1100000, 23100000, 'ARS', now() + interval '10 minutes', null, null)
+on conflict (id) do nothing;
+
+insert into public.order_items (
+  id, organization_id, order_id, item_type, ticket_type_id, event_table_id,
+  item_name, quantity, unit_price_amount, line_total_amount, currency
+) values
+  ('e5000000-0000-4000-8000-000000000601', '22222222-2222-4222-8222-222222222222', 'e5000000-0000-4000-8000-000000000501', 'table', null, 'e5000000-0000-4000-8000-000000000201', 'Mesa VIP 08', 1, 24000000, 24000000, 'ARS'),
+  ('e5000000-0000-4000-8000-000000000602', '22222222-2222-4222-8222-222222222222', 'e5000000-0000-4000-8000-000000000502', 'table', null, 'e5000000-0000-4000-8000-000000000203', 'Mesa VIP 10', 1, 22000000, 22000000, 'ARS')
+on conflict (id) do nothing;
+
+insert into public.table_holds (
+  id, organization_id, event_id, event_table_id, order_id, status, expires_at
+) values
+  ('e5000000-0000-4000-8000-000000000701', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000201', 'e5000000-0000-4000-8000-000000000501', 'consumed', now() + interval '10 minutes'),
+  ('e5000000-0000-4000-8000-000000000702', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'e5000000-0000-4000-8000-000000000203', 'e5000000-0000-4000-8000-000000000502', 'active', now() + interval '10 minutes')
+on conflict (id) do nothing;
+
+select public.issue_tickets_for_paid_order(
+  'e5000000-0000-4000-8000-000000000501',
+  jsonb_build_array(jsonb_build_object(
+    'order_item_id', 'e5000000-0000-4000-8000-000000000601',
+    'unit_index', 1,
+    'short_code', 'NMES-D1',
+    'qr_token_hash', encode(extensions.digest(convert_to('NLOS1:MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM', 'UTF8'), 'sha256'), 'hex'),
+    'qr_token_encrypted', 'dev:NLOS1:MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM'
+  ))
+);
+
+update public.promoter_commission_rules
+set commission_type = 'percentage', commission_value = 500
+where event_promoter_id = 'f4000000-0000-4000-8000-000000000101'
+  and subject_type = 'table' and event_table_id is null and active;
+
+select public.calculate_promoter_commissions_for_order('e5000000-0000-4000-8000-000000000501');

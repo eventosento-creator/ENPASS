@@ -11,7 +11,7 @@ type EventCoverProps = {
 
 export function EventCover({ src, alt, className, priority = false, sizes = "(max-width: 768px) 100vw, 50vw" }: EventCoverProps) {
   return <div className={cn("event-cover relative overflow-hidden bg-[#171719]", className)}>
-    {src ? <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover transition duration-500 group-hover:scale-[1.02]"/> : <Fallback/>}
+    {src ? <Image src={src} alt={alt} fill sizes={sizes} priority={priority} loading={priority ? "eager" : undefined} className="object-cover transition duration-500 group-hover:scale-[1.02]"/> : <Fallback/>}
     <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/5"/>
   </div>;
 }

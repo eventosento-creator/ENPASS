@@ -8,10 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:db": "supabase test db --local",
-    "test:concurrency": "node --env-file=.env.local scripts/test-checkin-concurrency.mjs",
+    "test:concurrency": "node --env-file=.env.local scripts/test-checkin-concurrency.mjs && node --env-file=.env.local scripts/test-table-concurrency.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {

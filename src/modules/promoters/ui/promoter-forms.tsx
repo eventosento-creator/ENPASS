@@ -7,8 +7,9 @@ import {
   createNewPromoterInvitation,
   updateEventPromoter,
   upsertPromoterCommissionRule,
+  upsertPromoterTableCommissionRule,
 } from "../application/actions";
-import type { EventPromoter, Promoter, PromoterCommissionRule, TicketType } from "@/shared/database/types";
+import type { EventPromoter, EventTable, Promoter, PromoterCommissionRule, TicketType } from "@/shared/database/types";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { ActionMessage } from "@/shared/ui/action-message";
 import { ShareLinkButtons } from "./share-link-buttons";
@@ -44,14 +45,15 @@ export function EditPromoterForm({ eventId, relation, promoter }: { eventId: str
 
 export function CommissionRuleForm({ eventId, relationId, ticketTypes, rules }: { eventId: string; relationId: string; ticketTypes: TicketType[]; rules: PromoterCommissionRule[] }) {
   const [state, action] = useActionState(upsertPromoterCommissionRule, {});
-  const general = rules.find((rule) => rule.ticket_type_id === null);
+  const ticketRules = rules.filter((rule) => rule.subject_type === "ticket");
+  const general = ticketRules.find((rule) => rule.ticket_type_id === null);
   const [ticketTypeId, setTicketTypeId] = useState("");
   const [commissionType, setCommissionType] = useState<"fixed_per_ticket" | "percentage">(general?.commission_type ?? "percentage");
   const [commissionValue, setCommissionValue] = useState(String((general?.commission_value ?? 500) / 100));
 
   function selectTarget(nextTicketTypeId: string) {
     setTicketTypeId(nextTicketTypeId);
-    const rule = rules.find((candidate) => candidate.ticket_type_id === (nextTicketTypeId || null)) ?? general;
+    const rule = ticketRules.find((candidate) => candidate.ticket_type_id === (nextTicketTypeId || null)) ?? general;
     setCommissionType(rule?.commission_type ?? "percentage");
     setCommissionValue(String((rule?.commission_value ?? 500) / 100));
   }
@@ -59,8 +61,24 @@ export function CommissionRuleForm({ eventId, relationId, ticketTypes, rules }: 
   return <section className="card p-5 sm:p-6">
     <p className="eyebrow">Comisión</p><h2 className="section-title mt-2">Regla general y excepciones</h2><p className="mt-2 text-sm leading-6 text-neutral-500">El porcentaje usa solo el valor base de las entradas. Las ventas confirmadas no cambian al editar.</p>
     <form action={action} className="mt-6 grid gap-4"><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="eventPromoterId" value={relationId}/><label className="label">Aplicar a<select className="field" name="ticketTypeId" value={ticketTypeId} onChange={(event) => selectTarget(event.target.value)}><option value="">Todas las entradas</option>{ticketTypes.map((type) => <option value={type.id} key={type.id}>{type.name}</option>)}</select></label><div className="grid gap-4 sm:grid-cols-2"><label className="label">Tipo<select className="field" name="commissionType" value={commissionType} onChange={(event) => setCommissionType(event.target.value as "fixed_per_ticket" | "percentage")}><option value="fixed_per_ticket">Por entrada</option><option value="percentage">Porcentaje</option></select></label><label className="label">Valor<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">{commissionType === "percentage" ? "%" : "$"}</span><input className="field pl-9" name="commissionValue" type="number" min="0.01" max={commissionType === "percentage" ? "100" : "1000000"} step="0.01" value={commissionValue} onChange={(event) => setCommissionValue(event.target.value)} required/></div></label></div><ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/><SubmitButton className="btn btn-secondary">Guardar regla</SubmitButton></form>
-    {rules.length > 0 && <div className="mt-6 border-t border-white/[.07] pt-5"><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Configuración actual</p><div className="mt-3 grid gap-2">{rules.map((rule) => <div className="flex items-center justify-between gap-4 rounded-xl bg-white/[.03] px-4 py-3 text-sm" key={rule.id}><span className="text-neutral-400">{rule.ticket_type_id ? ticketTypes.find((type) => type.id === rule.ticket_type_id)?.name ?? "Entrada" : "Todas las entradas"}</span><strong>{rule.commission_type === "percentage" ? `${rule.commission_value / 100}%` : `$${new Intl.NumberFormat("es-AR").format(rule.commission_value / 100)} / entrada`}</strong></div>)}</div></div>}
+    {ticketRules.length > 0 && <div className="mt-6 border-t border-white/[.07] pt-5"><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Configuración actual</p><div className="mt-3 grid gap-2">{ticketRules.map((rule) => <div className="flex items-center justify-between gap-4 rounded-xl bg-white/[.03] px-4 py-3 text-sm" key={rule.id}><span className="text-neutral-400">{rule.ticket_type_id ? ticketTypes.find((type) => type.id === rule.ticket_type_id)?.name ?? "Entrada" : "Todas las entradas"}</span><strong>{rule.commission_type === "percentage" ? `${rule.commission_value / 100}%` : `$${new Intl.NumberFormat("es-AR").format(rule.commission_value / 100)} / entrada`}</strong></div>)}</div></div>}
   </section>;
+}
+
+export function TableCommissionRuleForm({ eventId, relationId, tables, rules }: { eventId: string; relationId: string; tables: EventTable[]; rules: PromoterCommissionRule[] }) {
+  const [state, action] = useActionState(upsertPromoterTableCommissionRule, {});
+  const tableRules = rules.filter((rule) => rule.subject_type === "table");
+  const general = tableRules.find((rule) => rule.event_table_id === null);
+  const [eventTableId, setEventTableId] = useState("");
+  const [commissionType, setCommissionType] = useState<"fixed_per_ticket" | "percentage">(general?.commission_type ?? "percentage");
+  const [commissionValue, setCommissionValue] = useState(String((general?.commission_value ?? 500) / 100));
+  function selectTarget(nextTableId: string) {
+    setEventTableId(nextTableId);
+    const rule = tableRules.find((candidate) => candidate.event_table_id === (nextTableId || null)) ?? general;
+    setCommissionType(rule?.commission_type ?? "percentage");
+    setCommissionValue(String((rule?.commission_value ?? 500) / 100));
+  }
+  return <section className="card p-5 sm:p-6"><p className="eyebrow">Comisión de mesas</p><h2 className="section-title mt-2">Regla general y excepciones</h2><p className="mt-2 text-sm leading-6 text-neutral-500">El porcentaje usa el precio base de la mesa y excluye el cargo de servicio.</p><form action={action} className="mt-6 grid gap-4"><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="eventPromoterId" value={relationId}/><label className="label">Aplicar a<select className="field" name="eventTableId" value={eventTableId} onChange={(event) => selectTarget(event.target.value)}><option value="">Todas las mesas</option>{tables.map((table) => <option value={table.id} key={table.id}>{table.name}</option>)}</select></label><div className="grid gap-4 sm:grid-cols-2"><label className="label">Tipo<select className="field" name="commissionType" value={commissionType} onChange={(event) => setCommissionType(event.target.value as "fixed_per_ticket" | "percentage")}><option value="fixed_per_ticket">Fija por mesa</option><option value="percentage">Porcentaje</option></select></label><label className="label">Valor<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">{commissionType === "percentage" ? "%" : "$"}</span><input className="field pl-9" name="commissionValue" type="number" min="0.01" max={commissionType === "percentage" ? "100" : "1000000"} step="0.01" value={commissionValue} onChange={(event) => setCommissionValue(event.target.value)} required/></div></label></div><ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/><SubmitButton className="btn btn-secondary">Guardar regla de mesas</SubmitButton></form>{tableRules.length > 0 && <div className="mt-6 border-t border-white/[.07] pt-5"><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Configuración actual</p><div className="mt-3 grid gap-2">{tableRules.map((rule) => <div className="flex items-center justify-between gap-4 rounded-xl bg-white/[.03] px-4 py-3 text-sm" key={rule.id}><span className="text-neutral-400">{rule.event_table_id ? tables.find((table) => table.id === rule.event_table_id)?.name ?? "Mesa" : "Todas las mesas"}</span><strong>{rule.commission_type === "percentage" ? `${rule.commission_value / 100}%` : `$${new Intl.NumberFormat("es-AR").format(rule.commission_value / 100)} / mesa`}</strong></div>)}</div></div>}</section>;
 }
 
 export function PromoterInviteForm({ eventId, eventPromoterId, hasEmail }: { eventId: string; eventPromoterId: string; hasEmail: boolean }) {

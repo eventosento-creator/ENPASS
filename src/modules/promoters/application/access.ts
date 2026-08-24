@@ -82,20 +82,30 @@ export const getCurrentPromoterSession = cache(async (sessionHash: string | null
 export async function getPromoterDashboard(sessionHash: string) {
   const admin = createAdminClient();
   await admin.rpc("reconcile_promoter_session_commissions", { target_session_hash: sessionHash });
-  const { data, error } = await admin.rpc("get_promoter_dashboard", { target_session_hash: sessionHash });
-  if (error) throw new Error("PROMOTER_DASHBOARD_UNAVAILABLE");
-  return data ?? [];
+  const [{ data, error }, { data: tableData, error: tableError }] = await Promise.all([
+    admin.rpc("get_promoter_dashboard", { target_session_hash: sessionHash }),
+    admin.rpc("get_promoter_table_dashboard", { target_session_hash: sessionHash }),
+  ]);
+  if (error || tableError) throw new Error("PROMOTER_DASHBOARD_UNAVAILABLE");
+  const tableByRelation = new Map((tableData ?? []).map((row) => [row.event_promoter_id, row]));
+  return (data ?? []).map((row) => {
+    const table = tableByRelation.get(row.event_promoter_id) ?? { tables_sold: 0, table_revenue: 0 };
+    return { ...row, tickets_sold: Math.max(0, row.tickets_sold - table.tables_sold), ticket_revenue: Math.max(0, row.ticket_revenue - table.table_revenue), total_revenue: row.ticket_revenue, tables_sold: table.tables_sold, table_revenue: table.table_revenue };
+  });
 }
 
 export async function getPromoterEventDashboard(sessionHash: string, eventPromoterId: string) {
   const admin = createAdminClient();
   await admin.rpc("reconcile_promoter_session_commissions", { target_session_hash: sessionHash });
-  const { data, error } = await admin.rpc("get_promoter_event_dashboard", {
-    target_session_hash: sessionHash,
-    target_event_promoter: eventPromoterId,
-  });
-  if (error) throw new Error("PROMOTER_DASHBOARD_UNAVAILABLE");
-  return data?.[0] ?? null;
+  const [{ data, error }, { data: tableData, error: tableError }] = await Promise.all([
+    admin.rpc("get_promoter_event_dashboard", { target_session_hash: sessionHash, target_event_promoter: eventPromoterId }),
+    admin.rpc("get_promoter_event_table_dashboard", { target_session_hash: sessionHash, target_event_promoter: eventPromoterId }),
+  ]);
+  if (error || tableError) throw new Error("PROMOTER_DASHBOARD_UNAVAILABLE");
+  const row = data?.[0];
+  if (!row) return null;
+  const table = tableData?.[0] ?? { tables_sold: 0, table_revenue: 0, table_breakdown: [] };
+  return { ...row, tickets_sold: Math.max(0, row.tickets_sold - table.tables_sold), ticket_revenue: Math.max(0, row.ticket_revenue - table.table_revenue), total_revenue: row.ticket_revenue, tables_sold: table.tables_sold, table_revenue: table.table_revenue, table_breakdown: table.table_breakdown };
 }
 
 export async function revokePromoterSession(sessionHash: string | null) {

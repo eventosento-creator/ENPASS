@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { decryptTicketToken, encryptTicketToken } from "./ticket-cipher";
 
 describe("ticket token cipher", () => {
@@ -9,6 +9,7 @@ describe("ticket token cipher", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     if (original === undefined) delete process.env.TICKET_TOKEN_ENCRYPTION_KEY;
     else process.env.TICKET_TOKEN_ENCRYPTION_KEY = original;
   });
@@ -36,5 +37,15 @@ describe("ticket token cipher", () => {
     const encrypted = encryptTicketToken("NLOS1:opaque-payload");
     process.env.TICKET_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
     expect(() => decryptTicketToken(encrypted)).toThrow();
+  });
+
+  it("acepta payloads explícitos solamente para fixtures de desarrollo", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    expect(decryptTicketToken("dev:NLOS1:fixture-local")).toBe("NLOS1:fixture-local");
+  });
+
+  it("rechaza payloads de desarrollo fuera de development", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(() => decryptTicketToken("dev:NLOS1:fixture-local")).toThrow(/Formato/);
   });
 });

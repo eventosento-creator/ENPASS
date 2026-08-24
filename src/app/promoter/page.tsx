@@ -15,9 +15,10 @@ export default async function PromoterHomePage({ searchParams }: { searchParams:
   const events = await getPromoterDashboard(sessionHash);
   const totals = events.reduce((result, event) => ({
     tickets: result.tickets + event.tickets_sold,
-    revenue: result.revenue + event.ticket_revenue,
+    tables: result.tables + event.tables_sold,
+    revenue: result.revenue + event.total_revenue,
     commission: result.commission + event.confirmed_commission,
-  }), { tickets: 0, revenue: 0, commission: 0 });
+  }), { tickets: 0, tables: 0, revenue: 0, commission: 0 });
   const currency = events[0]?.currency ?? "ARS";
 
   return <PromoterShell name={session.display_name}>
@@ -26,8 +27,9 @@ export default async function PromoterHomePage({ searchParams }: { searchParams:
       <div className="relative">
         <p className="eyebrow">Tu actividad</p>
         <h1 className="mt-3 max-w-xl text-4xl font-black leading-[.96] tracking-[-.055em] sm:text-5xl">Todo lo que vendiste, claro.</h1>
-        <div className="mt-8 grid gap-6 border-t border-white/[.08] pt-7 sm:grid-cols-3">
+        <div className={`mt-8 grid gap-6 border-t border-white/[.08] pt-7 sm:grid-cols-2 ${totals.tables > 0 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           <HeroMetric label="Entradas" value={String(totals.tickets)}/>
+          {totals.tables > 0 && <HeroMetric label="Mesas" value={String(totals.tables)}/>}
           <HeroMetric label="Ventas" value={formatMoney(totals.revenue, currency)}/>
           <HeroMetric label="Tu comisión" value={formatMoney(totals.commission, currency)} accent/>
         </div>
@@ -41,7 +43,7 @@ export default async function PromoterHomePage({ searchParams }: { searchParams:
         return <article className="card overflow-hidden" key={event.event_promoter_id}>
           <Link className="card-interactive block p-5 sm:p-6" href={`/promoter/events/${event.event_promoter_id}`}>
             <div className="flex items-start justify-between gap-5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-xl font-black tracking-[-.03em]">{event.event_name}</h3>{event.relation_status === "inactive" && <span className="rounded-full bg-white/[.05] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-neutral-600">Inactivo</span>}</div><p className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-600"><CalendarDays size={14}/>{formatCompactEventDate(event.event_starts_at, event.event_timezone)}</p></div><ChevronRight className="mt-1 shrink-0 text-neutral-700" size={20}/></div>
-            <div className="mt-6 grid grid-cols-3 gap-3 border-t border-white/[.07] pt-5"><SmallMetric label="Entradas" value={String(event.tickets_sold)}/><SmallMetric label="Ventas" value={formatMoney(event.ticket_revenue, event.currency)}/><SmallMetric label="Comisión" value={formatMoney(event.confirmed_commission, event.currency)} accent/></div>
+            <div className={`mt-6 grid gap-3 border-t border-white/[.07] pt-5 ${event.tables_sold > 0 ? "grid-cols-4" : "grid-cols-3"}`}><SmallMetric label="Entradas" value={String(event.tickets_sold)}/>{event.tables_sold > 0 && <SmallMetric label="Mesas" value={String(event.tables_sold)}/>}<SmallMetric label="Ventas" value={formatMoney(event.total_revenue, event.currency)}/><SmallMetric label="Comisión" value={formatMoney(event.confirmed_commission, event.currency)} accent/></div>
           </Link>
           {event.relation_status === "active" && <div className="border-t border-white/[.07] p-4 sm:px-6"><ShareLinkButtons url={publicLink} shareLabel="Compartir mi link"/></div>}
         </article>;

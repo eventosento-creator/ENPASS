@@ -275,7 +275,7 @@ select is(
   'duplication keeps active EventPromoters when selected'
 );
 select is(
-  (select count(*) from public.promoter_commission_rules r join public.events e on e.id = r.event_id where e.slug = 'noche-2000-copia-test'),
+  (select count(*) from public.promoter_commission_rules r join public.events e on e.id = r.event_id where e.slug = 'noche-2000-copia-test' and r.subject_type = 'ticket'),
   4::bigint,
   'duplication maps general and TicketType-specific rules'
 );

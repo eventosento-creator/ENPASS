@@ -9,7 +9,7 @@ import { formatMoney } from "@/shared/lib/format";
 type PublicTicketType = Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean };
 export function TicketSelector({ eventSlug, ticketTypes }: { eventSlug: string; ticketTypes: PublicTicketType[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const selected = useMemo<Array<{ ticket_type_id: string; quantity: number }>>(() => ticketTypes.flatMap(t => quantities[t.id] ? [{ ticket_type_id: t.id, quantity: quantities[t.id]! }] : []), [quantities, ticketTypes]);
+  const selected = useMemo<Array<{ item_type: "ticket"; item_id: string; quantity: number }>>(() => ticketTypes.flatMap(t => quantities[t.id] ? [{ item_type: "ticket" as const, item_id: t.id, quantity: quantities[t.id]! }] : []), [quantities, ticketTypes]);
   const total = ticketTypes.reduce((sum, t) => sum + t.price_amount * (quantities[t.id] ?? 0), 0);
   function change(type: PublicTicketType, delta: number) { if (!type.sale_open) return; setQuantities(q => ({ ...q, [type.id]: Math.max(0, Math.min(type.max_per_order, type.available_quantity, (q[type.id] ?? 0) + delta)) })); }
   const ticketCount = selected.reduce((sum, item) => sum + item.quantity, 0);

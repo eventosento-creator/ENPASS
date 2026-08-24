@@ -130,6 +130,38 @@ export async function upsertPromoterCommissionRule(
   return { success: "Comisión actualizada. Las ventas anteriores conservan su valor." };
 }
 
+const tableCommissionRuleSchema = z.object({
+  eventId: z.uuid(),
+  eventPromoterId: z.uuid(),
+  eventTableId: z.union([z.literal(""), z.uuid()]).default(""),
+  commissionType: z.enum(["fixed_per_ticket", "percentage"]),
+  commissionValue: z.coerce.number().positive().max(1_000_000),
+});
+
+export async function upsertPromoterTableCommissionRule(
+  _: PromoterActionState,
+  formData: FormData,
+): Promise<PromoterActionState> {
+  const parsed = tableCommissionRuleSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el tipo y valor de comisión de mesa." };
+  let storedValue: number;
+  try {
+    storedValue = commissionValueFromDisplay(parsed.data.commissionType, parsed.data.commissionValue);
+  } catch {
+    return { error: "La comisión no es válida." };
+  }
+  const { error } = await (await createClient()).rpc("upsert_promoter_table_commission_rule", {
+    target_event_promoter: parsed.data.eventPromoterId,
+    target_event_table: parsed.data.eventTableId || null,
+    target_commission_type: parsed.data.commissionType,
+    target_commission_value: storedValue,
+  });
+  if (error) return { error: "No pudimos actualizar la comisión de mesas." };
+  revalidatePath(`/app/events/${parsed.data.eventId}/promoters`);
+  revalidatePath(`/app/events/${parsed.data.eventId}/promoters/${parsed.data.eventPromoterId}`);
+  return { success: "Comisión de mesas actualizada. Las ventas anteriores conservan su valor." };
+}
+
 export async function setEventPromoterStatus(formData: FormData) {
   const eventId = formData.get("eventId");
   const eventPromoterId = formData.get("eventPromoterId");

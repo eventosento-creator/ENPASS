@@ -2,7 +2,7 @@ import "server-only";
 
 import QRCode from "qrcode";
 import { createAdminClient } from "@/shared/database/admin";
-import type { Event, Order, Ticket, TicketStatus, TicketType, Venue } from "@/shared/database/types";
+import type { Event, EventTable, Order, Ticket, TicketStatus, TicketType, Venue } from "@/shared/database/types";
 import { hashOpaqueToken } from "../domain/credentials";
 import { decryptTicketToken } from "../infrastructure/ticket-cipher";
 
@@ -20,6 +20,8 @@ export type TicketPresentation = {
   venueAddress: string;
   sector: string | null;
   maxEntries: number;
+  usedEntries: number;
+  credentialKind: "ticket" | "table";
   qrSvg: string | null;
 };
 
@@ -45,30 +47,35 @@ async function hydrateTicketPresentations(tickets: Ticket[]) {
   if (tickets.length === 0) return [];
   const admin = createAdminClient();
   const eventIds = unique(tickets.map((ticket) => ticket.event_id));
-  const typeIds = unique(tickets.map((ticket) => ticket.ticket_type_id));
+  const typeIds = unique(tickets.flatMap((ticket) => ticket.ticket_type_id ? [ticket.ticket_type_id] : []));
+  const tableIds = unique(tickets.flatMap((ticket) => ticket.event_table_id ? [ticket.event_table_id] : []));
   const orderIds = unique(tickets.map((ticket) => ticket.order_id));
-  const [{ data: eventsData }, { data: typesData }, { data: ordersData }] = await Promise.all([
+  const [{ data: eventsData }, { data: typesData }, { data: tablesData }, { data: ordersData }] = await Promise.all([
     admin.from("events").select("*").in("id", eventIds),
     admin.from("ticket_types").select("*").in("id", typeIds),
+    admin.from("event_tables").select("*").in("id", tableIds),
     admin.from("orders").select("*").in("id", orderIds),
   ]);
   const events = (eventsData ?? []) as Event[];
   const types = (typesData ?? []) as TicketType[];
+  const tables = (tablesData ?? []) as EventTable[];
   const orders = (ordersData ?? []) as Order[];
   const venueIds = unique(events.map((event) => event.venue_id));
   const { data: venuesData } = await admin.from("venues").select("*").in("id", venueIds);
   const venues = (venuesData ?? []) as Venue[];
   const eventById = new Map(events.map((event) => [event.id, event]));
   const typeById = new Map(types.map((type) => [type.id, type]));
+  const tableById = new Map(tables.map((table) => [table.id, table]));
   const venueById = new Map(venues.map((venue) => [venue.id, venue]));
   const orderById = new Map(orders.map((order) => [order.id, order]));
 
   const presentations = await Promise.all(tickets.map(async (ticket): Promise<TicketPresentation | null> => {
     const event = eventById.get(ticket.event_id);
-    const ticketType = typeById.get(ticket.ticket_type_id);
+    const ticketType = ticket.ticket_type_id ? typeById.get(ticket.ticket_type_id) : undefined;
+    const eventTable = ticket.event_table_id ? tableById.get(ticket.event_table_id) : undefined;
     const order = orderById.get(ticket.order_id);
     const venue = event ? venueById.get(event.venue_id) : undefined;
-    if (!event || !ticketType || !venue || !order) return null;
+    if (!event || (!ticketType && !eventTable) || !venue || !order) return null;
 
     let qrSvg: string | null = null;
     if (ticket.status === "valid" && order.status === "paid") {
@@ -87,7 +94,7 @@ async function hydrateTicketPresentations(tickets: Ticket[]) {
       shortCode: ticket.short_code,
       status: order.status === "refunded" ? "refunded" : ticket.status,
       holderName: `${ticket.holder_first_name} ${ticket.holder_last_name}`.trim(),
-      ticketTypeName: ticketType.name,
+      ticketTypeName: ticketType?.name ?? eventTable!.name,
       eventName: event.name,
       eventSlug: event.slug,
       eventCoverUrl: event.cover_image_url,
@@ -97,6 +104,8 @@ async function hydrateTicketPresentations(tickets: Ticket[]) {
       venueAddress: `${venue.address}, ${venue.city}`,
       sector: ticket.sector,
       maxEntries: ticket.max_entries,
+      usedEntries: ticket.used_entries,
+      credentialKind: eventTable ? "table" : "ticket",
       qrSvg,
     };
   }));

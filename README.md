@@ -1,8 +1,8 @@
 # Nightlife OS
 
-Aplicación local de gestión, venta y acceso a eventos. FASE 4 incorpora RRPP, atribución de ventas y comisiones sobre la arquitectura funcional de FASE 0–3.5.
+Aplicación de gestión, venta y acceso a eventos. FASE 5 incorpora mesas, acceso grupal y beneficios sobre la arquitectura funcional de FASE 0–4.
 
-No hay deployment ni conexión a infraestructura productiva.
+Local es el entorno reproducible principal. El entorno remoto documentado es exclusivamente staging/beta; no hay infraestructura productiva ni dinero real.
 
 ## Requisitos
 
@@ -76,6 +76,9 @@ SMTP_FROM
 - PIN scanner local: `320000`
 - PIN supervisor local: `320001`
 - RRPP demo: Lucas, Martina y Agus
+- Sectores demo: VIP y Terraza
+- Mesas demo: disponible, reservada temporalmente, vendida y deshabilitada
+- Order mesa pagada: `e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e501`
 - Link público Lucas: `http://127.0.0.1:3000/e/noche-2000/lucas`
 - Acceso RRPP Lucas, de un uso después de cada reset: `http://127.0.0.1:3000/promoter/access?token=LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL`
 
@@ -93,10 +96,12 @@ El correo local para magic links se inspecciona en <http://127.0.0.1:56324>.
 - Scanner operativo: <http://localhost:3000/scan>
 - Gestión de accesos demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/access>
 - Gestión RRPP demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/promoters>
+- Gestión de mesas demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/tables>
 - Link RRPP público: <http://localhost:3000/e/noche-2000/lucas>
 - Panel RRPP: <http://localhost:3000/promoter>
 - QR locales de prueba: <http://localhost:3000/dev/qr>
 - Order pagada demo: <http://127.0.0.1:3000/order/2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b>
+- Order de mesa pagada demo: <http://127.0.0.1:3000/order/e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e501>
 - Mailpit: <http://127.0.0.1:56324>
 - Retorno de pago: `/payment/return` (lo construye Mercado Pago)
 - Webhook: `/api/webhooks/mercadopago`
@@ -166,8 +171,16 @@ Mercado Pago no acepta `localhost` para todas las URLs externas. El túnel se us
 - Snapshots históricos por OrderItem, redondeo half-up, confirmación idempotente al pagar, lazy recovery y refund total.
 - Ranking y detalle Producer sin N+1, métricas directas vs RRPP y duplicación de Event con Promoters/reglas opcionales.
 - Invitación RRPP passwordless de un uso, sesión revocable de 30 días y panel mobile-first multi-evento sin datos de compradores.
+- Sectores y mesas físicas con nombre libre, capacidad, precio, fee opcional, Gate y beneficios configurables.
+- Un único checkout para Ticket y Table OrderItems, con hold exclusivo de diez minutos y capacidad combinada del Event.
+- Estado available/held/sold derivado, constraint de ocupación física y prueba de dos compradores concurrentes con un solo ganador.
+- Credencial grupal única por mesa, `max_entries` derivado de capacidad y scanner 1..N con cupo completo en N+1.
+- Entitlements genéricos para acceso, bebidas, productos futuros y beneficios sin acoplar FASE 5 al POS.
+- Comisión de mesa fija o porcentual sobre precio base, con atribución, snapshots, retries y refund compartidos con Ticketing.
+- Refund de mesa sin uso libera inventario; después de uso queda en revisión y no se revende automáticamente.
+- Duplicación opcional de zones, mesas y templates sin copiar holds, ventas, compradores ni uso.
 
-Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md), [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md) y [docs/promoters-phase-4.md](docs/promoters-phase-4.md).
+Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md), [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md), [docs/promoters-phase-4.md](docs/promoters-phase-4.md), [docs/tables-phase-5.md](docs/tables-phase-5.md) y [docs/staging-deployment.md](docs/staging-deployment.md).
 
 ## Verificación
 
@@ -181,10 +194,10 @@ npx supabase db lint --local --schema public --level warning --fail-on warning
 npm run build
 ```
 
-Los 54 tests unitarios cubren fees, estados, dinero, cifrado, QR, scanner y cálculo de comisiones. Los 154 pgTAP incluyen 46 casos de atribución, comisiones, sesión RRPP, RLS y duplicación. `test:concurrency` dispara dos RPC paralelas y exige exactamente un `valid` y un `already_used`.
+La suite unitaria cubre fees, estados, dinero, cifrado, QR, scanner, comisiones y validación de mesas. Los 212 pgTAP incluyen 58 casos de FASE 5 para inventario, acceso grupal, beneficios, refunds, RRPP, RLS y duplicación. `test:concurrency` valida tanto check-in atómico como dos compradores intentando la misma mesa.
 
 ## Límite actual
 
-El flujo local controlado termina en `Ticket emitido + ScannerSession autorizada + Checkin atómico + RRPP atribuido/comisión confirmada`. No existe botón público para marcar una Order pagada.
+El flujo controlado termina en `Ticket o mesa emitida + ScannerSession autorizada + Checkin atómico + RRPP atribuido/comisión confirmada`. No existe botón público para marcar una Order pagada.
 
-No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, payouts/settlements RRPP, atribución cross-device, POS, mesas, inventory general, Wallet/PDF ni producción. El refund parcial todavía no distribuye comisión por unidad. La validación end-to-end con Mercado Pago sandbox continúa pendiente por falta de credenciales/túnel; no se declara completa hasta ejecutar ese recorrido real.
+No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, payouts/settlements RRPP, atribución cross-device, plano visual de mesas, canje de beneficios, POS, inventory general, Wallet/PDF ni producción. El refund parcial todavía no distribuye comisión por unidad. La validación end-to-end con Mercado Pago sandbox y teléfono físico no se declara completa hasta ejecutar esos recorridos sobre staging HTTPS.

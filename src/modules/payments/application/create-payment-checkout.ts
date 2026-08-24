@@ -52,7 +52,7 @@ export async function createPaymentCheckout(orderPublicId: string) {
       orderPublicId: order.public_id,
       eventName: event.name,
       items: items.map((item) => ({
-        id: item.ticket_type_id,
+        id: item.ticket_type_id ?? item.event_table_id ?? item.id,
         name: `${event.name} · ${item.item_name}`,
         quantity: item.quantity,
         unitAmount: item.unit_price_amount,

@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Organization = {
   id: string; name: string; slug: string; default_currency: string;
   service_fee_bps: number; fee_payer: "buyer" | "producer" | "mixed";
-  platform_fee_bps: number;
+  platform_fee_bps: number; table_service_fee_bps: number | null;
 };
 export type Venue = {
   id: string; organization_id: string; name: string; address: string; city: string;
@@ -20,6 +20,31 @@ export type TicketType = {
   id: string; organization_id: string; event_id: string; sale_phase_id: string | null; name: string; description: string;
   price_amount: number; currency: string; quantity: number; max_per_order: number;
   sales_start: string | null; sales_end: string | null; active: boolean; publicly_available: boolean; sort_order: number;
+};
+
+export type TableZone = {
+  id: string; organization_id: string; event_id: string; name: string; description: string;
+  sort_order: number; active: boolean; created_at: string; updated_at: string;
+};
+
+export type EventTable = {
+  id: string; organization_id: string; event_id: string; table_zone_id: string;
+  access_gate_id: string | null; name: string; description: string; capacity: number;
+  base_price_amount: number; currency: string; service_fee_bps: number | null;
+  active: boolean; sort_order: number; created_at: string; updated_at: string;
+};
+
+export type TableEntitlementTemplate = {
+  id: string; organization_id: string; event_id: string; event_table_id: string;
+  entitlement_type: "product" | "drink" | "generic"; reference_id: string | null;
+  name: string; quantity: number; metadata: Json; sort_order: number;
+  created_at: string; updated_at: string;
+};
+
+export type TableHold = {
+  id: string; organization_id: string; event_id: string; event_table_id: string;
+  order_id: string; status: "active" | "consumed" | "expired" | "cancelled" | "refund_review";
+  expires_at: string; created_at: string; updated_at: string;
 };
 
 export type OrderStatus = "pending" | "paid" | "expired" | "cancelled" | "refunded";
@@ -72,7 +97,9 @@ export type OrderItem = {
   id: string;
   organization_id: string;
   order_id: string;
-  ticket_type_id: string;
+  item_type: "ticket" | "table";
+  ticket_type_id: string | null;
+  event_table_id: string | null;
   item_name: string;
   quantity: number;
   unit_price_amount: number;
@@ -117,6 +144,8 @@ export type PromoterCommissionRule = {
   event_id: string;
   event_promoter_id: string;
   ticket_type_id: string | null;
+  subject_type: "ticket" | "table";
+  event_table_id: string | null;
   commission_type: PromoterCommissionType;
   commission_value: number;
   currency: string;
@@ -135,6 +164,8 @@ export type PromoterCommission = {
   order_item_id: string;
   ticket_id: string | null;
   commission_rule_id: string | null;
+  subject_type: "ticket" | "table";
+  event_table_id: string | null;
   commission_type: PromoterCommissionType;
   commission_value: number;
   base_amount: number;
@@ -228,7 +259,8 @@ export type Ticket = {
   event_id: string;
   order_id: string;
   order_item_id: string;
-  ticket_type_id: string;
+  ticket_type_id: string | null;
+  event_table_id: string | null;
   customer_id: string;
   unit_index: number;
   status: TicketStatus;
@@ -350,6 +382,11 @@ export interface Database {
       events: { Row: Event; Insert: Omit<Event, "id" | "published_at"> & { id?: string; published_at?: string | null; created_by: string }; Update: Partial<Event>; Relationships: [] };
       sale_phases: { Row: { id: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out: boolean }; Insert: { id?: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out?: boolean }; Update: { name?: string; sort_order?: number; activate_next_when_sold_out?: boolean }; Relationships: [] };
       ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available"> & { id?: string; publicly_available?: boolean }; Update: Partial<TicketType>; Relationships: [] };
+      table_zones: { Row: TableZone; Insert: never; Update: never; Relationships: [] };
+      event_tables: { Row: EventTable; Insert: never; Update: never; Relationships: [] };
+      table_entitlement_templates: { Row: TableEntitlementTemplate; Insert: never; Update: never; Relationships: [] };
+      table_holds: { Row: TableHold; Insert: never; Update: never; Relationships: [] };
+      entitlements: { Row: { id: string; organization_id: string; event_id: string; order_id: string; order_item_id: string; event_table_id: string; template_id: string | null; entitlement_type: "access" | "product" | "drink" | "generic"; reference_id: string | null; name: string; quantity: number; redeemed_quantity: number; status: "active" | "partially_redeemed" | "redeemed" | "revoked"; metadata: Json; issued_at: string; revoked_at: string | null; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       ticket_holds: { Row: { id: string; organization_id: string; event_id: string; ticket_type_id: string; order_id: string; quantity: number; status: "active" | "consumed" | "expired" | "cancelled"; expires_at: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       customers: { Row: Customer; Insert: Omit<Customer, "id" | "created_at"> & { id?: string; created_at?: string }; Update: Partial<Customer>; Relationships: [] };
       orders: { Row: Order; Insert: never; Update: never; Relationships: [] };
@@ -388,6 +425,10 @@ export interface Database {
       create_guest_checkout_attributed: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; target_attribution_session_hash: string | null }; Returns: { order_public_id: string; expires_at: string }[] };
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };
       get_public_ticket_types: { Args: { target_event: string }; Returns: (Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean })[] };
+      get_public_event_tables: { Args: { target_event: string }; Returns: { id: string; event_id: string; table_zone_id: string; zone_name: string; name: string; description: string; capacity: number; base_price_amount: number; currency: string; service_fee_bps: number; sort_order: number; availability_status: "available" | "held" | "sold"; benefits: Json }[] };
+      create_table_zone: { Args: { target_event: string; target_name: string; target_description?: string }; Returns: string };
+      create_event_table: { Args: { target_event: string; target_zone: string; target_name: string; target_description: string; target_capacity: number; target_base_price_amount: number; target_currency: string; target_service_fee_bps: number | null; target_access_gate: string | null; target_benefits: Json }; Returns: string };
+      set_event_table_active: { Args: { target_table: string; target_active: boolean }; Returns: undefined };
       get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean }[] };
       get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean }[] };
       disconnect_payment_account: { Args: { target_organization: string }; Returns: undefined };
@@ -405,6 +446,7 @@ export interface Database {
       revoke_buyer_session: { Args: { target_session_hash: string }; Returns: undefined };
       cancel_ticket: { Args: { target_ticket: string }; Returns: undefined };
       get_event_ticket_metrics: { Args: { target_event: string }; Returns: { tickets_issued: number; paid_orders: number; delivery_failures: number }[] };
+      get_event_table_metrics: { Args: { target_event: string }; Returns: { sold_tables: number; total_tables: number; table_revenue: number; held_tables: number; currency: string }[] };
       get_event_ticket_sales: { Args: { target_event: string }; Returns: { order_id: string; order_public_id: string; buyer_name: string; buyer_email: string; order_status: OrderStatus; total_amount: number; currency: string; ticket_count: number; ticket_names: string; delivery_status: TicketDeliveryStatus | null; created_at: string }[] };
       create_access_gate: { Args: { target_event: string; gate_name: string; gate_description: string; accepted_ticket_types: string[] }; Returns: string };
       update_access_gate: { Args: { target_gate: string; gate_name: string; gate_description: string; gate_active: boolean; accepted_ticket_types: string[] }; Returns: undefined };
@@ -424,6 +466,7 @@ export interface Database {
       update_event_promoter: { Args: { target_event_promoter: string; promoter_first_name: string; promoter_last_name: string; promoter_email: string; promoter_phone: string; promoter_instagram: string; target_public_slug: string }; Returns: undefined };
       set_event_promoter_status: { Args: { target_event_promoter: string; target_status: EventPromoterStatus }; Returns: undefined };
       upsert_promoter_commission_rule: { Args: { target_event_promoter: string; target_ticket_type: string | null; target_commission_type: PromoterCommissionType; target_commission_value: number }; Returns: string };
+      upsert_promoter_table_commission_rule: { Args: { target_event_promoter: string; target_event_table: string | null; target_commission_type: PromoterCommissionType; target_commission_value: number }; Returns: string };
       create_promoter_access_token: { Args: { target_event_promoter: string; target_token_hash: string; target_expires_at: string }; Returns: string };
       exchange_promoter_access_token: { Args: { target_token_hash: string; target_session_hash: string; target_session_expires_at: string }; Returns: boolean };
       get_promoter_session: { Args: { target_session_hash: string }; Returns: { promoter_id: string; organization_id: string; display_name: string; expires_at: string }[] };
@@ -435,10 +478,14 @@ export interface Database {
       reconcile_promoter_session_commissions: { Args: { target_session_hash: string }; Returns: number };
       get_event_promoter_metrics: { Args: { target_event: string }; Returns: { event_promoter_id: string; promoter_id: string; display_name: string; public_slug: string; status: EventPromoterStatus; tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; paid_orders: number; currency: string }[] };
       get_event_attribution_metrics: { Args: { target_event: string }; Returns: { promoter_ticket_revenue: number; direct_ticket_revenue: number; promoter_tickets: number }[] };
+      get_event_promoter_table_metrics: { Args: { target_event: string }; Returns: { event_promoter_id: string; tables_sold: number; table_revenue: number }[] };
+      get_event_table_attribution_metrics: { Args: { target_event: string }; Returns: { promoter_table_revenue: number; direct_table_revenue: number; promoter_tables: number }[] };
       get_event_promoter_detail: { Args: { target_event_promoter: string }; Returns: { tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; ticket_breakdown: Json; recent_sales: Json; currency: string }[] };
       get_promoter_dashboard: { Args: { target_session_hash: string }; Returns: { event_promoter_id: string; event_id: string; event_name: string; event_slug: string; event_starts_at: string; event_timezone: string; public_slug: string; relation_status: EventPromoterStatus; tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; currency: string }[] };
+      get_promoter_table_dashboard: { Args: { target_session_hash: string }; Returns: { event_promoter_id: string; tables_sold: number; table_revenue: number }[] };
       get_promoter_event_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { event_promoter_id: string; event_name: string; event_slug: string; event_starts_at: string; event_timezone: string; public_slug: string; relation_status: EventPromoterStatus; tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; ticket_breakdown: Json; recent_sales: Json; currency: string }[] };
-      duplicate_event_with_options: { Args: { target_event: string; target_name: string; target_slug: string; target_starts_at: string; preserve_promoters: boolean }; Returns: string };
+      get_promoter_event_table_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { tables_sold: number; table_revenue: number; table_breakdown: Json }[] };
+      duplicate_event_with_options: { Args: { target_event: string; target_name: string; target_slug: string; target_starts_at: string; preserve_promoters: boolean; preserve_tables: boolean }; Returns: string };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
