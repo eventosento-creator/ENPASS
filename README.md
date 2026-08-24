@@ -1,6 +1,6 @@
 # Nightlife OS
 
-Aplicación local de gestión y venta de entradas. FASE 2B agrega emisión individual de Tickets, QR seguros, experiencia “Mis entradas” guest-first y entrega local por email sobre el dominio de pagos de FASE 2A.
+Aplicación local de gestión, venta y acceso a eventos. FASE 3 agrega puertas, dispositivos scanner y check-in atómico sobre los Tickets seguros de FASE 2B.
 
 No hay deployment ni conexión a infraestructura productiva.
 
@@ -19,10 +19,10 @@ npm install
 npx supabase start
 npx supabase db reset --local
 cp .env.example .env.local
-npm run dev -- --hostname 127.0.0.1
+npm run dev
 ```
 
-Abrir <http://127.0.0.1:3000>. Supabase Local aplica todas las migrations y el seed con `db reset`.
+Abrir <http://localhost:3000>. Supabase Local aplica todas las migrations y el seed con `db reset`. Para usar la cámara abrir `/scan` mediante `localhost` o HTTPS.
 
 Después de `supabase start`, copiar su `PUBLISHABLE_KEY` y `SERVICE_ROLE_KEY` exclusivamente locales a `.env.local`. La API local versionada usa `http://127.0.0.1:56321`. Generar la clave de cifrado local con:
 
@@ -73,18 +73,23 @@ SMTP_FROM
 - Evento borrador: Fecha en preparación
 - Buyer fixture: `buyer@nightlife.local`
 - Order local pagada: `2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b`
+- PIN scanner local: `320000`
+- PIN supervisor local: `320001`
 
 El correo local para magic links se inspecciona en <http://127.0.0.1:56324>.
 
 ## URLs
 
-- Aplicación: <http://127.0.0.1:3000>
+- Aplicación: <http://localhost:3000>
 - Login Producer: <http://127.0.0.1:3000/login>
 - Dashboard: <http://127.0.0.1:3000/app>
 - Pagos Producer: <http://127.0.0.1:3000/app/settings>
 - Catálogo: <http://127.0.0.1:3000/eventos>
 - Evento: <http://127.0.0.1:3000/e/noche-2000>
 - Mis entradas: <http://127.0.0.1:3000/mis-entradas>
+- Scanner operativo: <http://localhost:3000/scan>
+- Gestión de accesos demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/access>
+- QR locales de prueba: <http://localhost:3000/dev/qr>
 - Order pagada demo: <http://127.0.0.1:3000/order/2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b>
 - Mailpit: <http://127.0.0.1:56324>
 - Retorno de pago: `/payment/return` (lo construye Mercado Pago)
@@ -140,8 +145,16 @@ Mercado Pago no acepta `localhost` para todas las URLs externas. El túnel se us
 - `EmailProvider` desacoplado, implementación SMTP local, delivery log y reenvío producer.
 - Refund total invalida Tickets; cancelación administrativa autorizada preparada.
 - Producer ve ventas pagadas, cantidad/tipos emitidos y estado de entrega dentro del evento.
+- Access Gates normalizadas por Event y TicketType, con activación/desactivación y aislamiento por Organization.
+- PIN temporal bcrypt de seis dígitos, un uso, rate limit y ScannerSession revocable en cookie HttpOnly separada.
+- `/scan` mobile-first con cámara local, cámara trasera, pausa entre lecturas, linterna compatible, sonido/vibración configurables y bloqueo offline explícito.
+- RPC de check-in atómica con locks de sesión/Ticket, idempotencia, `max_entries`, ventanas, status y reglas de puerta.
+- Resultados operativos de pantalla completa y debounce contra dobles lecturas.
+- Supervisor separado para códigos cortos y excepciones auditadas; scanners normales no reciben ese permiso.
+- Dashboard de accesos con métricas, dispositivos activos y últimos ingresos por polling de cuatro segundos.
+- Seed y galería local para válido, utilizado, reembolsado, cancelado, VIP, fuera de horario, multi-ingreso y otro Event.
 
-Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md) y [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md).
+Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md) y [docs/access-phase-3.md](docs/access-phase-3.md).
 
 ## Verificación
 
@@ -150,14 +163,15 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:db
-npx supabase db lint --local
+npm run test:concurrency
+npx supabase db lint --local --schema public --level warning --fail-on warning
 npm run build
 ```
 
-Los tests unitarios cubren fees, estados, dinero, cifrado de credenciales y Ticket, formato/unicidad QR y política anti-enumeración. pgTAP cubre pagos/holds y además emisión exacta, retries, múltiples tipos, paid requirement, magic links, tenant isolation, cancelación y refund.
+Los 47 tests unitarios cubren fees, estados, dinero, cifrado, QR y presentación del scanner. Los 108 pgTAP incluyen 37 casos de acceso/RLS. `test:concurrency` dispara dos RPC paralelas y exige exactamente un `valid` y un `already_used`.
 
 ## Límite actual
 
-El flujo local controlado termina en `Order paid + Tickets emitidos + email en Mailpit + QR visible`. No existe botón público para marcar una Order pagada.
+El flujo local controlado termina en `Ticket emitido + ScannerSession autorizada + Checkin atómico`. No existe botón público para marcar una Order pagada.
 
-No se implementan Scanner, Access Gates, Device Authorization, check-in atómico, ingresos en tiempo real, RRPP, POS, mesas, inventory general, Wallet/PDF ni producción. La validación end-to-end con Mercado Pago sandbox continúa pendiente por falta de credenciales/túnel; no se declara completa hasta ejecutar ese recorrido real.
+No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, RRPP, POS, mesas, inventory general, Wallet/PDF ni producción. La validación end-to-end con Mercado Pago sandbox continúa pendiente por falta de credenciales/túnel; no se declara completa hasta ejecutar ese recorrido real.

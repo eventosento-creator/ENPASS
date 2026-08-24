@@ -148,6 +148,9 @@ export type WebhookEvent = {
 
 export type TicketStatus = "valid" | "cancelled" | "refunded";
 export type TicketDeliveryStatus = "pending" | "processing" | "sent" | "failed";
+export type ScannerPermission = "scanner" | "supervisor";
+export type CheckInResult = "valid" | "already_used" | "invalid" | "wrong_event" | "wrong_gate" | "too_early" | "too_late" | "cancelled" | "refunded" | "expired" | "device_not_authorized" | "rate_limited";
+export type CheckInSource = "qr" | "manual";
 
 export type Ticket = {
   id: string;
@@ -194,6 +197,79 @@ export type TicketDelivery = {
   updated_at: string;
 };
 
+export type AccessGate = {
+  id: string;
+  organization_id: string;
+  event_id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AccessGateTicketType = {
+  access_gate_id: string;
+  ticket_type_id: string;
+  organization_id: string;
+  event_id: string;
+  created_at: string;
+};
+
+export type ScannerDeviceAuthorization = {
+  id: string;
+  organization_id: string;
+  event_id: string;
+  access_gate_id: string;
+  label: string;
+  permission: ScannerPermission;
+  pin_hash: string | null;
+  code_expires_at: string;
+  session_expires_at: string;
+  activation_count: number;
+  activated_at: string | null;
+  revoked_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScannerSession = {
+  id: string;
+  authorization_id: string;
+  organization_id: string;
+  event_id: string;
+  access_gate_id: string;
+  permission: ScannerPermission;
+  session_token_hash: string;
+  expires_at: string;
+  last_seen_at: string;
+  scan_window_started_at: string;
+  scan_attempts: number;
+  manual_window_started_at: string;
+  manual_attempts: number;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+export type CheckIn = {
+  id: string;
+  organization_id: string | null;
+  event_id: string | null;
+  ticket_id: string | null;
+  access_gate_id: string | null;
+  scanner_session_id: string | null;
+  result: CheckInResult;
+  source: CheckInSource;
+  entry_number: number | null;
+  idempotency_key: string;
+  override: boolean;
+  override_by_scanner_session_id: string | null;
+  override_of_checkin_id: string | null;
+  override_reason: "wrong_gate" | "outside_window" | "manual_code" | "supervisor_exception" | null;
+  scanned_at: string;
+};
+
 // Only the subset currently consumed by the application is declared here.
 export interface Database {
   public: {
@@ -217,6 +293,12 @@ export interface Database {
       buyer_access_token_customers: { Row: { access_token_id: string; customer_id: string }; Insert: never; Update: never; Relationships: [] };
       buyer_sessions: { Row: { id: string; session_hash: string; expires_at: string; last_used_at: string; revoked_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       buyer_session_customers: { Row: { buyer_session_id: string; customer_id: string }; Insert: never; Update: never; Relationships: [] };
+      access_gates: { Row: AccessGate; Insert: never; Update: never; Relationships: [] };
+      access_gate_ticket_types: { Row: AccessGateTicketType; Insert: never; Update: never; Relationships: [] };
+      scanner_device_authorizations: { Row: ScannerDeviceAuthorization; Insert: never; Update: never; Relationships: [] };
+      scanner_sessions: { Row: ScannerSession; Insert: never; Update: never; Relationships: [] };
+      scanner_activation_rate_limits: { Row: { fingerprint_hash: string; window_started_at: string; failed_attempts: number; blocked_until: string | null; updated_at: string }; Insert: never; Update: never; Relationships: [] };
+      checkins: { Row: CheckIn; Insert: never; Update: never; Relationships: [] };
       audit_logs: { Row: { id: number; organization_id: string; actor_user_id: string | null; action: string; entity_type: string; entity_id: string | null; before_data: Json | null; after_data: Json | null; created_at: string }; Insert: { organization_id: string; actor_user_id?: string | null; action: string; entity_type: string; entity_id?: string | null; before_data?: Json | null; after_data?: Json | null; created_at?: string }; Update: never; Relationships: [] };
     };
     Views: Record<string, never>;
@@ -244,6 +326,20 @@ export interface Database {
       cancel_ticket: { Args: { target_ticket: string }; Returns: undefined };
       get_event_ticket_metrics: { Args: { target_event: string }; Returns: { tickets_issued: number; paid_orders: number; delivery_failures: number }[] };
       get_event_ticket_sales: { Args: { target_event: string }; Returns: { order_id: string; order_public_id: string; buyer_name: string; buyer_email: string; order_status: OrderStatus; total_amount: number; currency: string; ticket_count: number; ticket_names: string; delivery_status: TicketDeliveryStatus | null; created_at: string }[] };
+      create_access_gate: { Args: { target_event: string; gate_name: string; gate_description: string; accepted_ticket_types: string[] }; Returns: string };
+      update_access_gate: { Args: { target_gate: string; gate_name: string; gate_description: string; gate_active: boolean; accepted_ticket_types: string[] }; Returns: undefined };
+      create_scanner_authorization: { Args: { target_event: string; target_gate: string; device_label: string; target_permission: ScannerPermission; target_pin: string; target_code_expires_at: string; target_session_expires_at: string }; Returns: string };
+      revoke_scanner_authorization: { Args: { target_authorization: string }; Returns: undefined };
+      activate_scanner_device: { Args: { target_pin: string; target_session_hash: string; target_fingerprint_hash: string }; Returns: { activation_status: string; scanner_session_id: string | null; event_id: string | null; event_name: string | null; gate_id: string | null; gate_name: string | null; permission: ScannerPermission | null; event_timezone: string | null; expires_at: string | null; retry_after_seconds: number }[] };
+      get_scanner_session: { Args: { target_session_hash: string }; Returns: { scanner_session_id: string; event_id: string; event_name: string; gate_id: string; gate_name: string; permission: ScannerPermission; event_timezone: string; expires_at: string }[] };
+      revoke_scanner_session: { Args: { target_session: string }; Returns: undefined };
+      revoke_current_scanner_session: { Args: { target_session_hash: string }; Returns: undefined };
+      check_in_ticket: { Args: { target_session_hash: string; target_qr_hash: string; target_idempotency_key: string }; Returns: { result: CheckInResult; checkin_id: string | null; ticket_id: string | null; holder_name: string | null; ticket_type_name: string | null; sector: string | null; short_code: string | null; used_entries: number | null; max_entries: number | null; first_used_at: string | null; first_used_gate_name: string | null; valid_from: string | null; valid_until: string | null; suggested_gate_name: string | null; scanned_at: string }[] };
+      supervisor_override_checkin: { Args: { target_session_hash: string; target_checkin: string; target_reason: "wrong_gate" | "outside_window" | "supervisor_exception"; target_idempotency_key: string }; Returns: Json };
+      get_supervisor_ticket_preview: { Args: { target_session_hash: string; target_short_code: string }; Returns: Json };
+      supervisor_manual_checkin: { Args: { target_session_hash: string; target_short_code: string; target_idempotency_key: string }; Returns: Json };
+      get_event_access_metrics: { Args: { target_event: string }; Returns: { entries_today: number; valid_scans_today: number; duplicate_scans_today: number; rejected_scans_today: number; active_devices: number }[] };
+      get_event_recent_checkins: { Args: { target_event: string; result_limit?: number }; Returns: { checkin_id: string; result: CheckInResult; gate_name: string | null; device_label: string | null; ticket_type_name: string | null; holder_name: string | null; short_code: string | null; entry_number: number | null; override: boolean; source: CheckInSource; scanned_at: string }[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

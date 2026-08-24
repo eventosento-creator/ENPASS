@@ -152,3 +152,146 @@ insert into public.ticket_holds (
     '2b000000-0000-4000-8000-000000000002', 1, 'consumed', now() + interval '10 minutes'
   )
 on conflict (id) do nothing;
+
+-- FASE 3 local access fixtures. These deterministic credentials are intentionally
+-- development-only and are exposed exclusively by /dev/qr outside production.
+insert into public.access_gates (id, organization_id, event_id, name, description, active)
+values
+  (
+    'a3000000-0000-4000-8000-000000000001',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'Acceso principal', 'Ingreso general por Av. España', true
+  ),
+  (
+    'a3000000-0000-4000-8000-000000000002',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'Acceso VIP', 'Ingreso preferencial', true
+  )
+on conflict (id) do nothing;
+
+insert into public.access_gate_ticket_types (access_gate_id, ticket_type_id, organization_id, event_id)
+values
+  ('a3000000-0000-4000-8000-000000000001', '55555555-5555-4555-8555-555555555551', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444'),
+  ('a3000000-0000-4000-8000-000000000001', '55555555-5555-4555-8555-555555555553', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444'),
+  ('a3000000-0000-4000-8000-000000000002', '55555555-5555-4555-8555-555555555552', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444')
+on conflict do nothing;
+
+-- Local PINs: scanner 320000, supervisor 320001. A reset renews their 60-minute window.
+insert into public.scanner_device_authorizations (
+  id, organization_id, event_id, access_gate_id, label, permission, pin_hash,
+  code_expires_at, session_expires_at, created_by
+) values
+  (
+    'a3000000-0000-4000-8000-000000000011',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'a3000000-0000-4000-8000-000000000001',
+    'Scanner puerta 1', 'scanner', extensions.crypt('320000', extensions.gen_salt('bf', 10)),
+    now() + interval '1 hour',
+    (select starts_at + interval '16 hours' from public.events where id = '44444444-4444-4444-8444-444444444444'),
+    '11111111-1111-4111-8111-111111111111'
+  ),
+  (
+    'a3000000-0000-4000-8000-000000000012',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'a3000000-0000-4000-8000-000000000001',
+    'Supervisor puerta 1', 'supervisor', extensions.crypt('320001', extensions.gen_salt('bf', 10)),
+    now() + interval '1 hour',
+    (select starts_at + interval '16 hours' from public.events where id = '44444444-4444-4444-8444-444444444444'),
+    '11111111-1111-4111-8111-111111111111'
+  )
+on conflict (id) do nothing;
+
+insert into public.customers (id, organization_id, first_name, last_name, email)
+values
+  ('a3000000-0000-4000-8000-000000000021', '22222222-2222-4222-8222-222222222222', 'Acceso', 'Demo', 'access-fixtures@nightlife.local'),
+  ('a3000000-0000-4000-8000-000000000022', '22222222-2222-4222-8222-222222222222', 'Reembolso', 'Demo', 'access-refunded@nightlife.local'),
+  ('a3000000-0000-4000-8000-000000000023', '22222222-2222-4222-8222-222222222222', 'Otro', 'Evento', 'access-other-event@nightlife.local')
+on conflict (id) do nothing;
+
+insert into public.orders (
+  id, public_id, organization_id, event_id, customer_id, status,
+  subtotal_amount, service_fee_amount, total_amount, currency, expires_at
+) values
+  (
+    'a3000000-0000-4000-8000-000000000031', 'a3a3a3a3a3a3a3a3a3a3a3a3a3a3a301',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'a3000000-0000-4000-8000-000000000021', 'paid', 9300000, 0, 9300000, 'ARS', now() + interval '30 days'
+  ),
+  (
+    'a3000000-0000-4000-8000-000000000032', 'a3a3a3a3a3a3a3a3a3a3a3a3a3a3a302',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'a3000000-0000-4000-8000-000000000022', 'refunded', 1600000, 0, 1600000, 'ARS', now() + interval '30 days'
+  ),
+  (
+    'a3000000-0000-4000-8000-000000000033', 'a3a3a3a3a3a3a3a3a3a3a3a3a3a3a303',
+    '22222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777771',
+    'a3000000-0000-4000-8000-000000000023', 'paid', 1200000, 0, 1200000, 'ARS', now() + interval '30 days'
+  ),
+  (
+    'a3000000-0000-4000-8000-000000000034', 'a3a3a3a3a3a3a3a3a3a3a3a3a3a3a304',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'a3000000-0000-4000-8000-000000000021', 'cancelled', 1600000, 0, 1600000, 'ARS', now() + interval '30 days'
+  )
+on conflict (id) do nothing;
+
+insert into public.order_items (
+  id, organization_id, order_id, ticket_type_id, item_name,
+  quantity, unit_price_amount, line_total_amount, currency
+) values
+  ('a3000000-0000-4000-8000-000000000041', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000031', '55555555-5555-4555-8555-555555555553', 'General', 5, 1600000, 8000000, 'ARS'),
+  ('a3000000-0000-4000-8000-000000000042', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000031', '55555555-5555-4555-8555-555555555552', 'Preventa 2 VIP', 1, 1300000, 1300000, 'ARS'),
+  ('a3000000-0000-4000-8000-000000000043', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000032', '55555555-5555-4555-8555-555555555553', 'General', 1, 1600000, 1600000, 'ARS'),
+  ('a3000000-0000-4000-8000-000000000044', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000033', '99999999-9999-4999-8999-999999999911', 'Preventa', 1, 1200000, 1200000, 'ARS'),
+  ('a3000000-0000-4000-8000-000000000045', '22222222-2222-4222-8222-222222222222', 'a3000000-0000-4000-8000-000000000034', '55555555-5555-4555-8555-555555555553', 'General', 1, 1600000, 1600000, 'ARS')
+on conflict (id) do nothing;
+
+insert into public.tickets (
+  id, organization_id, event_id, order_id, order_item_id, ticket_type_id, customer_id,
+  unit_index, status, holder_first_name, holder_last_name, max_entries, used_entries,
+  valid_from, valid_until, sector, short_code, qr_token_hash, qr_token_encrypted, refunded_at
+) values
+  ('a3000000-0000-4000-8000-000000000051', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Valentina', 'Demo', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NVAL-D1', encode(extensions.digest(convert_to('NLOS1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'UTF8'), 'sha256'), 'hex'), repeat('v', 40), null),
+  ('a3000000-0000-4000-8000-000000000052', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 2, 'valid', 'Ulises', 'Demo', 1, 1, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NUSE-D1', encode(extensions.digest(convert_to('NLOS1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', 'UTF8'), 'sha256'), 'hex'), repeat('u', 40), null),
+  ('a3000000-0000-4000-8000-000000000053', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 3, 'valid', 'Temprano', 'Demo', 1, 0, now() + interval '1 day', now() + interval '30 days', 'Pista', 'NEAR-D1', encode(extensions.digest(convert_to('NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', 'UTF8'), 'sha256'), 'hex'), repeat('e', 40), null),
+  ('a3000000-0000-4000-8000-000000000054', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 4, 'valid', 'Tarde', 'Demo', 1, 0, now() - interval '30 days', now() - interval '1 day', 'Pista', 'NLAT-D1', encode(extensions.digest(convert_to('NLOS1:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD', 'UTF8'), 'sha256'), 'hex'), repeat('l', 40), null),
+  ('a3000000-0000-4000-8000-000000000055', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000041', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000021', 5, 'valid', 'Múltiple', 'Demo', 2, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NMUL-D1', encode(extensions.digest(convert_to('NLOS1:EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', 'UTF8'), 'sha256'), 'hex'), repeat('m', 40), null),
+  ('a3000000-0000-4000-8000-000000000056', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000031', 'a3000000-0000-4000-8000-000000000042', '55555555-5555-4555-8555-555555555552', 'a3000000-0000-4000-8000-000000000021', 1, 'valid', 'Victoria', 'VIP', 1, 0, now() - interval '1 day', now() + interval '30 days', 'VIP', 'NVIP-D1', encode(extensions.digest(convert_to('NLOS1:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', 'UTF8'), 'sha256'), 'hex'), repeat('p', 40), null),
+  ('a3000000-0000-4000-8000-000000000057', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'a3000000-0000-4000-8000-000000000032', 'a3000000-0000-4000-8000-000000000043', '55555555-5555-4555-8555-555555555553', 'a3000000-0000-4000-8000-000000000022', 1, 'refunded', 'Renata', 'Reembolso', 1, 0, now() - interval '1 day', now() + interval '30 days', 'Pista', 'NREF-D1', encode(extensions.digest(convert_to('NLOS1:GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG', 'UTF8'), 'sha256'), 'hex'), repeat('r', 40), now()),
+  ('a3000000-0000-4000-8000-000000000058', '22222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777771', 'a3000000-0000-4000-8000-000000000033', 'a3000000-0000-4000-8000-000000000044', '99999999-9999-4999-8999-999999999911', 'a3000000-0000-4000-8000-000000000023', 1, 'valid', 'Olivia', 'Otro', 1, 0, now() - interval '1 day', now() + interval '30 days', 'General', 'NOTR-D1', encode(extensions.digest(convert_to('NLOS1:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH', 'UTF8'), 'sha256'), 'hex'), repeat('o', 40), null)
+on conflict (id) do nothing;
+
+insert into public.tickets (
+  id, organization_id, event_id, order_id, order_item_id, ticket_type_id, customer_id,
+  unit_index, status, holder_first_name, holder_last_name, max_entries, used_entries,
+  valid_from, valid_until, sector, short_code, qr_token_hash, qr_token_encrypted, cancelled_at
+) values (
+  'a3000000-0000-4000-8000-000000000059',
+  '22222222-2222-4222-8222-222222222222',
+  '44444444-4444-4444-8444-444444444444',
+  'a3000000-0000-4000-8000-000000000034',
+  'a3000000-0000-4000-8000-000000000045',
+  '55555555-5555-4555-8555-555555555553',
+  'a3000000-0000-4000-8000-000000000021',
+  1, 'cancelled', 'Camila', 'Cancelada', 1, 0,
+  now() - interval '1 day', now() + interval '30 days', 'Pista', 'NCAN-D1',
+  encode(extensions.digest(convert_to('NLOS1:IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII', 'UTF8'), 'sha256'), 'hex'),
+  repeat('c', 40), now()
+) on conflict (id) do nothing;
+
+insert into public.checkins (
+  id, organization_id, event_id, ticket_id, access_gate_id, result,
+  source, entry_number, idempotency_key, scanned_at
+) values (
+  'a3000000-0000-4000-8000-000000000061',
+  '22222222-2222-4222-8222-222222222222',
+  '44444444-4444-4444-8444-444444444444',
+  'a3000000-0000-4000-8000-000000000052',
+  'a3000000-0000-4000-8000-000000000001',
+  'valid', 'qr', 1,
+  'a3000000-0000-4000-8000-000000000062',
+  now() - interval '1 hour'
+) on conflict (id) do nothing;
