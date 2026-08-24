@@ -7,6 +7,7 @@ import { createAdminClient } from "@/shared/database/admin";
 import type { PaymentAccount, WebhookEvent } from "@/shared/database/types";
 import { paymentLog } from "@/shared/lib/structured-log";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
+import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 
 const webhookSchema = z.object({
   id: z.union([z.string(), z.number()]),
@@ -101,6 +102,11 @@ export async function POST(request: NextRequest) {
 
     const { data: paidOrder } = await admin.from("orders").select("status").eq("id", payment.order_id).single();
     if (paidOrder?.status === "paid") {
+      try {
+        await reconcilePromoterCommissionsForOrder(payment.order_id);
+      } catch {
+        // Commission recovery is retry-safe and must never invalidate a confirmed payment.
+      }
       try {
         await fulfillPaidOrder(payment.order_id);
       } catch {

@@ -1,7 +1,14 @@
 .next
+.vercel
 node_modules
 .env*
 !.env.example
 coverage
 supabase/.temp
+supabase/.branches
+supabase/.cache
+.cloudflared
+tunnel-credentials.json
+*.pem
+*.key
 *.tsbuildinfo

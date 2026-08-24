@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fromZonedTime } from "date-fns-tz";
+import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
 import { eventInputSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
@@ -136,6 +137,36 @@ export async function publishEvent(formData: FormData) {
   if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/app/events/${eventId}`);
   redirect(`/app/events/${eventId}?published=1`);
+}
+
+const duplicateEventSchema = z.object({
+  eventId: z.uuid(),
+  name: z.string().trim().min(2).max(140),
+  startsAt: z.string().min(1),
+  timezone: z.string().min(1).max(120),
+});
+
+export async function duplicateEvent(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = duplicateEventSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el nombre y la fecha de la copia." };
+  let startsAt: string;
+  try {
+    startsAt = fromZonedTime(parsed.data.startsAt, parsed.data.timezone).toISOString();
+  } catch {
+    return { error: "La fecha no es válida." };
+  }
+  if (new Date(startsAt).getTime() <= Date.now()) return { error: "La nueva fecha debe ser futura." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("duplicate_event_with_options", {
+    target_event: parsed.data.eventId,
+    target_name: parsed.data.name,
+    target_slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
+    target_starts_at: startsAt,
+    preserve_promoters: formData.get("preservePromoters") === "on",
+  });
+  if (error || !data) return { error: "No pudimos duplicar el evento." };
+  revalidatePath("/app/events");
+  redirect(`/app/events/${data}`);
 }
 
 function validateCover(file: File) {

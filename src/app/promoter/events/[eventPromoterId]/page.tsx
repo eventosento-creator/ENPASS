@@ -1,0 +1,38 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ChevronLeft, Eye, Link2, Ticket, WalletCards } from "lucide-react";
+import { getCurrentPromoterSession, getPromoterEventDashboard } from "@/modules/promoters/application/access";
+import { getPromoterSessionHash } from "@/modules/promoters/infrastructure/session";
+import { ShareLinkButtons } from "@/modules/promoters/ui/share-link-buttons";
+import { formatCompactEventDate, formatMoney } from "@/shared/lib/format";
+import type { Json } from "@/shared/database/types";
+
+type Breakdown = { name: string; quantity: number };
+type RecentSale = { quantity: number; ticket_revenue: number; items: string; created_at: string };
+
+export default async function PromoterEventPage({ params }: { params: Promise<{ eventPromoterId: string }> }) {
+  const { eventPromoterId } = await params;
+  const sessionHash = await getPromoterSessionHash();
+  const session = await getCurrentPromoterSession(sessionHash);
+  if (!session || !sessionHash) return <SessionExpired/>;
+  const event = await getPromoterEventDashboard(sessionHash, eventPromoterId);
+  if (!event) notFound();
+  const publicLink = absoluteUrl(`/e/${event.event_slug}/${event.public_slug}`);
+  const breakdown = asBreakdown(event.ticket_breakdown);
+  const recentSales = asRecentSales(event.recent_sales);
+
+  return <main className="min-h-screen bg-[radial-gradient(circle_at_top,#17190e_0%,#080809_34%)] pb-14"><header className="container-shell flex min-h-20 items-center justify-between"><Link href="/promoter" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-neutral-500 hover:text-white"><ChevronLeft size={17}/>Tus fechas</Link><span className="text-[10px] font-bold uppercase tracking-[.14em] text-[var(--accent)]">Panel RRPP</span></header><div className="container-shell">
+    <section className="relative overflow-hidden rounded-[1.75rem] border border-[var(--accent)]/15 bg-[linear-gradient(145deg,#1a1c13_0%,#111113_65%)] p-6 sm:p-9"><div className="absolute -right-16 -top-16 size-48 rounded-full bg-[var(--accent)]/10 blur-3xl"/><div className="relative"><div className="flex flex-wrap items-center gap-2"><p className="eyebrow">{formatCompactEventDate(event.event_starts_at, event.event_timezone)}</p>{event.relation_status === "inactive" && <span className="rounded-full bg-white/[.06] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-neutral-500">Link inactivo</span>}</div><h1 className="mt-3 text-4xl font-black leading-[.97] tracking-[-.055em] sm:text-5xl">{event.event_name}</h1><div className="mt-8 grid grid-cols-2 gap-6 border-t border-white/[.08] pt-7 sm:grid-cols-3"><Metric label="Entradas" value={String(event.tickets_sold)}/><Metric label="Ventas" value={formatMoney(event.ticket_revenue, event.currency)}/><Metric label="Tu comisión" value={formatMoney(event.confirmed_commission, event.currency)} accent/></div></div></section>
+    {event.relation_status === "active" ? <section className="card mt-5 p-5 sm:p-6"><p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.13em] text-neutral-600"><Link2 size={14}/>Tu link</p><p className="mt-3 break-all text-sm font-semibold text-neutral-300">{publicLink}</p><div className="mt-4"><ShareLinkButtons url={publicLink} shareLabel="Compartir mi link"/></div></section> : <p className="status-warning mt-5 rounded-xl p-4 text-sm leading-6">Este link está pausado. Tus resultados anteriores siguen visibles.</p>}
+    <section className="mt-10 grid items-start gap-9 lg:grid-cols-2"><div><div className="flex items-center justify-between gap-4"><div><p className="eyebrow">Desglose</p><h2 className="section-title mt-2">Entradas vendidas</h2></div><span className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600"><Eye size={14}/>{event.visits} visitas</span></div>{breakdown.length ? <div className="mt-4 divide-y divide-white/[.07] border-y border-white/[.07]">{breakdown.map((item) => <div className="flex items-center justify-between gap-4 py-4" key={item.name}><span className="text-sm text-neutral-400">{item.name}</span><strong>{item.quantity}</strong></div>)}</div> : <EmptyCopy text="Todavía no vendiste entradas para esta fecha."/>}</div><div><p className="eyebrow">Actividad</p><h2 className="section-title mt-2">Últimas ventas</h2>{recentSales.length ? <div className="mt-4 grid gap-3">{recentSales.map((sale) => <article className="card p-4" key={`${sale.created_at}-${sale.items}`}><div className="flex items-start justify-between gap-4"><div><p className="font-bold">{sale.items}</p><p className="mt-1 text-xs text-neutral-600">{relativeDate(sale.created_at, event.event_timezone)}</p></div><div className="text-right"><p className="font-black">{formatMoney(sale.ticket_revenue, event.currency)}</p><p className="mt-1 text-xs text-neutral-600">{sale.quantity} {sale.quantity === 1 ? "entrada" : "entradas"}</p></div></div></article>)}</div> : <EmptyCopy text="Las ventas confirmadas van a aparecer acá."/>}</div></section>
+  </div></main>;
+}
+
+function SessionExpired() { return <main className="container-shell grid min-h-screen place-items-center py-10"><section className="card max-w-md p-8 text-center"><WalletCards className="mx-auto text-neutral-700" size={32}/><h1 className="mt-5 text-2xl font-black">Tu acceso venció</h1><p className="mt-3 text-sm leading-6 text-neutral-500">Pedile al productor un nuevo link seguro para volver a entrar.</p><Link href="/promoter" className="btn btn-secondary mt-6">Volver</Link></section></main>; }
+function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) { return <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[.12em] text-neutral-600">{label}</p><p className={`mt-2 truncate text-2xl font-black tracking-[-.045em] sm:text-3xl ${accent ? "text-[var(--accent)]" : ""}`}>{value}</p></div>; }
+function EmptyCopy({ text }: { text: string }) { return <div className="card mt-4 p-7 text-center"><Ticket className="mx-auto text-neutral-700" size={26}/><p className="mt-3 text-sm text-neutral-500">{text}</p></div>; }
+function absoluteUrl(path: string) { return new URL(path, process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").toString(); }
+function asBreakdown(value: Json): Breakdown[] { return Array.isArray(value) ? value.filter((item): item is Breakdown => isRecord(item) && typeof item.name === "string" && typeof item.quantity === "number") : []; }
+function asRecentSales(value: Json): RecentSale[] { return Array.isArray(value) ? value.filter((item): item is RecentSale => isRecord(item) && typeof item.quantity === "number" && typeof item.ticket_revenue === "number" && typeof item.items === "string" && typeof item.created_at === "string") : []; }
+function isRecord(value: Json): value is { [key: string]: Json | undefined } { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function relativeDate(value: string, timezone: string) { const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000)); if (minutes < 1) return "Ahora"; if (minutes < 60) return `Hace ${minutes} min`; const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date()); const date = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(value)); if (today === date) return `Hoy ${new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: timezone }).format(new Date(value))}`; return new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: timezone }).format(new Date(value)); }

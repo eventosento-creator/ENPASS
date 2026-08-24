@@ -6,6 +6,7 @@ import { PaymentStatusPoller } from "@/modules/payments/ui/payment-status-poller
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { HoldCountdown } from "@/modules/orders/ui/hold-countdown";
 import { createClient } from "@/shared/database/server";
+import { createAdminClient } from "@/shared/database/admin";
 import { formatMoney } from "@/shared/lib/format";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { recoverPaidOrderByPublicId } from "@/modules/ticketing/application/fulfillment";
@@ -30,6 +31,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const canPay = order.status === "pending" && order.payment_account_connected && !exceptional;
   const issuance = paid ? await recoverPaidOrderByPublicId(publicId) : null;
   const tickets = paid || refunded ? await getTicketPresentationsForOrder(publicId) : [];
+  const developmentAttribution = process.env.NODE_ENV === "development" ? await getDevelopmentAttribution(publicId) : null;
 
   if (paid || (refunded && tickets.length > 0)) return <main className="container-shell min-h-screen py-6 sm:py-10"><section className="mx-auto w-full max-w-2xl">
     <header className="mb-6 flex items-center justify-between"><Link href="/" className="text-sm font-black tracking-[-.03em]">NIGHTLIFE OS</Link><Link href={"/mis-entradas" as never} className="text-xs font-bold text-neutral-500 hover:text-white">Mis entradas</Link></header>
@@ -48,7 +50,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       {canPay && <form action={startPayment} className="mt-7"><input name="orderPublicId" type="hidden" value={order.public_id}/><SubmitButton className="btn btn-primary w-full" pendingLabel="Abriendo Mercado Pago…"><CreditCard size={18}/>{order.payment_status === "rejected" ? "Intentar nuevamente" : order.payment_status ? "Continuar en Mercado Pago" : "Pagar con Mercado Pago"}</SubmitButton><PaymentStatusPoller publicId={order.public_id} initialOrderStatus={order.status} initialPaymentStatus={order.payment_status}/></form>}
       {order.status === "pending" && !order.payment_account_connected && <div className="mt-7 rounded-xl border border-amber-300/10 bg-amber-300/[.04] p-4 text-sm leading-6 text-amber-100/70">El productor todavía no habilitó el cobro online. Tu reserva se liberará automáticamente al vencer.</div>}
       {expired && !exceptional && <Link href={`/e/${order.event_slug}`} className="btn btn-secondary mt-7 w-full">Volver a elegir entradas</Link>}
-      {process.env.NODE_ENV === "development" && <details className="mt-7 rounded-xl border border-white/[.06] p-4 text-xs text-neutral-600"><summary className="cursor-pointer font-bold">Información de desarrollo</summary><p className="mt-3 leading-5">Orden: {order.status}. Pago: {order.payment_status ?? "sin iniciar"}. La emisión solo comienza cuando la Order queda paid server-side.</p></details>}
+      {process.env.NODE_ENV === "development" && <details className="mt-7 rounded-xl border border-white/[.06] p-4 text-xs text-neutral-600"><summary className="cursor-pointer font-bold">Información de desarrollo</summary><p className="mt-3 leading-5">Orden: {order.status}. Pago: {order.payment_status ?? "sin iniciar"}. Atribución: {developmentAttribution}. La emisión solo comienza cuando la Order queda paid server-side.</p></details>}
     </div></div>
   </section></main>;
 }
@@ -71,4 +73,12 @@ function PaymentError({ code }: { code: string }) {
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return <div className={`flex justify-between ${strong ? "mt-1 text-lg font-black text-white" : "text-neutral-400"}`}><span>{label}</span><span>{value}</span></div>;
+}
+
+async function getDevelopmentAttribution(publicId: string) {
+  const admin = createAdminClient();
+  const { data: order } = await admin.from("orders").select("promoter_id").eq("public_id", publicId).maybeSingle();
+  if (!order?.promoter_id) return "Directa";
+  const { data: promoter } = await admin.from("promoters").select("display_name").eq("id", order.promoter_id).maybeSingle();
+  return promoter?.display_name ?? "RRPP no disponible";
 }

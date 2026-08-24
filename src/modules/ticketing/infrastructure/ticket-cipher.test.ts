@@ -23,7 +23,13 @@ describe("ticket token cipher", () => {
 
   it("rechaza ciphertext manipulado", () => {
     const encrypted = encryptTicketToken("NLOS1:opaque-payload");
-    expect(() => decryptTicketToken(`${encrypted.slice(0, -1)}x`)).toThrow();
+    const parts = encrypted.split(".");
+    const encodedCiphertext = parts[3];
+    if (!encodedCiphertext) throw new Error("Fixture sin ciphertext");
+    const ciphertext = Buffer.from(encodedCiphertext, "base64url");
+    ciphertext[0] = ciphertext[0]! ^ 1;
+    parts[3] = ciphertext.toString("base64url");
+    expect(() => decryptTicketToken(parts.join("."))).toThrow();
   });
 
   it("rechaza una clave incorrecta", () => {

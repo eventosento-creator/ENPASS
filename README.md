@@ -1,6 +1,6 @@
 # Nightlife OS
 
-Aplicación local de gestión, venta y acceso a eventos. FASE 3.5 consolida los recorridos Buyer, Producer y Scanner sobre la arquitectura funcional de FASE 0–3.
+Aplicación local de gestión, venta y acceso a eventos. FASE 4 incorpora RRPP, atribución de ventas y comisiones sobre la arquitectura funcional de FASE 0–3.5.
 
 No hay deployment ni conexión a infraestructura productiva.
 
@@ -75,6 +75,9 @@ SMTP_FROM
 - Order local pagada: `2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b`
 - PIN scanner local: `320000`
 - PIN supervisor local: `320001`
+- RRPP demo: Lucas, Martina y Agus
+- Link público Lucas: `http://127.0.0.1:3000/e/noche-2000/lucas`
+- Acceso RRPP Lucas, de un uso después de cada reset: `http://127.0.0.1:3000/promoter/access?token=LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL`
 
 El correo local para magic links se inspecciona en <http://127.0.0.1:56324>.
 
@@ -89,6 +92,9 @@ El correo local para magic links se inspecciona en <http://127.0.0.1:56324>.
 - Mis entradas: <http://127.0.0.1:3000/mis-entradas>
 - Scanner operativo: <http://localhost:3000/scan>
 - Gestión de accesos demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/access>
+- Gestión RRPP demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/promoters>
+- Link RRPP público: <http://localhost:3000/e/noche-2000/lucas>
+- Panel RRPP: <http://localhost:3000/promoter>
 - QR locales de prueba: <http://localhost:3000/dev/qr>
 - Order pagada demo: <http://127.0.0.1:3000/order/2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b>
 - Mailpit: <http://127.0.0.1:56324>
@@ -153,8 +159,15 @@ Mercado Pago no acepta `localhost` para todas las URLs externas. El túnel se us
 - Supervisor separado para códigos cortos y excepciones auditadas; scanners normales no reciben ese permiso.
 - Dashboard de accesos con métricas, dispositivos activos y últimos ingresos por polling de cuatro segundos.
 - Seed y galería local para válido, utilizado, reembolsado, cancelado, VIP, fuera de horario, multi-ingreso y otro Event.
+- Promoters normalizados por Organization y asociados a múltiples Events mediante EventPromoter.
+- Links legibles `/e/:eventSlug/:promoterSlug`, atribución last-touch por Event y cookie opaca HttpOnly de hasta siete días.
+- Atribución server-side congelada en Order; links inactivos preservan la página pública sin asignar nuevas ventas.
+- Comisiones fijas por entrada o porcentuales en basis points, regla general con override por TicketType y service fee excluido.
+- Snapshots históricos por OrderItem, redondeo half-up, confirmación idempotente al pagar, lazy recovery y refund total.
+- Ranking y detalle Producer sin N+1, métricas directas vs RRPP y duplicación de Event con Promoters/reglas opcionales.
+- Invitación RRPP passwordless de un uso, sesión revocable de 30 días y panel mobile-first multi-evento sin datos de compradores.
 
-Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md) y [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md).
+Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md), [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md) y [docs/promoters-phase-4.md](docs/promoters-phase-4.md).
 
 ## Verificación
 
@@ -168,10 +181,10 @@ npx supabase db lint --local --schema public --level warning --fail-on warning
 npm run build
 ```
 
-Los 47 tests unitarios cubren fees, estados, dinero, cifrado, QR y presentación del scanner. Los 108 pgTAP incluyen 37 casos de acceso/RLS. `test:concurrency` dispara dos RPC paralelas y exige exactamente un `valid` y un `already_used`.
+Los 54 tests unitarios cubren fees, estados, dinero, cifrado, QR, scanner y cálculo de comisiones. Los 154 pgTAP incluyen 46 casos de atribución, comisiones, sesión RRPP, RLS y duplicación. `test:concurrency` dispara dos RPC paralelas y exige exactamente un `valid` y un `already_used`.
 
 ## Límite actual
 
-El flujo local controlado termina en `Ticket emitido + ScannerSession autorizada + Checkin atómico`. No existe botón público para marcar una Order pagada.
+El flujo local controlado termina en `Ticket emitido + ScannerSession autorizada + Checkin atómico + RRPP atribuido/comisión confirmada`. No existe botón público para marcar una Order pagada.
 
-No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, RRPP, POS, mesas, inventory general, Wallet/PDF ni producción. La validación end-to-end con Mercado Pago sandbox continúa pendiente por falta de credenciales/túnel; no se declara completa hasta ejecutar ese recorrido real.
+No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, payouts/settlements RRPP, atribución cross-device, POS, mesas, inventory general, Wallet/PDF ni producción. El refund parcial todavía no distribuye comisión por unidad. La validación end-to-end con Mercado Pago sandbox continúa pendiente por falta de credenciales/túnel; no se declara completa hasta ejecutar ese recorrido real.

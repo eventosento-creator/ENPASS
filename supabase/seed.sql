@@ -295,3 +295,173 @@ insert into public.checkins (
   'a3000000-0000-4000-8000-000000000062',
   now() - interval '1 hour'
 ) on conflict (id) do nothing;
+
+-- FASE 4 local RRPP fixtures. The invitation token is intentionally local,
+-- one-time and restored by `supabase db reset`.
+insert into public.promoters (
+  id, organization_id, display_name, first_name, last_name, email, phone, instagram, status
+) values
+  (
+    'f4000000-0000-4000-8000-000000000001',
+    '22222222-2222-4222-8222-222222222222',
+    'Lucas Gómez', 'Lucas', 'Gómez', 'lucas@nightlife.local', '+5492615550201', 'lucasg', 'active'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000002',
+    '22222222-2222-4222-8222-222222222222',
+    'Martina Ruiz', 'Martina', 'Ruiz', 'martina@nightlife.local', '+5492615550202', 'martinar', 'active'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000003',
+    '22222222-2222-4222-8222-222222222222',
+    'Agus Pérez', 'Agus', 'Pérez', null, '+5492615550203', 'agusp', 'active'
+  )
+on conflict (id) do nothing;
+
+insert into public.event_promoters (
+  id, organization_id, event_id, promoter_id, public_slug, status
+) values
+  (
+    'f4000000-0000-4000-8000-000000000101',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000001', 'lucas', 'active'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000102',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000002', 'martina', 'active'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000103',
+    '22222222-2222-4222-8222-222222222222',
+    '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000003', 'agus', 'active'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000104',
+    '22222222-2222-4222-8222-222222222222',
+    '77777777-7777-4777-8777-777777777771',
+    'f4000000-0000-4000-8000-000000000001', 'lucas', 'active'
+  )
+on conflict (id) do nothing;
+
+insert into public.promoter_commission_rules (
+  id, organization_id, event_id, event_promoter_id, ticket_type_id,
+  commission_type, commission_value, currency, active
+) values
+  (
+    'f4000000-0000-4000-8000-000000000201',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000101', null, 'fixed_per_ticket', 100000, 'ARS', true
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000202',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000102', null, 'percentage', 500, 'ARS', true
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000203',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000103', null, 'percentage', 500, 'ARS', true
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000204',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000103', '55555555-5555-4555-8555-555555555552',
+    'percentage', 800, 'ARS', true
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000205',
+    '22222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777771',
+    'f4000000-0000-4000-8000-000000000104', null, 'fixed_per_ticket', 120000, 'ARS', true
+  )
+on conflict (id) do nothing;
+
+insert into public.promoter_access_tokens (
+  id, organization_id, promoter_id, event_promoter_id, token_hash, expires_at
+) values (
+  'f4000000-0000-4000-8000-000000000301',
+  '22222222-2222-4222-8222-222222222222',
+  'f4000000-0000-4000-8000-000000000001',
+  'f4000000-0000-4000-8000-000000000101',
+  encode(extensions.digest(convert_to(repeat('L', 43), 'UTF8'), 'sha256'), 'hex'),
+  now() + interval '24 hours'
+) on conflict (id) do nothing;
+
+insert into public.customers (id, organization_id, first_name, last_name, email)
+values
+  ('f4000000-0000-4000-8000-000000000401', '22222222-2222-4222-8222-222222222222', 'Buyer', 'Lucas', 'buyer-lucas@nightlife.local'),
+  ('f4000000-0000-4000-8000-000000000402', '22222222-2222-4222-8222-222222222222', 'Buyer', 'Martina', 'buyer-martina@nightlife.local'),
+  ('f4000000-0000-4000-8000-000000000403', '22222222-2222-4222-8222-222222222222', 'Buyer', 'Agus', 'buyer-agus@nightlife.local')
+on conflict (id) do nothing;
+
+insert into public.orders (
+  id, public_id, organization_id, event_id, customer_id, status,
+  subtotal_amount, service_fee_amount, total_amount, currency, expires_at,
+  promoter_id, event_promoter_id
+) values
+  (
+    'f4000000-0000-4000-8000-000000000501', 'f4f4f4f4f4f4f4f4f4f4f4f4f4f4f401',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000401', 'paid', 4800000, 384000, 5184000, 'ARS', now() + interval '10 minutes',
+    'f4000000-0000-4000-8000-000000000001', 'f4000000-0000-4000-8000-000000000101'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000502', 'f4f4f4f4f4f4f4f4f4f4f4f4f4f4f402',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000402', 'paid', 2600000, 208000, 2808000, 'ARS', now() + interval '10 minutes',
+    'f4000000-0000-4000-8000-000000000002', 'f4000000-0000-4000-8000-000000000102'
+  ),
+  (
+    'f4000000-0000-4000-8000-000000000503', 'f4f4f4f4f4f4f4f4f4f4f4f4f4f4f403',
+    '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+    'f4000000-0000-4000-8000-000000000403', 'paid', 2900000, 232000, 3132000, 'ARS', now() + interval '10 minutes',
+    'f4000000-0000-4000-8000-000000000003', 'f4000000-0000-4000-8000-000000000103'
+  )
+on conflict (id) do nothing;
+
+insert into public.order_items (
+  id, organization_id, order_id, ticket_type_id, item_name,
+  quantity, unit_price_amount, line_total_amount, currency
+) values
+  ('f4000000-0000-4000-8000-000000000601', '22222222-2222-4222-8222-222222222222', 'f4000000-0000-4000-8000-000000000501', '55555555-5555-4555-8555-555555555553', 'General', 3, 1600000, 4800000, 'ARS'),
+  ('f4000000-0000-4000-8000-000000000602', '22222222-2222-4222-8222-222222222222', 'f4000000-0000-4000-8000-000000000502', '55555555-5555-4555-8555-555555555552', 'Preventa 2', 2, 1300000, 2600000, 'ARS'),
+  ('f4000000-0000-4000-8000-000000000603', '22222222-2222-4222-8222-222222222222', 'f4000000-0000-4000-8000-000000000503', '55555555-5555-4555-8555-555555555553', 'General', 1, 1600000, 1600000, 'ARS'),
+  ('f4000000-0000-4000-8000-000000000604', '22222222-2222-4222-8222-222222222222', 'f4000000-0000-4000-8000-000000000503', '55555555-5555-4555-8555-555555555552', 'Preventa 2', 1, 1300000, 1300000, 'ARS')
+on conflict (id) do nothing;
+
+insert into public.ticket_holds (
+  id, organization_id, event_id, ticket_type_id, order_id, quantity, status, expires_at
+) values
+  ('f4000000-0000-4000-8000-000000000701', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555553', 'f4000000-0000-4000-8000-000000000501', 3, 'consumed', now() + interval '10 minutes'),
+  ('f4000000-0000-4000-8000-000000000702', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555552', 'f4000000-0000-4000-8000-000000000502', 2, 'consumed', now() + interval '10 minutes'),
+  ('f4000000-0000-4000-8000-000000000703', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555553', 'f4000000-0000-4000-8000-000000000503', 1, 'consumed', now() + interval '10 minutes'),
+  ('f4000000-0000-4000-8000-000000000704', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555552', 'f4000000-0000-4000-8000-000000000503', 1, 'consumed', now() + interval '10 minutes')
+on conflict (id) do nothing;
+
+insert into public.promoter_link_visits (
+  organization_id, event_id, event_promoter_id, anonymous_session_id, visited_at
+)
+select '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+  'f4000000-0000-4000-8000-000000000101', gen_random_uuid(), now() - make_interval(mins => visit_number)
+from generate_series(1, 8) visit_number;
+
+insert into public.promoter_link_visits (
+  organization_id, event_id, event_promoter_id, anonymous_session_id, visited_at
+)
+select '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+  'f4000000-0000-4000-8000-000000000102', gen_random_uuid(), now() - make_interval(mins => visit_number)
+from generate_series(1, 6) visit_number;
+
+insert into public.promoter_link_visits (
+  organization_id, event_id, event_promoter_id, anonymous_session_id, visited_at
+)
+select '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444',
+  'f4000000-0000-4000-8000-000000000103', gen_random_uuid(), now() - make_interval(mins => visit_number)
+from generate_series(1, 3) visit_number;
+
+select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000501');
+select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000502');
+select public.calculate_promoter_commissions_for_order('f4000000-0000-4000-8000-000000000503');

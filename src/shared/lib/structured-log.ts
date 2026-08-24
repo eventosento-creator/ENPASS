@@ -36,3 +36,20 @@ export function ticketingLog(event: TicketingLogEvent, fields: Record<string, Sa
     ...fields,
   }));
 }
+
+type PromoterLogEvent =
+  | "promoter.attribution.created"
+  | "promoter.attribution.skipped"
+  | "promoter.commission.calculated"
+  | "promoter.commission.confirmed"
+  | "promoter.commission.failed"
+  | "promoter.invite.sent"
+  | "promoter.access.granted";
+
+export function promoterLog(event: PromoterLogEvent, fields: Record<string, SafeLogValue> = {}) {
+  console.info(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event,
+    ...fields,
+  }));
+}

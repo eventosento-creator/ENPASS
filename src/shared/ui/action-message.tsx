@@ -1,4 +1,4 @@
-export function ActionMessage({ message }: { message?: string }) {
+export function ActionMessage({ message, tone = "error" }: { message?: string; tone?: "error" | "success" }) {
   if (!message) return null;
-  return <p role="status" className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-200">{message}</p>;
+  return <p role="status" className={`rounded-xl p-3 text-sm ${tone === "success" ? "status-success" : "status-danger"}`}>{message}</p>;
 }

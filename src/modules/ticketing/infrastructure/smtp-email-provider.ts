@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { BuyerAccessEmail, EmailProvider, TicketEmail } from "./email-provider";
+import type { BuyerAccessEmail, EmailProvider, PromoterInviteEmail, TicketEmail } from "./email-provider";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -51,6 +51,22 @@ export class SmtpEmailProvider implements EmailProvider {
       `),
     });
   }
+
+  async sendPromoterInvite(message: PromoterInviteEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Te sumaron a ${message.eventName}`,
+      text: `Hola ${message.promoterName}. Ya tenés tu link para vender entradas de ${message.eventName}. Ver mis ventas: ${message.accessUrl}`,
+      html: emailFrame(`
+        <p style="margin:0 0 10px;color:#d6ff45;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase">Acceso RRPP</p>
+        <h1 style="margin:0 0 18px;font-size:32px;line-height:1.05">Te sumaron a ${escapeHtml(message.eventName)}</h1>
+        <p style="margin:0;color:#a3a3a3;line-height:1.6">Hola ${escapeHtml(message.promoterName)}. Ya tenés tu link personal para compartir entradas y revisar tus ventas.</p>
+        ${accessButton(message.accessUrl, "Ver mis ventas")}
+        <p style="margin:24px 0 0;color:#77777f;font-size:12px;line-height:1.6">Este acceso vence en 24 horas y solo puede utilizarse una vez.</p>
+      `),
+    });
+  }
 }
 
 function smtpConfig() {
@@ -67,8 +83,8 @@ function emailFrame(content: string) {
   return `<!doctype html><html lang="es"><body style="margin:0;background:#090909;color:#f7f7f5;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:32px 20px"><p style="margin:0 0 18px;font-size:14px;font-weight:900;letter-spacing:-.02em">NIGHTLIFE OS</p><div style="border:1px solid #29292d;border-radius:22px;background:#141416;padding:32px">${content}</div><p style="margin:18px 0 0;text-align:center;color:#55555c;font-size:11px">Acceso seguro · No necesitás una cuenta</p></div></body></html>`;
 }
 
-function accessButton(accessUrl: string) {
-  return `<p style="margin:28px 0 0"><a href="${escapeHtml(accessUrl)}" style="display:block;border-radius:13px;background:#d6ff45;color:#090909;padding:15px 20px;text-align:center;text-decoration:none;font-weight:900">Ver mis entradas</a></p>`;
+function accessButton(accessUrl: string, label = "Ver mis entradas") {
+  return `<p style="margin:28px 0 0"><a href="${escapeHtml(accessUrl)}" style="display:block;border-radius:13px;background:#d6ff45;color:#090909;padding:15px 20px;text-align:center;text-decoration:none;font-weight:900">${escapeHtml(label)}</a></p>`;
 }
 
 function escapeHtml(value: string) {
