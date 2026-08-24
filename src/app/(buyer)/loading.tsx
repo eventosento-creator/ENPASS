@@ -1,1 +1,1 @@
-export default function Loading() { return <main className="container-shell animate-pulse py-10"><div className="h-80 rounded-3xl bg-neutral-900"/></main>; }
+export default function Loading() { return <main aria-label="Cargando" aria-busy="true" className="container-shell py-6 sm:py-10"><div className="skeleton h-12 w-40 rounded-xl"/><div className="mt-6 grid gap-7 lg:grid-cols-[minmax(0,1fr)_400px]"><div className="skeleton aspect-[4/5] max-h-[760px] rounded-[1.4rem]"/><div className="skeleton h-96 rounded-[1.35rem]"/></div></main>; }

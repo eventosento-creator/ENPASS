@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand, MapPin, ShieldCheck, X } from "lucide-react";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import type { TicketPresentation } from "../application/queries";
@@ -9,6 +9,7 @@ import { formatEventDate } from "@/shared/lib/format";
 export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
   const [index, setIndex] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const touchStart = useRef<number | null>(null);
   const ticket = tickets[index];
 
   useEffect(() => {
@@ -27,9 +28,15 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
   if (!ticket) return null;
   const hasMultiple = tickets.length > 1;
   const status = statusContent(ticket.status);
+  function finishSwipe(clientX: number) {
+    if (touchStart.current === null || !hasMultiple) return;
+    const distance = clientX - touchStart.current;
+    if (Math.abs(distance) > 55) setIndex((current) => Math.max(0, Math.min(tickets.length - 1, current + (distance < 0 ? 1 : -1))));
+    touchStart.current = null;
+  }
 
   return <>
-    <section className="ticket-shell overflow-hidden">
+    <section className="ticket-shell touch-pan-y overflow-hidden" onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => finishSwipe(event.changedTouches[0]?.clientX ?? 0)}>
       <EventCover src={ticket.eventCoverUrl} alt={`Flyer de ${ticket.eventName}`} className="aspect-[16/8]" priority/>
       <div className="p-5 sm:p-7">
         <div className="flex items-start justify-between gap-4">
@@ -61,9 +68,9 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
     </nav>}
 
     {fullscreen && ticket.qrSvg && <div className="fixed inset-0 z-[100] overflow-y-auto bg-white text-black" role="dialog" aria-modal="true" aria-label={`QR grande, entrada ${index + 1} de ${tickets.length}`}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col px-5 py-5">
+      <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
         <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.14em] text-neutral-500">{index + 1} de {tickets.length}</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">{ticket.eventName}</h2><p className="mt-1 text-sm font-semibold text-neutral-500">{ticket.ticketTypeName}</p></div><button autoFocus aria-label="Cerrar QR grande" type="button" className="grid size-12 shrink-0 place-items-center rounded-full bg-neutral-100" onClick={() => setFullscreen(false)}><X size={22}/></button></div>
-        <div className="my-auto py-6"><div className="ticket-qr mx-auto aspect-square w-full" dangerouslySetInnerHTML={{ __html: ticket.qrSvg }}/><div className="mt-4 text-center"><p className="font-mono text-lg font-black tracking-[.12em]">#{ticket.shortCode}</p><p className="mt-2 text-sm font-semibold text-neutral-500">{ticket.holderName}</p></div></div>
+        <div className="my-auto py-5"><div className="ticket-qr mx-auto aspect-square w-full max-w-[min(82dvh,100%)]" dangerouslySetInnerHTML={{ __html: ticket.qrSvg }}/><div className="mt-4 text-center"><p className="font-mono text-lg font-black tracking-[.12em]">#{ticket.shortCode}</p><p className="mt-2 text-sm font-semibold text-neutral-500">{ticket.holderName}</p></div></div>
         <p className="text-center text-xs font-semibold text-neutral-500">Mantené el código completo visible al acercarte al ingreso.</p>
       </div>
     </div>}

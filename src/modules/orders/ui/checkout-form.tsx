@@ -12,6 +12,6 @@ export function CheckoutForm({ eventId, selections, requireDocument }: { eventId
     <label className="label">Email<input className="field" name="email" type="email" autoComplete="email" required/><span className="text-xs font-normal text-neutral-600">Te enviaremos la entrada a este email. No vamos a crear una cuenta.</span></label>
     <label className="label">Teléfono <span className="text-neutral-600">(opcional)</span><input className="field" name="phone" type="tel" autoComplete="tel"/></label>
     {requireDocument ? <label className="label">DNI<input className="field" name="document" inputMode="numeric" autoComplete="off" required/></label> : <input type="hidden" name="document" value=""/>}
-    <ActionMessage message={state.error}/><SubmitButton>Continuar al pago</SubmitButton><p className="text-center text-xs leading-5 text-neutral-600">Reservaremos tus entradas durante 10 minutos mientras completás el pago.</p>
+    <ActionMessage message={state.error}/><SubmitButton className="btn btn-primary min-h-14">Reservar por 10 minutos</SubmitButton><p className="text-center text-xs leading-5 text-neutral-600">Después vas a Mercado Pago. La reserva comienza recién al continuar.</p>
   </form>;
 }

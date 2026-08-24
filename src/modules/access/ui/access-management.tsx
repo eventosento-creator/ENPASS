@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { useActionState, useState } from "react";
+import { Check, Copy, KeyRound, ShieldCheck } from "lucide-react";
 import { createAccessGate, createScannerAuthorization, updateAccessGate, type AccessActionState } from "../application/actions";
 import type { AccessGate, AccessGateTicketType, TicketType } from "@/shared/database/types";
 import { SubmitButton } from "@/shared/ui/submit-button";
@@ -20,28 +20,31 @@ export function CreateGateForm({ eventId, ticketTypes }: { eventId: string; tick
   </form>;
 }
 
-export function GateEditor({ gate, rules, ticketTypes }: { gate: AccessGate; rules: AccessGateTicketType[]; ticketTypes: TicketType[] }) {
+export function GateEditor({ gate, rules, ticketTypes, entries, activeDevices }: { gate: AccessGate; rules: AccessGateTicketType[]; ticketTypes: TicketType[]; entries: number; activeDevices: number }) {
   const [state, action] = useActionState(updateAccessGate, initialState);
   const selected = new Set(rules.filter((rule) => rule.access_gate_id === gate.id).map((rule) => rule.ticket_type_id));
-  return <form action={action} className="card grid gap-4 p-5">
+  return <form action={action} className="card overflow-hidden">
     <input type="hidden" name="eventId" value={gate.event_id}/><input type="hidden" name="gateId" value={gate.id}/>
-    <div className="flex items-start justify-between gap-3"><div><p className="text-lg font-black">{gate.name}</p><p className="mt-1 text-xs text-neutral-500">{gate.active ? "Operativa" : "Desactivada"}</p></div><label className="flex items-center gap-2 text-xs font-bold text-neutral-400"><input type="checkbox" name="active" defaultChecked={gate.active}/> Activa</label></div>
-    <label className="label">Nombre<input className="field" name="name" defaultValue={gate.name} required/></label>
-    <label className="label">Descripción<input className="field" name="description" defaultValue={gate.description}/></label>
-    <TicketTypeChecks ticketTypes={ticketTypes} selected={selected}/>
-    <Message state={state}/><SubmitButton className="btn btn-secondary w-full" pendingLabel="Guardando…">Guardar reglas</SubmitButton>
+    <details className="group"><summary className="flex min-h-24 cursor-pointer list-none items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><p className="text-lg font-black">{gate.name}</p><span className={`size-2 rounded-full ${gate.active ? "bg-[var(--success)]" : "bg-neutral-700"}`}/></div><p className="mt-2 text-xs text-neutral-500">{entries} {entries === 1 ? "ingreso" : "ingresos"} · {activeDevices} {activeDevices === 1 ? "dispositivo activo" : "dispositivos activos"}</p></div><span className="text-xs font-bold text-neutral-600 group-open:text-white">Configurar</span></summary><div className="grid gap-4 border-t border-white/[.07] p-5">
+      <label className="flex min-h-11 items-center justify-between rounded-xl border border-white/[.08] px-3 text-sm font-bold text-neutral-300"><span>Puerta operativa</span><input type="checkbox" name="active" defaultChecked={gate.active}/></label>
+      <label className="label">Nombre<input className="field" name="name" defaultValue={gate.name} required/></label>
+      <label className="label">Descripción<input className="field" name="description" defaultValue={gate.description}/></label>
+      <TicketTypeChecks ticketTypes={ticketTypes} selected={selected}/>
+      <Message state={state}/><SubmitButton className="btn btn-secondary w-full" pendingLabel="Guardando…">Guardar cambios</SubmitButton>
+    </div></details>
   </form>;
 }
 
 export function DeviceAuthorizationForm({ eventId, gates }: { eventId: string; gates: AccessGate[] }) {
   const [state, action] = useActionState(createScannerAuthorization, initialState);
+  const [copied, setCopied] = useState(false);
   return <form action={action} className="card grid gap-4 p-5">
     <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)]"><KeyRound size={19}/></span><div><p className="font-black">Autorizar dispositivo</p><p className="text-xs text-neutral-500">PIN único · vence en 30 minutos</p></div></div>
     <input type="hidden" name="eventId" value={eventId}/>
     <label className="label">Puerta<select className="field" name="gateId" required defaultValue=""><option value="" disabled>Elegí una puerta</option>{gates.filter((gate) => gate.active).map((gate) => <option value={gate.id} key={gate.id}>{gate.name}</option>)}</select></label>
     <label className="label">Nombre del dispositivo<input className="field" name="label" placeholder="Scanner puerta 2" required/></label>
     <label className="label">Permiso<select className="field" name="permission" defaultValue="scanner"><option value="scanner">Scanner</option><option value="supervisor">Supervisor</option></select></label>
-    {state.pin && <div className="rounded-2xl border border-lime-400/40 bg-lime-400/10 p-5 text-center"><p className="text-xs font-black uppercase tracking-[.2em] text-lime-300">PIN de activación</p><p className="mt-2 font-mono text-4xl font-black tracking-[.2em]">{state.pin}</p><p className="mt-2 text-xs text-lime-100/70">Se muestra una sola vez.</p></div>}
+    {state.pin && <div className="rounded-2xl border border-lime-400/25 bg-lime-400/[.07] p-5 text-center"><p className="text-xs font-black uppercase tracking-[.2em] text-lime-300">PIN de activación</p><p className="mt-3 font-mono text-4xl font-black tracking-[.16em]">{state.pin.slice(0, 3)} {state.pin.slice(3)}</p><p className="mt-3 text-xs leading-5 text-lime-100/70">Usá este código para activar un dispositivo de puerta. Vence en 30 minutos y se muestra una sola vez.</p><button className="btn btn-ghost mt-4 w-full" type="button" onClick={() => { void navigator.clipboard.writeText(state.pin!); setCopied(true); }} disabled={copied}>{copied ? <Check size={16}/> : <Copy size={16}/>} {copied ? "Copiado" : "Copiar PIN"}</button></div>}
     <Message state={state}/><SubmitButton className="btn btn-primary w-full" pendingLabel="Generando…"><ShieldCheck size={17}/>Generar PIN</SubmitButton>
   </form>;
 }

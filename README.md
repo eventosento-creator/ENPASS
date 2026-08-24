@@ -1,6 +1,6 @@
 # Nightlife OS
 
-Aplicación local de gestión, venta y acceso a eventos. FASE 3 agrega puertas, dispositivos scanner y check-in atómico sobre los Tickets seguros de FASE 2B.
+Aplicación local de gestión, venta y acceso a eventos. FASE 3.5 consolida los recorridos Buyer, Producer y Scanner sobre la arquitectura funcional de FASE 0–3.
 
 No hay deployment ni conexión a infraestructura productiva.
 
@@ -154,7 +154,7 @@ Mercado Pago no acepta `localhost` para todas las URLs externas. El túnel se us
 - Dashboard de accesos con métricas, dispositivos activos y últimos ingresos por polling de cuatro segundos.
 - Seed y galería local para válido, utilizado, reembolsado, cancelado, VIP, fuera de horario, multi-ingreso y otro Event.
 
-Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md) y [docs/access-phase-3.md](docs/access-phase-3.md).
+Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md) y [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md).
 
 ## Verificación
 
