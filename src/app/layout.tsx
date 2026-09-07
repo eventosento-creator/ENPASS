@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning><head><Script id="enpass-theme" strategy="beforeInteractive">{`try{const saved=localStorage.getItem('enpass-theme');const theme=saved==='light'||saved==='dark'?saved:(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch{document.documentElement.dataset.theme='dark'}`}</Script></head><body>{children}</body></html>;
+  return <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning><head><Script id="enpass-theme" strategy="beforeInteractive">{`try{const saved=localStorage.getItem('enpass-theme');const theme=saved==='dark'?'dark':'light';document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch{document.documentElement.dataset.theme='light'}`}</Script></head><body>{children}</body></html>;
 }
