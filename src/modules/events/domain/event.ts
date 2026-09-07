@@ -13,6 +13,7 @@ export const eventInputSchema = z.object({
   promotersEnabled: booleanString,
   tablesEnabled: booleanString,
   accessEnabled: booleanString,
+  posEnabled: booleanString,
 });
 
 export const eventConfigurationSchema = z.object({
@@ -22,6 +23,7 @@ export const eventConfigurationSchema = z.object({
   promotersEnabled: booleanString,
   tablesEnabled: booleanString,
   accessEnabled: booleanString,
+  posEnabled: booleanString,
 });
 
 export const eventUpdateSchema = z.object({

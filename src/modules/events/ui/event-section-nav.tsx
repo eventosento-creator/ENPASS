@@ -1,13 +1,15 @@
 import Link from "next/link";
-import type { EventCapabilities } from "../domain/event-profile";
+import type { EventCapabilities, EventProfile } from "../domain/event-profile";
+import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 
-export function EventSectionNav({ eventId, active, capabilities }: { eventId: string; active: "summary" | "tickets" | "promoters" | "tables" | "access"; capabilities: EventCapabilities }) {
+export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: "summary" | "tickets" | "promoters" | "tables" | "access" | "pos"; capabilities: EventCapabilities; profile?: EventProfile }) {
   const items = [
     { href: `/app/events/${eventId}`, label: "Resumen", key: "summary" },
     { href: `/app/events/${eventId}#entradas`, label: "Entradas", key: "tickets" },
     { href: `/app/events/${eventId}/promoters`, label: "RRPP", key: "promoters" },
     { href: `/app/events/${eventId}/tables`, label: "Mesas", key: "tables" },
     { href: `/app/events/${eventId}/access`, label: "Accesos", key: "access" },
+    { href: `/app/events/${eventId}/pos`, label: getPosModuleLabel(profile), key: "pos" },
   ] as const;
   const visibleItems = items.filter((item) => item.key === "summary" || capabilities[item.key]);
   return <nav aria-label="Secciones del evento" className="mt-7 flex gap-1 overflow-x-auto border-b border-white/[.07]">

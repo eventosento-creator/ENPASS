@@ -32,8 +32,8 @@ insert into public.venues (id, organization_id, name, address, city, province, c
 values ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', 'Club Central', 'Av. España 2110', 'Mendoza', 'Mendoza', 700, 'America/Argentina/Mendoza')
 on conflict (id) do nothing;
 
-insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, doors_open_at, status, capacity, currency, published_at, created_by, profile, tickets_enabled, promoters_enabled, tables_enabled, access_enabled)
-values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 650, 'ARS', now(), '11111111-1111-4111-8111-111111111111', 'nightlife', true, true, true, true)
+insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, doors_open_at, status, capacity, currency, published_at, created_by, profile, tickets_enabled, promoters_enabled, tables_enabled, access_enabled, pos_enabled)
+values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 650, 'ARS', now(), '11111111-1111-4111-8111-111111111111', 'nightlife', true, true, true, true, true)
 on conflict (id) do nothing;
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, status, capacity, currency, published_at, created_by)
@@ -569,3 +569,67 @@ where event_promoter_id = 'f4000000-0000-4000-8000-000000000101'
   and subject_type = 'table' and event_table_id is null and active;
 
 select public.calculate_promoter_commissions_for_order('e5000000-0000-4000-8000-000000000501');
+
+-- FASE 6 local POS fixtures. Product catalog is reusable by the Organization;
+-- EventProduct owns the price for this date. PIN 481920 is local and single-use.
+insert into public.product_categories (id, organization_id, name, sort_order)
+values
+  ('f6000000-0000-4000-8000-000000000101', '22222222-2222-4222-8222-222222222222', 'Tragos', 0),
+  ('f6000000-0000-4000-8000-000000000102', '22222222-2222-4222-8222-222222222222', 'Cervezas', 1),
+  ('f6000000-0000-4000-8000-000000000103', '22222222-2222-4222-8222-222222222222', 'Sin alcohol', 2),
+  ('f6000000-0000-4000-8000-000000000104', '22222222-2222-4222-8222-222222222222', 'Botellas', 3)
+on conflict (id) do nothing;
+
+insert into public.products (
+  id, organization_id, category_id, name, description, sku, barcode,
+  default_price_amount, currency, active
+) values
+  ('f6000000-0000-4000-8000-000000000201', '22222222-2222-4222-8222-222222222222', 'f6000000-0000-4000-8000-000000000101', 'Fernet', 'Fernet con gaseosa cola.', 'TRG-FER', null, 800000, 'ARS', true),
+  ('f6000000-0000-4000-8000-000000000202', '22222222-2222-4222-8222-222222222222', 'f6000000-0000-4000-8000-000000000102', 'Cerveza', '', 'CER-001', null, 600000, 'ARS', true),
+  ('f6000000-0000-4000-8000-000000000203', '22222222-2222-4222-8222-222222222222', 'f6000000-0000-4000-8000-000000000103', 'Agua', '', 'SNA-AGU', '7790000000001', 300000, 'ARS', true),
+  ('f6000000-0000-4000-8000-000000000204', '22222222-2222-4222-8222-222222222222', 'f6000000-0000-4000-8000-000000000101', 'Vodka + Speed', '', 'TRG-VOD', null, 1000000, 'ARS', true),
+  ('f6000000-0000-4000-8000-000000000205', '22222222-2222-4222-8222-222222222222', 'f6000000-0000-4000-8000-000000000104', 'Champagne', '', 'BOT-CHA', null, 3500000, 'ARS', true)
+on conflict (id) do nothing;
+
+insert into public.event_products (
+  id, organization_id, event_id, product_id, price_amount, currency, enabled, sort_order
+) values
+  ('f6000000-0000-4000-8000-000000000301', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'f6000000-0000-4000-8000-000000000201', 1000000, 'ARS', true, 0),
+  ('f6000000-0000-4000-8000-000000000302', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'f6000000-0000-4000-8000-000000000202', 600000, 'ARS', true, 1),
+  ('f6000000-0000-4000-8000-000000000303', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'f6000000-0000-4000-8000-000000000203', 300000, 'ARS', true, 2),
+  ('f6000000-0000-4000-8000-000000000304', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'f6000000-0000-4000-8000-000000000204', 1200000, 'ARS', true, 3),
+  ('f6000000-0000-4000-8000-000000000305', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'f6000000-0000-4000-8000-000000000205', 4000000, 'ARS', true, 4)
+on conflict (id) do nothing;
+
+insert into public.sales_locations (
+  id, organization_id, event_id, name, description, active, sort_order
+) values
+  ('f6000000-0000-4000-8000-000000000401', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'Barra principal', 'Pista central.', true, 0),
+  ('f6000000-0000-4000-8000-000000000402', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'Barra VIP', 'Sector de mesas.', true, 1)
+on conflict (id) do nothing;
+
+insert into public.sales_location_products (
+  sales_location_id, event_product_id, organization_id, event_id, enabled, sort_order
+) values
+  ('f6000000-0000-4000-8000-000000000401', 'f6000000-0000-4000-8000-000000000301', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 0),
+  ('f6000000-0000-4000-8000-000000000401', 'f6000000-0000-4000-8000-000000000302', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 1),
+  ('f6000000-0000-4000-8000-000000000401', 'f6000000-0000-4000-8000-000000000303', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 2),
+  ('f6000000-0000-4000-8000-000000000401', 'f6000000-0000-4000-8000-000000000304', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 3),
+  ('f6000000-0000-4000-8000-000000000402', 'f6000000-0000-4000-8000-000000000301', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 0),
+  ('f6000000-0000-4000-8000-000000000402', 'f6000000-0000-4000-8000-000000000303', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 1),
+  ('f6000000-0000-4000-8000-000000000402', 'f6000000-0000-4000-8000-000000000305', '22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', true, 2)
+on conflict do nothing;
+
+insert into public.pos_device_authorizations (
+  id, organization_id, event_id, sales_location_id, name, status, pin_hash,
+  code_expires_at, session_expires_at, created_by
+) values (
+  'f6000000-0000-4000-8000-000000000501',
+  '22222222-2222-4222-8222-222222222222',
+  '44444444-4444-4444-8444-444444444444',
+  'f6000000-0000-4000-8000-000000000401',
+  'Caja demo', 'pending', extensions.crypt('481920', extensions.gen_salt('bf', 10)),
+  now() + interval '1 hour',
+  (select starts_at + interval '16 hours' from public.events where id = '44444444-4444-4444-8444-444444444444'),
+  '11111111-1111-4111-8111-111111111111'
+) on conflict (id) do nothing;

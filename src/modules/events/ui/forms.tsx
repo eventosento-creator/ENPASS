@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Armchair, CalendarDays, DoorOpen, Music2, Presentation, Shield, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
+import { Armchair, CalendarDays, DoorOpen, Music2, Presentation, Shield, ShoppingCart, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createEvent, createTicketType, replaceEventCover, updateEvent, updateEventConfiguration, updateTicketType } from "../application/actions";
 import { ActionMessage } from "@/shared/ui/action-message";
@@ -35,6 +35,7 @@ export function EventForm({ organizationId, venues }: { organizationId: string; 
     <input type="hidden" name="promotersEnabled" value={String(capabilities.promoters)}/>
     <input type="hidden" name="tablesEnabled" value={String(capabilities.tables)}/>
     <input type="hidden" name="accessEnabled" value={String(capabilities.access)}/>
+    <input type="hidden" name="posEnabled" value={String(capabilities.pos)}/>
     <label className="group relative mx-auto aspect-[4/3] w-full max-w-sm cursor-pointer overflow-hidden rounded-[1.4rem] border border-dashed border-white/15 bg-[var(--surface)] md:sticky md:top-6 md:aspect-[4/5]">
       {preview ? <div role="img" aria-label="Vista previa del flyer" className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${preview}")` }}/> : <div className="grid h-full place-items-center p-6 text-center"><div><span className="text-3xl">✦</span><p className="mt-3 font-bold">Subí el flyer</p><p className="mt-1 text-xs text-neutral-500">JPG, PNG o WebP · hasta 5 MB</p></div></div>}
       <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-xs font-bold backdrop-blur">{preview ? "Cambiar imagen" : "Elegir imagen"}</span>
@@ -57,7 +58,7 @@ export function EventFunctionsForm({ event, hasData }: { event: Event; hasData: 
   const [profile, setProfile] = useState<EventProfile>(event.profile);
   const [capabilities, setCapabilities] = useState<Record<VisibleEventCapability, boolean>>({
     tickets: event.tickets_enabled, promoters: event.promoters_enabled,
-    tables: event.tables_enabled, access: event.access_enabled,
+    tables: event.tables_enabled, access: event.access_enabled, pos: event.pos_enabled,
   });
   function submit(eventSubmit: React.FormEvent<HTMLFormElement>) {
     const disabledWithHistory = visibleCapabilities.filter((capability) => hasData[capability] && !capabilities[capability]);
@@ -65,7 +66,7 @@ export function EventFunctionsForm({ event, hasData }: { event: Event; hasData: 
   }
   return <form action={action} onSubmit={submit} className="surface mt-8 grid gap-6 p-5 sm:p-7">
     <input type="hidden" name="eventId" value={event.id}/>
-    <input type="hidden" name="ticketsEnabled" value={String(capabilities.tickets)}/><input type="hidden" name="promotersEnabled" value={String(capabilities.promoters)}/><input type="hidden" name="tablesEnabled" value={String(capabilities.tables)}/><input type="hidden" name="accessEnabled" value={String(capabilities.access)}/>
+    <input type="hidden" name="ticketsEnabled" value={String(capabilities.tickets)}/><input type="hidden" name="promotersEnabled" value={String(capabilities.promoters)}/><input type="hidden" name="tablesEnabled" value={String(capabilities.tables)}/><input type="hidden" name="accessEnabled" value={String(capabilities.access)}/><input type="hidden" name="posEnabled" value={String(capabilities.pos)}/>
     <div><label className="label">Tipo de evento<select className="field" name="profile" value={profile} onChange={(change) => setProfile(change.target.value as EventProfile)}>{EVENT_PROFILE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><p className="mt-2 text-xs leading-5 text-neutral-600">Cambiar el tipo no modifica automáticamente las funciones elegidas.</p></div>
     <div><p className="label">Funciones del evento</p><p className="mt-2 text-sm text-neutral-500">Activá únicamente las herramientas que necesitás para esta fecha.</p><div className="mt-4 grid grid-cols-2 gap-2">{visibleCapabilities.map((capability) => <CapabilityButton key={capability} capability={capability} active={capabilities[capability]} onToggle={() => setCapabilities((current) => ({ ...current, [capability]: !current[capability] }))}/>)}</div></div>
     <p className="rounded-xl border border-white/[.07] bg-white/[.025] p-4 text-xs leading-5 text-neutral-500">Al desactivar una función conservamos su configuración, operaciones y métricas históricas. Podés volver a activarla cuando quieras.</p>
@@ -73,10 +74,11 @@ export function EventFunctionsForm({ event, hasData }: { event: Event; hasData: 
   </form>;
 }
 
-const visibleCapabilities = ["tickets", "promoters", "tables", "access"] as const;
+const visibleCapabilities = ["tickets", "promoters", "tables", "access", "pos"] as const;
 const capabilityLabels: Record<VisibleEventCapability, { label: string; icon: typeof Ticket }> = {
   tickets: { label: "Entradas", icon: Ticket }, promoters: { label: "RRPP", icon: UsersRound },
   tables: { label: "Mesas", icon: Armchair }, access: { label: "Control de acceso", icon: DoorOpen },
+  pos: { label: "Punto de venta", icon: ShoppingCart },
 };
 const profileIcons = [Sparkles, Music2, CalendarDays, Presentation, Trophy, Shield, UsersRound, Sparkles] as const;
 

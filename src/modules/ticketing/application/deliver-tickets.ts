@@ -18,6 +18,7 @@ export async function deliverTicketsForPaidOrder(
   if (!orderData) throw new Error("ORDER_NOT_FOUND");
   const order = orderData as Order;
   if (order.status !== "paid") throw new Error("ORDER_NOT_PAID");
+  if (!order.customer_id) throw new Error("CUSTOMER_NOT_FOUND");
 
   const { data: customerData } = await admin.from("customers").select("*").eq("id", order.customer_id).single();
   if (!customerData) throw new Error("CUSTOMER_NOT_FOUND");

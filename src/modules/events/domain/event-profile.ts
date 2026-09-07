@@ -11,7 +11,7 @@ export const EVENT_CAPABILITIES = [
 
 export type EventCapability = (typeof EVENT_CAPABILITIES)[number];
 export type EventCapabilities = Record<EventCapability, boolean>;
-export type VisibleEventCapability = Exclude<EventCapability, "pos" | "inventory">;
+export type VisibleEventCapability = Exclude<EventCapability, "inventory">;
 
 export const EVENT_PROFILE_OPTIONS: ReadonlyArray<{
   value: EventProfile;
@@ -29,12 +29,12 @@ export const EVENT_PROFILE_OPTIONS: ReadonlyArray<{
 ];
 
 const PRESETS: Record<EventProfile, EventCapabilities> = {
-  nightlife: { tickets: true, promoters: true, tables: true, access: true, pos: false, inventory: false },
-  concert: { tickets: true, promoters: true, tables: false, access: true, pos: false, inventory: false },
-  festival: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
+  nightlife: { tickets: true, promoters: true, tables: true, access: true, pos: true, inventory: false },
+  concert: { tickets: true, promoters: true, tables: false, access: true, pos: true, inventory: false },
+  festival: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
   conference: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
-  sports: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
-  expo: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
+  sports: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
+  expo: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
   private_event: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
   other: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
 };

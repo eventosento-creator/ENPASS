@@ -11,7 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:db": "supabase test db --local",
-    "test:concurrency": "node --env-file=.env.local scripts/test-checkin-concurrency.mjs && node --env-file=.env.local scripts/test-table-concurrency.mjs",
+    "test:concurrency": "node --env-file=.env.local scripts/test-checkin-concurrency.mjs && node --env-file=.env.local scripts/test-table-concurrency.mjs && node --env-file=.env.local scripts/test-pos-concurrency.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {

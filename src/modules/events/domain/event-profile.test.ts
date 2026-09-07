@@ -4,7 +4,7 @@ import { changeEventProfile, getDefaultCapabilitiesForProfile } from "./event-pr
 describe("event profiles", () => {
   it("enables the full existing journey for nightlife", () => {
     expect(getDefaultCapabilitiesForProfile("nightlife")).toEqual({
-      tickets: true, promoters: true, tables: true, access: true, pos: false, inventory: false,
+      tickets: true, promoters: true, tables: true, access: true, pos: true, inventory: false,
     });
   });
 

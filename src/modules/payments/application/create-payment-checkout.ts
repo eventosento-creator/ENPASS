@@ -23,6 +23,7 @@ export async function createPaymentCheckout(orderPublicId: string) {
     .eq("id", attempt.payment_id).single();
   if (paymentError || !paymentData) throw new Error("PAYMENT_NOT_FOUND");
   const payment = paymentData as Payment;
+  if (!payment.payment_account_id) throw new Error("PAYMENT_ACCOUNT_REQUIRED");
 
   const existingCheckout = config.sandbox ? payment.sandbox_checkout_url : payment.checkout_url;
   if (existingCheckout) return { checkoutUrl: existingCheckout, paymentPublicId: payment.public_id };
@@ -35,6 +36,7 @@ export async function createPaymentCheckout(orderPublicId: string) {
   if (!orderData || !itemData?.length || !accountData) throw new Error("PAYMENT_CONTEXT_INCOMPLETE");
   const order = orderData as Order;
   const items = itemData as OrderItem[];
+  if (!order.customer_id || !order.expires_at) throw new Error("PAYMENT_CONTEXT_INCOMPLETE");
 
   const [{ data: customerData }, { data: eventData }] = await Promise.all([
     admin.from("customers").select("*").eq("id", order.customer_id).single(),

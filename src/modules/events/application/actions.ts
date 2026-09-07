@@ -50,7 +50,7 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     promoters_enabled: parsed.data.promotersEnabled,
     tables_enabled: parsed.data.tablesEnabled,
     access_enabled: parsed.data.accessEnabled,
-    pos_enabled: false,
+    pos_enabled: parsed.data.posEnabled,
     inventory_enabled: false,
     currency: "ARS", cover_image_url: coverImageUrl, created_by: user.user.id,
   }).select("id").single();
@@ -66,7 +66,7 @@ export async function updateEventConfiguration(_: ActionState, formData: FormDat
   const parsed = eventConfigurationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá el tipo y las funciones del evento." };
   const supabase = await createClient();
-  const { data: event } = await supabase.from("events").select("slug, pos_enabled, inventory_enabled").eq("id", parsed.data.eventId).single();
+  const { data: event } = await supabase.from("events").select("slug, inventory_enabled").eq("id", parsed.data.eventId).single();
   if (!event) return { error: "No encontramos el evento." };
   const { error } = await supabase.rpc("update_event_configuration", {
     target_event: parsed.data.eventId,
@@ -75,9 +75,10 @@ export async function updateEventConfiguration(_: ActionState, formData: FormDat
     target_promoters_enabled: parsed.data.promotersEnabled,
     target_tables_enabled: parsed.data.tablesEnabled,
     target_access_enabled: parsed.data.accessEnabled,
-    target_pos_enabled: event.pos_enabled,
+    target_pos_enabled: parsed.data.posEnabled,
     target_inventory_enabled: event.inventory_enabled,
   });
+  if (error?.message.includes("OPEN_POS_SESSIONS")) return { error: "Cerrá las cajas abiertas antes de desactivar esta función." };
   if (error) return { error: "No pudimos guardar las funciones del evento." };
   revalidatePath(`/app/events/${parsed.data.eventId}`);
   revalidatePath(`/app/events/${parsed.data.eventId}/edit`);
@@ -247,6 +248,8 @@ export async function duplicateEvent(_: ActionState, formData: FormData): Promis
     preserve_tickets: formData.get("preserveTickets") === "on",
     preserve_promoters: formData.get("preservePromoters") === "on",
     preserve_tables: formData.get("preserveTables") === "on",
+    preserve_products: formData.get("preserveProducts") === "on",
+    preserve_sales_locations: formData.get("preserveSalesLocations") === "on",
   });
   if (error || !data) return { error: "No pudimos duplicar el evento." };
   revalidatePath("/app/events");

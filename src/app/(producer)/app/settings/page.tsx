@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CreditCard, ExternalLink, MapPin, ShieldCheck, Unplug } from "lucide-react";
+import { CreditCard, ExternalLink, MapPin, Package, ShieldCheck, Unplug } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { disconnectMercadoPago } from "@/modules/payments/application/actions";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
@@ -27,6 +27,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {!environment.ready && <div className="border-t border-amber-300/10 bg-amber-300/[.04] p-5 text-sm leading-6 text-amber-100/70 sm:px-7"><strong className="text-amber-100">Configuración local incompleta.</strong> {environment.message}</div>}
     </section>
     <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/[.06]"><MapPin size={20}/></span><div><h2 className="font-bold">Lugares</h2><p className="mt-1 text-sm text-neutral-500">Direcciones, capacidad y zona horaria.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href="/app/venues">Administrar lugares</Link></section>
+    <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/[.06]"><Package size={20}/></span><div><h2 className="font-bold">Productos</h2><p className="mt-1 text-sm text-neutral-500">Catálogo reutilizable para las barras y puntos de venta.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href="/app/products">Administrar productos</Link></section>
   </div>;
 }
 

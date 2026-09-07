@@ -1,6 +1,6 @@
-# Nightlife OS
+# ENPASS
 
-Aplicación de gestión, venta y acceso a eventos. FASE 5 incorpora mesas, acceso grupal y beneficios sobre la arquitectura funcional de FASE 0–4.
+Plataforma de gestión, venta y acceso a eventos. FASE 6 incorpora catálogo, venta presencial y cajas sobre la arquitectura funcional de FASE 0–5.5.
 
 Local es el entorno reproducible principal. El entorno remoto documentado es exclusivamente staging/beta; no hay infraestructura productiva ni dinero real.
 
@@ -77,6 +77,9 @@ SMTP_FROM
 - PIN supervisor local: `320001`
 - RRPP demo: Lucas, Martina y Agus
 - Sectores demo: VIP y Terraza
+- Productos demo: Fernet, cerveza, agua, vodka con energizante y champagne
+- Puntos de venta demo: Barra principal y Barra VIP
+- PIN POS local, de un uso después de cada reset: `481920`
 - Mesas demo: disponible, reservada temporalmente, vendida y deshabilitada
 - Order mesa pagada: `e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e501`
 - Link público Lucas: `http://127.0.0.1:3000/e/noche-2000/lucas`
@@ -97,6 +100,9 @@ El correo local para magic links se inspecciona en <http://127.0.0.1:56324>.
 - Gestión de accesos demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/access>
 - Gestión RRPP demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/promoters>
 - Gestión de mesas demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/tables>
+- Productos: <http://localhost:3000/app/products>
+- Gestión POS demo: <http://localhost:3000/app/events/44444444-4444-4444-8444-444444444444/pos>
+- Terminal POS: <http://localhost:3000/pos>
 - Link RRPP público: <http://localhost:3000/e/noche-2000/lucas>
 - Panel RRPP: <http://localhost:3000/promoter>
 - QR locales de prueba: <http://localhost:3000/dev/qr>
@@ -179,8 +185,15 @@ Mercado Pago no acepta `localhost` para todas las URLs externas. El túnel se us
 - Comisión de mesa fija o porcentual sobre precio base, con atribución, snapshots, retries y refund compartidos con Ticketing.
 - Refund de mesa sin uso libera inventario; después de uso queda en revisión y no se revende automáticamente.
 - Duplicación opcional de zones, mesas y templates sin copiar holds, ventas, compradores ni uso.
+- Catálogo reusable por Organization con categorías, SKU, barcode opcional y precio base en centavos.
+- Productos y precios autoritativos por Event, oferta separada por barra o punto de venta.
+- PIN POS bcrypt de seis dígitos, temporal y de un uso; rate limit y sesión opaca HttpOnly separada de Auth.
+- Caja por dispositivo con apertura, ingresos, egresos, esperado, contado, diferencia y cierre inmutable.
+- Venta POS transaccional e idempotente reutilizando Order, OrderItem y Payment, con efectivo y métodos externos manuales.
+- POS mobile-first con búsqueda, categorías, carrito, cálculo de vuelto, estado offline y métricas por evento, barra y producto.
+- Duplicación opcional de productos, precios y puntos de venta sin copiar dispositivos, cajas ni ventas.
 
-Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md), [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md), [docs/promoters-phase-4.md](docs/promoters-phase-4.md), [docs/tables-phase-5.md](docs/tables-phase-5.md) y [docs/staging-deployment.md](docs/staging-deployment.md).
+Las decisiones están en [docs/mercadopago-phase-2a.md](docs/mercadopago-phase-2a.md), [docs/ticketing-phase-2b.md](docs/ticketing-phase-2b.md), [docs/access-phase-3.md](docs/access-phase-3.md), [docs/product-ux-phase-3-5.md](docs/product-ux-phase-3-5.md), [docs/promoters-phase-4.md](docs/promoters-phase-4.md), [docs/tables-phase-5.md](docs/tables-phase-5.md), [docs/event-profiles-phase-5-5.md](docs/event-profiles-phase-5-5.md), [docs/pos-phase-6.md](docs/pos-phase-6.md) y [docs/staging-deployment.md](docs/staging-deployment.md).
 
 ## Verificación
 
@@ -194,10 +207,10 @@ npx supabase db lint --local --schema public --level warning --fail-on warning
 npm run build
 ```
 
-La suite unitaria cubre fees, estados, dinero, cifrado, QR, scanner, comisiones y validación de mesas. Los 212 pgTAP incluyen 58 casos de FASE 5 para inventario, acceso grupal, beneficios, refunds, RRPP, RLS y duplicación. `test:concurrency` valida tanto check-in atómico como dos compradores intentando la misma mesa.
+La suite unitaria cubre fees, estados, dinero, cifrado, QR, scanner, comisiones, mesas, carrito POS, vuelto y arqueo. pgTAP cubre además tenant isolation, activación, snapshots, pagos manuales, caja e idempotencia. `test:concurrency` valida check-in, holds de mesa y 20 reintentos simultáneos de una venta POS.
 
 ## Límite actual
 
-El flujo controlado termina en `Ticket o mesa emitida + ScannerSession autorizada + Checkin atómico + RRPP atribuido/comisión confirmada`. No existe botón público para marcar una Order pagada.
+El flujo controlado incluye `Ticket o mesa emitida + ScannerSession autorizada + Checkin atómico + RRPP atribuido/comisión confirmada + venta POS/cierre de caja`. No existe botón público para marcar una Order online pagada.
 
-No se implementan scanning offline, sincronización distribuida, Realtime/WebSockets, payouts/settlements RRPP, atribución cross-device, plano visual de mesas, canje de beneficios, POS, inventory general, Wallet/PDF ni producción. El refund parcial todavía no distribuye comisión por unidad. La validación end-to-end con Mercado Pago sandbox y teléfono físico no se declara completa hasta ejecutar esos recorridos sobre staging HTTPS.
+No se implementan scanning o venta offline, sincronización distribuida, Realtime/WebSockets, payouts/settlements RRPP, atribución cross-device, plano visual de mesas, canje de beneficios, inventory general, comandas, Point, turnos de empleados, Wallet/PDF ni producción. El refund parcial todavía no distribuye comisión por unidad. La validación end-to-end con Mercado Pago sandbox y teléfono físico no se declara completa hasta ejecutar esos recorridos sobre staging HTTPS.
