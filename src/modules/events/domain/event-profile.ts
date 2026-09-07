@@ -6,7 +6,7 @@ export const EVENT_PROFILES = [
 export type EventProfile = (typeof EVENT_PROFILES)[number];
 
 export const EVENT_CAPABILITIES = [
-  "tickets", "promoters", "tables", "access", "pos", "inventory",
+  "tickets", "promoters", "tables", "seatmap", "access", "pos", "inventory",
 ] as const;
 
 export type EventCapability = (typeof EVENT_CAPABILITIES)[number];
@@ -29,14 +29,14 @@ export const EVENT_PROFILE_OPTIONS: ReadonlyArray<{
 ];
 
 const PRESETS: Record<EventProfile, EventCapabilities> = {
-  nightlife: { tickets: true, promoters: true, tables: true, access: true, pos: true, inventory: false },
-  concert: { tickets: true, promoters: true, tables: false, access: true, pos: true, inventory: false },
-  festival: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
-  conference: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
-  sports: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
-  expo: { tickets: true, promoters: false, tables: false, access: true, pos: true, inventory: false },
-  private_event: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
-  other: { tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false },
+  nightlife: { tickets: true, promoters: true, tables: true, seatmap: false, access: true, pos: true, inventory: false },
+  concert: { tickets: true, promoters: true, tables: false, seatmap: false, access: true, pos: true, inventory: false },
+  festival: { tickets: true, promoters: false, tables: false, seatmap: false, access: true, pos: true, inventory: false },
+  conference: { tickets: true, promoters: false, tables: false, seatmap: true, access: true, pos: false, inventory: false },
+  sports: { tickets: true, promoters: false, tables: false, seatmap: true, access: true, pos: true, inventory: false },
+  expo: { tickets: true, promoters: false, tables: false, seatmap: false, access: true, pos: true, inventory: false },
+  private_event: { tickets: true, promoters: false, tables: false, seatmap: false, access: true, pos: false, inventory: false },
+  other: { tickets: true, promoters: false, tables: false, seatmap: false, access: true, pos: false, inventory: false },
 };
 
 export function getDefaultCapabilitiesForProfile(profile: EventProfile): EventCapabilities {
@@ -51,6 +51,7 @@ export function getEventCapabilities(event: {
   tickets_enabled: boolean;
   promoters_enabled: boolean;
   tables_enabled: boolean;
+  seatmap_enabled: boolean;
   access_enabled: boolean;
   pos_enabled: boolean;
   inventory_enabled: boolean;
@@ -59,6 +60,7 @@ export function getEventCapabilities(event: {
     tickets: event.tickets_enabled,
     promoters: event.promoters_enabled,
     tables: event.tables_enabled,
+    seatmap: event.seatmap_enabled,
     access: event.access_enabled,
     pos: event.pos_enabled,
     inventory: event.inventory_enabled,

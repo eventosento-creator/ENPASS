@@ -12,6 +12,7 @@ export const eventInputSchema = z.object({
   ticketsEnabled: booleanString,
   promotersEnabled: booleanString,
   tablesEnabled: booleanString,
+  seatmapEnabled: booleanString,
   accessEnabled: booleanString,
   posEnabled: booleanString,
 });
@@ -22,6 +23,7 @@ export const eventConfigurationSchema = z.object({
   ticketsEnabled: booleanString,
   promotersEnabled: booleanString,
   tablesEnabled: booleanString,
+  seatmapEnabled: booleanString,
   accessEnabled: booleanString,
   posEnabled: booleanString,
 });

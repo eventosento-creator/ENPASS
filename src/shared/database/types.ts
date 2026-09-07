@@ -17,6 +17,7 @@ export type Event = {
   capacity: number; require_document: boolean; currency: string; published_at: string | null;
   profile: EventProfile; tickets_enabled: boolean; promoters_enabled: boolean;
   tables_enabled: boolean; access_enabled: boolean; pos_enabled: boolean; inventory_enabled: boolean;
+  seatmap_enabled: boolean;
 };
 export type EventProfile = "nightlife" | "concert" | "festival" | "conference" | "sports" | "expo" | "private_event" | "other";
 export type TicketType = {
@@ -56,6 +57,24 @@ export type TableEntitlementTemplate = {
 
 export type TableHold = {
   id: string; organization_id: string; event_id: string; event_table_id: string;
+  order_id: string; status: "active" | "consumed" | "expired" | "cancelled" | "refund_review";
+  expires_at: string; created_at: string; updated_at: string;
+};
+
+export type SeatMapSection = {
+  id: string; organization_id: string; event_id: string; name: string; description: string;
+  rows: number; seats_per_row: number; base_price_amount: number; currency: string;
+  service_fee_bps: number | null; sort_order: number; active: boolean; created_at: string; updated_at: string;
+};
+
+export type EventSeat = {
+  id: string; organization_id: string; event_id: string; section_id: string;
+  row_label: string; seat_number: number; label: string; active: boolean;
+  created_at: string; updated_at: string;
+};
+
+export type SeatHold = {
+  id: string; organization_id: string; event_id: string; event_seat_id: string;
   order_id: string; status: "active" | "consumed" | "expired" | "cancelled" | "refund_review";
   expires_at: string; created_at: string; updated_at: string;
 };
@@ -113,9 +132,10 @@ export type OrderItem = {
   id: string;
   organization_id: string;
   order_id: string;
-  item_type: "ticket" | "table" | "product";
+  item_type: "ticket" | "table" | "seat" | "product";
   ticket_type_id: string | null;
   event_table_id: string | null;
+  event_seat_id: string | null;
   product_id: string | null;
   event_product_id: string | null;
   item_name: string;
@@ -281,6 +301,7 @@ export type Ticket = {
   order_item_id: string;
   ticket_type_id: string | null;
   event_table_id: string | null;
+  event_seat_id: string | null;
   customer_id: string;
   unit_index: number;
   status: TicketStatus;
@@ -416,6 +437,9 @@ export interface Database {
       event_tables: { Row: EventTable; Insert: never; Update: never; Relationships: [] };
       table_entitlement_templates: { Row: TableEntitlementTemplate; Insert: never; Update: never; Relationships: [] };
       table_holds: { Row: TableHold; Insert: never; Update: never; Relationships: [] };
+      seat_map_sections: { Row: SeatMapSection; Insert: never; Update: never; Relationships: [] };
+      event_seats: { Row: EventSeat; Insert: never; Update: never; Relationships: [] };
+      seat_holds: { Row: SeatHold; Insert: never; Update: never; Relationships: [] };
       entitlements: { Row: { id: string; organization_id: string; event_id: string; order_id: string; order_item_id: string; event_table_id: string; template_id: string | null; entitlement_type: "access" | "product" | "drink" | "generic"; reference_id: string | null; name: string; quantity: number; redeemed_quantity: number; status: "active" | "partially_redeemed" | "redeemed" | "revoked"; metadata: Json; issued_at: string; revoked_at: string | null; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       ticket_holds: { Row: { id: string; organization_id: string; event_id: string; ticket_type_id: string; order_id: string; quantity: number; status: "active" | "consumed" | "expired" | "cancelled"; expires_at: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       customers: { Row: Customer; Insert: Omit<Customer, "id" | "created_at"> & { id?: string; created_at?: string }; Update: Partial<Customer>; Relationships: [] };
@@ -452,7 +476,7 @@ export interface Database {
       create_organization: { Args: { org_name: string; org_slug: string }; Returns: string };
       publish_event: { Args: { target_event: string }; Returns: undefined };
       update_event_details: { Args: { target_event: string; target_venue: string; target_name: string; target_description: string; target_starts_at: string; target_doors_open_at: string | null; target_ends_at: string | null; target_capacity: number; target_require_document: boolean }; Returns: undefined };
-      update_event_configuration: { Args: { target_event: string; target_profile: EventProfile; target_tickets_enabled: boolean; target_promoters_enabled: boolean; target_tables_enabled: boolean; target_access_enabled: boolean; target_pos_enabled: boolean; target_inventory_enabled: boolean }; Returns: undefined };
+      update_event_configuration: { Args: { target_event: string; target_profile: EventProfile; target_tickets_enabled: boolean; target_promoters_enabled: boolean; target_tables_enabled: boolean; target_access_enabled: boolean; target_pos_enabled: boolean; target_inventory_enabled: boolean; target_seatmap_enabled: boolean }; Returns: undefined };
       create_pos_device_authorization: { Args: { target_event: string; target_location: string; device_name: string; target_pin: string; target_code_expires_at: string; target_session_expires_at: string }; Returns: string };
       revoke_pos_device: { Args: { target_authorization: string }; Returns: undefined };
       activate_pos_device: { Args: { target_pin: string; target_session_hash: string; target_fingerprint_hash: string }; Returns: { activation_status: string; device_session_id: string | null; device_id: string | null; event_id: string | null; event_name: string | null; sales_location_id: string | null; sales_location_name: string | null; device_name: string | null; event_timezone: string | null; expires_at: string | null; retry_after_seconds: number }[] };
@@ -472,10 +496,13 @@ export interface Database {
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };
       get_public_ticket_types: { Args: { target_event: string }; Returns: (Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean })[] };
       get_public_event_tables: { Args: { target_event: string }; Returns: { id: string; event_id: string; table_zone_id: string; zone_name: string; name: string; description: string; capacity: number; base_price_amount: number; currency: string; service_fee_bps: number; sort_order: number; availability_status: "available" | "held" | "sold"; benefits: Json }[] };
-      get_public_event_by_slug: { Args: { target_slug: string }; Returns: { id: string; venue_id: string; name: string; slug: string; description: string; cover_image_url: string | null; starts_at: string; doors_open_at: string | null; ends_at: string | null; capacity: number; require_document: boolean; currency: string; tickets_enabled: boolean; tables_enabled: boolean }[] };
+      get_public_event_by_slug: { Args: { target_slug: string }; Returns: { id: string; venue_id: string; name: string; slug: string; description: string; cover_image_url: string | null; starts_at: string; doors_open_at: string | null; ends_at: string | null; capacity: number; require_document: boolean; currency: string; tickets_enabled: boolean; tables_enabled: boolean; seatmap_enabled: boolean }[] };
       create_table_zone: { Args: { target_event: string; target_name: string; target_description?: string }; Returns: string };
       create_event_table: { Args: { target_event: string; target_zone: string; target_name: string; target_description: string; target_capacity: number; target_base_price_amount: number; target_currency: string; target_service_fee_bps: number | null; target_access_gate: string | null; target_benefits: Json }; Returns: string };
       set_event_table_active: { Args: { target_table: string; target_active: boolean }; Returns: undefined };
+      create_seat_map_section: { Args: { target_event: string; target_name: string; target_description: string; target_rows: number; target_seats_per_row: number; target_base_price_amount: number; target_currency: string; target_service_fee_bps: number | null }; Returns: string };
+      set_event_seat_active: { Args: { target_seat: string; target_active: boolean }; Returns: undefined };
+      get_public_event_seats: { Args: { target_event: string }; Returns: { id: string; event_id: string; section_id: string; section_name: string; row_label: string; seat_number: number; label: string; base_price_amount: number; currency: string; service_fee_bps: number | null; sort_order: number; availability_status: "available" | "held" | "sold" }[] };
       get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean }[] };
       get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean }[] };
       complete_free_order: { Args: { target_order_public_id: string }; Returns: string };

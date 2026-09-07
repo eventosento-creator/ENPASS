@@ -49,6 +49,7 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     tickets_enabled: parsed.data.ticketsEnabled,
     promoters_enabled: parsed.data.promotersEnabled,
     tables_enabled: parsed.data.tablesEnabled,
+    seatmap_enabled: parsed.data.seatmapEnabled,
     access_enabled: parsed.data.accessEnabled,
     pos_enabled: parsed.data.posEnabled,
     inventory_enabled: false,
@@ -77,6 +78,7 @@ export async function updateEventConfiguration(_: ActionState, formData: FormDat
     target_access_enabled: parsed.data.accessEnabled,
     target_pos_enabled: parsed.data.posEnabled,
     target_inventory_enabled: event.inventory_enabled,
+    target_seatmap_enabled: parsed.data.seatmapEnabled,
   });
   if (error?.message.includes("OPEN_POS_SESSIONS")) return { error: "Cerrá las cajas abiertas antes de desactivar esta función." };
   if (error) return { error: "No pudimos guardar las funciones del evento." };

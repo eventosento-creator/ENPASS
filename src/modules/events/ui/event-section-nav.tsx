@@ -2,12 +2,13 @@ import Link from "next/link";
 import type { EventCapabilities, EventProfile } from "../domain/event-profile";
 import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 
-export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: "summary" | "tickets" | "promoters" | "tables" | "access" | "pos"; capabilities: EventCapabilities; profile?: EventProfile }) {
+export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: "summary" | "tickets" | "promoters" | "tables" | "seatmap" | "access" | "pos"; capabilities: EventCapabilities; profile?: EventProfile }) {
   const items = [
     { href: `/app/events/${eventId}`, label: "Resumen", key: "summary" },
     { href: `/app/events/${eventId}#entradas`, label: "Entradas", key: "tickets" },
     { href: `/app/events/${eventId}/promoters`, label: "RRPP", key: "promoters" },
     { href: `/app/events/${eventId}/tables`, label: "Mesas", key: "tables" },
+    { href: `/app/events/${eventId}/seatmap`, label: "Asientos", key: "seatmap" },
     { href: `/app/events/${eventId}/access`, label: "Accesos", key: "access" },
     { href: `/app/events/${eventId}/pos`, label: getPosModuleLabel(profile), key: "pos" },
   ] as const;
