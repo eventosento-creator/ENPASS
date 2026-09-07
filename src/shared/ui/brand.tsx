@@ -12,3 +12,10 @@ export function EnpassLogo({ className, compact = false }: { className?: string;
     {!compact && <span aria-hidden className="brand-wordmark -ml-0.5">NPASS</span>}
   </span>;
 }
+
+export function EnpassLockup({ label, className }: { label: string; className?: string }) {
+  return <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <EnpassLogo/>
+    <span className="border-l border-[var(--border-strong)] pl-2.5 text-[10px] font-black uppercase tracking-[.14em] text-[var(--muted)]">{label}</span>
+  </span>;
+}
