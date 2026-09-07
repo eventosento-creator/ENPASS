@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { formatEventDate, formatMoney } from "@/shared/lib/format";
 import type { DiscoveryEvent } from "../domain/discovery";
@@ -37,8 +37,9 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
             sizes="(max-width: 640px) 86vw, (max-width: 1024px) 70vw, 58vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"/>
-          <span className="absolute left-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[.1em] text-black shadow-lg">
+          <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[.1em] text-black shadow-lg">
             ✦ Próxima fecha
+            <span aria-hidden className={`size-1.5 rounded-full ${event.has_availability ? "bg-emerald-500" : "bg-red-500"}`}/>
           </span>
           <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
             <h2 className="max-w-lg text-2xl font-black leading-[1.02] tracking-[-.03em] text-white sm:text-4xl">{event.name}</h2>
@@ -47,7 +48,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
               <span className="flex items-center gap-1.5"><MapPin size={14}/>{event.venue_name} · {event.city}</span>
             </div>
             <div className="mt-4 flex items-center gap-3">
-              <span className="inline-flex min-h-11 items-center justify-center rounded-[.85rem] bg-white px-5 text-sm font-bold text-black shadow-[var(--highlight-top),0_1px_2px_rgb(0_0_0/24%)] transition group-hover:brightness-105">Ver entradas</span>
+              <span className="inline-flex min-h-11 items-center gap-1.5 rounded-[.85rem] bg-white pl-5 pr-4 text-sm font-bold text-black shadow-[var(--highlight-top),0_1px_2px_rgb(0_0_0/24%)] transition group-hover:gap-2.5 group-hover:brightness-105">Ver entradas<ArrowRight size={16}/></span>
               <span className="text-sm font-bold text-white/90">{price}</span>
             </div>
           </div>

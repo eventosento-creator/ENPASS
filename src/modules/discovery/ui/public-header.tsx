@@ -1,19 +1,35 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CalendarDays, LogIn, Ticket } from "lucide-react";
 import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export function PublicHeader() {
+  const pathname = usePathname();
+  const isEventos = pathname === "/eventos" || pathname?.startsWith("/e/");
+  const isMisEntradas = pathname?.startsWith("/mis-entradas") || pathname?.startsWith("/order/");
   return <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[color:var(--background)]/90 backdrop-blur-xl">
     <div className="container-shell flex h-16 items-center justify-between gap-2">
       <Link href="/" className="shrink-0"><EnpassLogo/></Link>
       <nav aria-label="Navegación principal" className="flex items-center gap-0.5 text-sm sm:gap-1">
-        <Link aria-label="Explorar eventos" className="inline-flex min-h-10 items-center gap-2 rounded-full px-2.5 py-2 text-neutral-300 transition hover:bg-white/[.05] hover:text-white sm:px-3" href="/eventos"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Eventos</span></Link>
-        <Link aria-label="Mis entradas" className="inline-flex min-h-10 items-center gap-2 rounded-full px-2.5 py-2 text-neutral-400 transition hover:bg-white/[.05] hover:text-white sm:px-3" href={"/mis-entradas" as never}><Ticket aria-hidden size={16}/><span className="hidden lg:inline">Mis entradas</span></Link>
-        <ThemeToggle className="rounded-full"/><Link aria-label="Ingresar para crear eventos" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.08] px-2.5 py-2 text-neutral-400 transition hover:border-white/[.14] hover:text-white sm:ml-1 sm:px-3" href="/login"><LogIn aria-hidden size={16}/><span className="hidden md:inline">Crear evento</span></Link>
+        <NavTab active={isEventos} href="/eventos" label="Eventos" icon={CalendarDays}/>
+        <NavTab active={isMisEntradas} href={"/mis-entradas" as never} label="Mis entradas" icon={Ticket} labelClassName="hidden lg:inline"/>
+        <ThemeToggle className="rounded-full"/>
+        <Link aria-label="Ingresar para crear eventos" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.08] px-2.5 py-2 text-neutral-400 transition hover:border-white/[.14] hover:text-white sm:ml-1 sm:px-3" href="/login"><LogIn aria-hidden size={16}/><span className="hidden md:inline">Crear evento</span></Link>
       </nav>
     </div>
   </header>;
+}
+
+function NavTab({ active, href, label, icon: Icon, labelClassName = "hidden sm:inline" }: { active: boolean; href: Parameters<typeof Link>[0]["href"]; label: string; icon: typeof CalendarDays; labelClassName?: string }) {
+  return <Link
+    aria-label={label}
+    aria-current={active ? "page" : undefined}
+    className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2.5 py-2 transition sm:px-3 ${active ? "bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-xs)]" : "text-neutral-400 hover:bg-white/[.05] hover:text-white"}`}
+    href={href}
+  ><Icon aria-hidden size={16}/><span className={labelClassName}>{label}</span></Link>;
 }
 
 export function PublicFooter() {
