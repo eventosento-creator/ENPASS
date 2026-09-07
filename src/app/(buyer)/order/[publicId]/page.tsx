@@ -9,6 +9,7 @@ import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { formatMoney } from "@/shared/lib/format";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { EnpassLogo } from "@/shared/ui/brand";
 import { recoverPaidOrderByPublicId } from "@/modules/ticketing/application/fulfillment";
 import { getTicketPresentationsForOrder } from "@/modules/ticketing/application/queries";
 import { TicketCarousel } from "@/modules/ticketing/ui/ticket-carousel";
@@ -36,13 +37,13 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const developmentAttribution = process.env.NODE_ENV === "development" ? await getDevelopmentAttribution(publicId) : null;
 
   if (paid || (refunded && tickets.length > 0)) return <main className="container-shell min-h-screen py-6 sm:py-10"><section className="mx-auto w-full max-w-2xl">
-    <header className="mb-6 flex items-center justify-between"><Link href="/" className="text-sm font-black tracking-[-.03em]">ENPASS</Link><Link href={"/mis-entradas" as never} className="text-xs font-bold text-neutral-500 hover:text-white">Mis accesos</Link></header>
+    <header className="mb-6 flex items-center justify-between"><Link href="/"><EnpassLogo/></Link><Link href={"/mis-entradas" as never} className="text-xs font-bold text-neutral-500 hover:text-white">Mis accesos</Link></header>
     <div className="mb-6"><p className="eyebrow">{refunded ? "Compra reembolsada" : free ? "Entradas confirmadas" : "Pago confirmado"}</p><div className="mt-3 flex items-start gap-3"><CheckCircle2 className="mt-1 shrink-0 text-[var(--accent)]" size={28}/><div><h1 className="text-3xl font-black tracking-[-.045em] sm:text-4xl">{refunded ? "Estado de tus accesos" : tickets.length ? "¡Ya tenés tus accesos!" : "Estamos preparando tus accesos"}</h1><p className="mt-2 text-sm leading-6 text-neutral-500">{refunded ? "El pago fue reintegrado y los QR dejaron de ser válidos." : tickets.length ? "Guardá este acceso o recuperalo cuando quieras desde Mis accesos." : free ? "La reserva gratuita quedó confirmada. Estamos generando tus accesos." : "Tu pago está confirmado. No vuelvas a pagar."}</p></div></div></div>
     {tickets.length > 0 ? <TicketCarousel tickets={tickets}/> : <div className="card p-7 sm:p-9"><LoaderCircle className="animate-spin text-[var(--accent)]" size={30}/><h2 className="mt-5 text-xl font-black">Terminando la emisión</h2><p className="mt-2 text-sm leading-6 text-neutral-500">Estamos generando tus credenciales de forma segura. Si demora, podés cerrar esta pantalla: el pago ya quedó confirmado.</p><TicketIssuancePoller/>{issuance?.status === "processing" && <p className="mt-4 rounded-xl border border-amber-300/10 bg-amber-300/[.04] p-4 text-sm text-amber-100/75">Hay una demora extraordinaria en la emisión. No vuelvas a pagar; el equipo puede reintentarla sin generar otro cobro.</p>}</div>}
   </section></main>;
 
   return <main className="container-shell grid min-h-screen place-items-center py-6 sm:py-10"><section className="w-full max-w-2xl">
-    <header className="mb-6 flex items-center justify-between"><span className="text-sm font-black tracking-[-.03em]">ENPASS</span><span className="flex items-center gap-1.5 text-xs text-neutral-600"><LockKeyhole size={13}/> Compra protegida</span></header>
+    <header className="mb-6 flex items-center justify-between"><EnpassLogo/><span className="flex items-center gap-1.5 text-xs text-neutral-600"><LockKeyhole size={13}/> Compra protegida</span></header>
     <div className="card overflow-hidden"><EventCover src={order.event_cover_url} alt={`Flyer de ${order.event_name}`} className="aspect-[16/7]" priority/><div className="p-5 sm:p-8">
       <OrderHeadline paid={paid} expired={expired} refunded={refunded} exceptional={exceptional} paymentStatus={order.payment_status}/>
       {query.paymentError && <PaymentError code={query.paymentError}/>}

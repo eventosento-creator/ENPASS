@@ -1,15 +1,21 @@
+import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
+const MARK_RATIO = 698 / 445;
+const WORDMARK_RATIO = 1081 / 213;
+
 export function EnpassMark({ className }: { className?: string }) {
-  return <svg aria-hidden viewBox="0 0 64 48" className={cn("h-8 w-auto", className)} fill="none">
-    <path fill="currentColor" d="M4 4h44v9H14v7h23v-6l19 10-19 10v-6H14v7h34v9H4V4Z"/>
-  </svg>;
+  return <span className={cn("relative inline-block h-8 w-auto", className)} style={{ aspectRatio: MARK_RATIO }} aria-hidden>
+    <Image src="/brand/enpass-mark-black.png" alt="" fill sizes="64px" className="theme-icon-light object-contain"/>
+    <Image src="/brand/enpass-mark-white.png" alt="" fill sizes="64px" className="theme-icon-dark object-contain"/>
+  </span>;
 }
 
 export function EnpassLogo({ className, compact = false }: { className?: string; compact?: boolean }) {
-  return <span className={cn("inline-flex items-center text-[var(--text)]", className)} aria-label="ENPASS">
-    <EnpassMark className={compact ? "h-7" : "h-8"}/>
-    {!compact && <span aria-hidden className="brand-wordmark -ml-0.5">NPASS</span>}
+  if (compact) return <span className={cn("inline-flex items-center", className)} aria-label="ENPASS"><EnpassMark/></span>;
+  return <span className={cn("relative inline-block h-8 w-auto", className)} style={{ aspectRatio: WORDMARK_RATIO }} aria-label="ENPASS">
+    <Image src="/brand/enpass-wordmark-black.png" alt="" fill priority sizes="200px" className="theme-icon-light object-contain object-left"/>
+    <Image src="/brand/enpass-wordmark-white.png" alt="" fill priority sizes="200px" className="theme-icon-dark object-contain object-left"/>
   </span>;
 }
 
