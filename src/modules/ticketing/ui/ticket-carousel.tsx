@@ -55,7 +55,7 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
 
         <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/[.08] pt-5">
           <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-neutral-600">{ticket.credentialKind === "table" ? `MESA · ${ticket.ticketTypeName}` : ticket.ticketTypeName}</p><p className="mt-2 text-lg font-extrabold">{ticket.holderName}</p><p className="mt-1 font-mono text-sm tracking-[.12em] text-neutral-500">#{ticket.shortCode}</p>{ticket.maxEntries > 1 && <p className="mt-2 text-xs font-black text-[var(--accent)]">{ticket.usedEntries} / {ticket.maxEntries} ingresos utilizados</p>}</div>
-          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${ticket.status === "valid" ? "bg-[var(--accent)] text-black" : "bg-white/[.07] text-neutral-300"}`}>{status.label}</span>
+          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${ticket.status === "valid" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-white/[.07] text-neutral-300"}`}>{status.label}</span>
         </div>
         {ticket.status === "valid" && <p className="mt-5 flex items-center gap-2 text-xs leading-5 text-neutral-500"><ShieldCheck size={15} className="shrink-0 text-[var(--accent)]"/> {ticket.credentialKind === "table" ? `Este QR permite hasta ${ticket.maxEntries} ingresos y suma uno por cada validación.` : "Presentá este QR en el ingreso. El código corto sirve como referencia de soporte."}</p>}
       </div>
