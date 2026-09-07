@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/shared/database/server";
-import { EventEditForm } from "@/modules/events/ui/forms";
+import { EventEditForm, EventFunctionsForm } from "@/modules/events/ui/forms";
 
 export default async function EditEventPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -11,9 +11,13 @@ export default async function EditEventPage({ params }: { params: Promise<{ even
   if (!event) notFound();
   if (["finished", "cancelled"].includes(event.status)) notFound();
 
-  const [{ data: venues }, { data: currentVenue }] = await Promise.all([
+  const [{ data: venues }, { data: currentVenue }, { count: ticketCount }, { count: promoterCount }, { count: tableCount }, { count: gateCount }] = await Promise.all([
     supabase.from("venues").select("*").eq("organization_id", event.organization_id).order("name"),
     supabase.from("venues").select("timezone").eq("id", event.venue_id).single(),
+    supabase.from("ticket_types").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+    supabase.from("event_promoters").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+    supabase.from("event_tables").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+    supabase.from("access_gates").select("id", { count: "exact", head: true }).eq("event_id", event.id),
   ]);
   if (!venues?.length || !currentVenue) notFound();
 
@@ -23,5 +27,6 @@ export default async function EditEventPage({ params }: { params: Promise<{ even
     <h1 className="page-title mt-3">Editar evento</h1>
     <p className="mt-3 text-neutral-500">Actualizá la información que ven compradores y equipo de acceso.</p>
     <EventEditForm event={event} venues={venues} timezone={currentVenue.timezone}/>
+    <div id="funciones" className="scroll-mt-6 pt-12"><p className="eyebrow">Experiencia</p><h2 className="section-title mt-2">Funciones del evento</h2><EventFunctionsForm event={event} hasData={{ tickets: Boolean(ticketCount), promoters: Boolean(promoterCount), tables: Boolean(tableCount), access: Boolean(gateCount) }}/></div>
   </section>;
 }

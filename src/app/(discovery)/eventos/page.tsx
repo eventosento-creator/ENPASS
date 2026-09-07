@@ -7,7 +7,7 @@ import { DiscoveryFilters } from "@/modules/discovery/ui/discovery-filters";
 import { PublicEventGrid } from "@/modules/discovery/ui/public-event-card";
 import { EmptyState } from "@/shared/ui/empty-state";
 
-export const metadata: Metadata = { title: "Eventos", description: "Encontrá tu próxima fecha: fiestas y eventos con entradas disponibles en Nightlife OS." };
+export const metadata: Metadata = { title: "Eventos", description: "Encontrá tu próxima fecha: fiestas y eventos con entradas disponibles en ENPASS." };
 
 export default async function EventsDiscoveryPage({ searchParams }: { searchParams: Promise<{ city?: string | string[]; when?: string | string[] }> }) {
   const [query, events] = await Promise.all([searchParams, getPublicDiscoveryEvents()]);

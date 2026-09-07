@@ -7,12 +7,17 @@ import { CreateGateForm, DeviceAuthorizationForm, GateEditor } from "@/modules/a
 import { revokeScannerAuthorization, revokeScannerSession } from "@/modules/access/application/actions";
 import type { CheckInResult } from "@/shared/database/types";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
+import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 
 export default async function EventAccessPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const supabase = await createClient();
-  const [eventResult, ticketTypesResult, gatesResult, rulesResult, authorizationsResult, sessionsResult, metricsResult, recentResult, checkinsResult] = await Promise.all([
-    supabase.from("events").select("*").eq("id", eventId).single(),
+  const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
+  if (!event) notFound();
+  const capabilities = getEventCapabilities(event);
+  if (!capabilities.access) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="Control de acceso"/>;
+  const [ticketTypesResult, gatesResult, rulesResult, authorizationsResult, sessionsResult, metricsResult, recentResult, checkinsResult] = await Promise.all([
     supabase.from("ticket_types").select("*").eq("event_id", eventId).order("sort_order"),
     supabase.from("access_gates").select("*").eq("event_id", eventId).order("created_at"),
     supabase.from("access_gate_ticket_types").select("*").eq("event_id", eventId),
@@ -22,8 +27,6 @@ export default async function EventAccessPage({ params }: { params: Promise<{ ev
     supabase.rpc("get_event_recent_checkins", { target_event: eventId, result_limit: 30 }),
     supabase.from("checkins").select("access_gate_id").eq("event_id", eventId).eq("result", "valid"),
   ]);
-  const event = eventResult.data;
-  if (!event) notFound();
   const { data: venue } = await supabase.from("venues").select("name, timezone").eq("id", event.venue_id).single();
   if (!venue) notFound();
   const gates = gatesResult.data ?? [];
@@ -42,7 +45,7 @@ export default async function EventAccessPage({ params }: { params: Promise<{ ev
       <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Control de acceso</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{venue.name} · operación en vivo</p></div>
       <div className="flex flex-wrap items-center gap-3"><AccessMonitor/><Link className="btn btn-primary" href="/scan" target="_blank"><Smartphone size={17}/>Abrir scanner</Link></div>
     </header>
-    <EventSectionNav eventId={event.id} active="access"/>
+    <EventSectionNav eventId={event.id} active="access" capabilities={capabilities}/>
 
     <section className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-5">
       <Metric icon={<UsersRound/>} label="Ingresos hoy" value={metrics.entries_today}/>

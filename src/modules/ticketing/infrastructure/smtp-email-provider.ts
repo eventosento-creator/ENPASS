@@ -45,7 +45,7 @@ export class SmtpEmailProvider implements EmailProvider {
       subject: "Acceso a tus compras",
       text: `Abrí este acceso seguro para ver tus entradas y mesas: ${message.accessUrl}`,
       html: emailFrame(`
-        <p style="margin:0 0 8px;color:#a3a3a3;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Nightlife OS</p>
+        <p style="margin:0 0 8px;color:#a3a3a3;font-size:13px;letter-spacing:.12em;text-transform:uppercase">ENPASS</p>
         <h1 style="margin:0 0 18px;font-size:32px;line-height:1.05">Tus accesos, a un toque.</h1>
         <p style="margin:0;color:#a3a3a3;line-height:1.6">Usá este acceso personal para abrir tus entradas y mesas. Vence en 15 minutos y solo puede utilizarse una vez.</p>
         ${accessButton(message.accessUrl)}
@@ -84,7 +84,7 @@ function smtpConfig() {
 }
 
 function emailFrame(content: string) {
-  return `<!doctype html><html lang="es"><body style="margin:0;background:#090909;color:#f7f7f5;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:32px 20px"><p style="margin:0 0 18px;font-size:14px;font-weight:900;letter-spacing:-.02em">NIGHTLIFE OS</p><div style="border:1px solid #29292d;border-radius:22px;background:#141416;padding:32px">${content}</div><p style="margin:18px 0 0;text-align:center;color:#55555c;font-size:11px">Acceso seguro · No necesitás una cuenta</p></div></body></html>`;
+  return `<!doctype html><html lang="es"><body style="margin:0;background:#090909;color:#f7f7f5;font-family:Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:32px 20px"><p style="margin:0 0 18px;font-size:14px;font-weight:900;letter-spacing:-.02em">ENPASS</p><div style="border:1px solid #29292d;border-radius:22px;background:#141416;padding:32px">${content}</div><p style="margin:18px 0 0;text-align:center;color:#55555c;font-size:11px">Acceso seguro · No necesitás una cuenta</p></div></body></html>`;
 }
 
 function accessButton(accessUrl: string, label = "Ver mis accesos") {

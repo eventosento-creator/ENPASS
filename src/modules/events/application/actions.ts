@@ -6,7 +6,7 @@ import { fromZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
-import { eventInputSchema, eventUpdateSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
+import { eventConfigurationSchema, eventInputSchema, eventUpdateSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
 import type { ActionState } from "@/modules/identity/application/actions";
 
 export async function createEvent(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -45,6 +45,13 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     name: parsed.data.name, slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
     description: parsed.data.description, starts_at: startsAt, doors_open_at: null, ends_at: null,
     status: "draft", capacity: eventCapacity, require_document: parsed.data.requireDocument,
+    profile: parsed.data.profile,
+    tickets_enabled: parsed.data.ticketsEnabled,
+    promoters_enabled: parsed.data.promotersEnabled,
+    tables_enabled: parsed.data.tablesEnabled,
+    access_enabled: parsed.data.accessEnabled,
+    pos_enabled: false,
+    inventory_enabled: false,
     currency: "ARS", cover_image_url: coverImageUrl, created_by: user.user.id,
   }).select("id").single();
   if (error || !data) {
@@ -52,7 +59,31 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     console.error(JSON.stringify({ level: "error", event: "event.create.failed", code: error?.code, detail: error?.message }));
     return { error: eventMutationError(error?.message) };
   }
-  redirect(`/app/events/new?step=2&event=${data.id}`);
+  redirect(`/app/events/new?step=${parsed.data.ticketsEnabled ? 2 : 3}&event=${data.id}`);
+}
+
+export async function updateEventConfiguration(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = eventConfigurationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el tipo y las funciones del evento." };
+  const supabase = await createClient();
+  const { data: event } = await supabase.from("events").select("slug, pos_enabled, inventory_enabled").eq("id", parsed.data.eventId).single();
+  if (!event) return { error: "No encontramos el evento." };
+  const { error } = await supabase.rpc("update_event_configuration", {
+    target_event: parsed.data.eventId,
+    target_profile: parsed.data.profile,
+    target_tickets_enabled: parsed.data.ticketsEnabled,
+    target_promoters_enabled: parsed.data.promotersEnabled,
+    target_tables_enabled: parsed.data.tablesEnabled,
+    target_access_enabled: parsed.data.accessEnabled,
+    target_pos_enabled: event.pos_enabled,
+    target_inventory_enabled: event.inventory_enabled,
+  });
+  if (error) return { error: "No pudimos guardar las funciones del evento." };
+  revalidatePath(`/app/events/${parsed.data.eventId}`);
+  revalidatePath(`/app/events/${parsed.data.eventId}/edit`);
+  revalidatePath(`/e/${event.slug}`);
+  revalidatePath("/app/events");
+  return { success: "Funciones actualizadas." };
 }
 
 export async function updateEvent(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -213,6 +244,7 @@ export async function duplicateEvent(_: ActionState, formData: FormData): Promis
     target_name: parsed.data.name,
     target_slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
     target_starts_at: startsAt,
+    preserve_tickets: formData.get("preserveTickets") === "on",
     preserve_promoters: formData.get("preservePromoters") === "on",
     preserve_tables: formData.get("preserveTables") === "on",
   });

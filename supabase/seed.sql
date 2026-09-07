@@ -32,8 +32,8 @@ insert into public.venues (id, organization_id, name, address, city, province, c
 values ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', 'Club Central', 'Av. España 2110', 'Mendoza', 'Mendoza', 700, 'America/Argentina/Mendoza')
 on conflict (id) do nothing;
 
-insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, doors_open_at, status, capacity, currency, published_at, created_by)
-values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 650, 'ARS', now(), '11111111-1111-4111-8111-111111111111')
+insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, doors_open_at, status, capacity, currency, published_at, created_by, profile, tickets_enabled, promoters_enabled, tables_enabled, access_enabled)
+values ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Noche 2000', 'noche-2000', 'Una noche de clásicos, hits y visuales inmersivas en el corazón de Mendoza. Puertas 23:30.', '/demo/noche-2000.png', timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 23 hours 59 minutes'), timezone('America/Argentina/Mendoza', date_trunc('day', now() at time zone 'America/Argentina/Mendoza') + interval '14 days 22 hours 59 minutes'), 'published', 650, 'ARS', now(), '11111111-1111-4111-8111-111111111111', 'nightlife', true, true, true, true)
 on conflict (id) do nothing;
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, cover_image_url, starts_at, status, capacity, currency, published_at, created_by)
@@ -83,6 +83,30 @@ on conflict (id) do nothing;
 insert into public.events (id, organization_id, venue_id, name, slug, description, starts_at, status, capacity, currency, created_by)
 values ('44444444-4444-4444-8444-444444444445', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'Fecha en preparación', 'fecha-en-preparacion', 'Borrador para probar estados de gestión.', now() + interval '21 days', 'draft', 400, 'ARS', '11111111-1111-4111-8111-111111111111')
 on conflict (id) do nothing;
+
+insert into public.events (
+  id, organization_id, venue_id, name, slug, description, starts_at, status,
+  capacity, currency, published_at, created_by, profile,
+  tickets_enabled, promoters_enabled, tables_enabled, access_enabled
+) values (
+  '55000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+  '33333333-3333-4333-8333-333333333333', 'Tech Mendoza 2026', 'tech-mendoza-2026',
+  'Una jornada de producto, tecnología y comunidad.', now() + interval '35 days', 'published',
+  500, 'ARS', now(), '11111111-1111-4111-8111-111111111111', 'conference',
+  true, false, false, true
+) on conflict (id) do nothing;
+
+insert into public.sale_phases (id, organization_id, event_id, name, sort_order)
+values ('55000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', '55000000-0000-4000-8000-000000000001', 'General', 0)
+on conflict (id) do nothing;
+
+insert into public.ticket_types (
+  id, organization_id, event_id, sale_phase_id, name, price_amount, quantity, max_per_order, sort_order
+) values (
+  '55000000-0000-4000-8000-000000000003', '22222222-2222-4222-8222-222222222222',
+  '55000000-0000-4000-8000-000000000001', '55000000-0000-4000-8000-000000000002',
+  'Acceso general', 0, 250, 6, 0
+) on conflict (id) do nothing;
 
 -- Controlled local fixture for FASE 2B. Opening /order/2b2b... lazily emits exactly
 -- three Tickets and sends their secure access link to Mailpit. It never exists in cloud.

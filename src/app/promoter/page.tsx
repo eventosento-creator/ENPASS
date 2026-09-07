@@ -53,7 +53,7 @@ export default async function PromoterHomePage({ searchParams }: { searchParams:
 }
 
 function PromoterShell({ name, children }: { name: string; children: React.ReactNode }) {
-  return <main className="min-h-screen bg-[radial-gradient(circle_at_top,#17190e_0%,#080809_35%)] pb-14"><header className="container-shell flex min-h-20 items-center justify-between gap-4"><Link href="/promoter" className="text-sm font-black tracking-[-.03em]">NIGHTLIFE OS <span className="ml-2 text-[10px] font-bold uppercase tracking-[.14em] text-[var(--accent)]">RRPP</span></Link><div className="flex items-center gap-2"><span className="hidden text-xs font-semibold text-neutral-500 sm:block">Hola, {name}</span><form action={logoutPromoter}><button type="submit" className="btn btn-ghost btn-icon min-h-11" aria-label="Cerrar sesión"><LogOut size={16}/></button></form></div></header><div className="container-shell">{children}</div></main>;
+  return <main className="min-h-screen bg-[radial-gradient(circle_at_top,#17190e_0%,#080809_35%)] pb-14"><header className="container-shell flex min-h-20 items-center justify-between gap-4"><Link href="/promoter" className="text-sm font-black tracking-[-.03em]">ENPASS <span className="ml-2 text-[10px] font-bold uppercase tracking-[.14em] text-[var(--accent)]">RRPP</span></Link><div className="flex items-center gap-2"><span className="hidden text-xs font-semibold text-neutral-500 sm:block">Hola, {name}</span><form action={logoutPromoter}><button type="submit" className="btn btn-ghost btn-icon min-h-11" aria-label="Cerrar sesión"><LogOut size={16}/></button></form></div></header><div className="container-shell">{children}</div></main>;
 }
 
 function AccessRequired({ invalid }: { invalid: boolean }) {

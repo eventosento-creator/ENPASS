@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Nightlife Access",
+    name: "ENPASS Access",
     short_name: "NL Access",
     description: "Scanner operativo de accesos para eventos",
     start_url: "/scan",

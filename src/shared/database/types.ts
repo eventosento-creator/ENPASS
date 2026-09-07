@@ -15,7 +15,10 @@ export type Event = {
   doors_open_at: string | null; ends_at: string | null;
   status: "draft" | "published" | "sold_out" | "finished" | "cancelled";
   capacity: number; require_document: boolean; currency: string; published_at: string | null;
+  profile: EventProfile; tickets_enabled: boolean; promoters_enabled: boolean;
+  tables_enabled: boolean; access_enabled: boolean; pos_enabled: boolean; inventory_enabled: boolean;
 };
+export type EventProfile = "nightlife" | "concert" | "festival" | "conference" | "sports" | "expo" | "private_event" | "other";
 export type TicketType = {
   id: string; organization_id: string; event_id: string; sale_phase_id: string | null; name: string; description: string;
   price_amount: number; currency: string; quantity: number; max_per_order: number;
@@ -422,11 +425,13 @@ export interface Database {
       create_organization: { Args: { org_name: string; org_slug: string }; Returns: string };
       publish_event: { Args: { target_event: string }; Returns: undefined };
       update_event_details: { Args: { target_event: string; target_venue: string; target_name: string; target_description: string; target_starts_at: string; target_doors_open_at: string | null; target_ends_at: string | null; target_capacity: number; target_require_document: boolean }; Returns: undefined };
+      update_event_configuration: { Args: { target_event: string; target_profile: EventProfile; target_tickets_enabled: boolean; target_promoters_enabled: boolean; target_tables_enabled: boolean; target_access_enabled: boolean; target_pos_enabled: boolean; target_inventory_enabled: boolean }; Returns: undefined };
       create_guest_checkout: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json }; Returns: { order_public_id: string; expires_at: string }[] };
       create_guest_checkout_attributed: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; target_attribution_session_hash: string | null }; Returns: { order_public_id: string; expires_at: string }[] };
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };
       get_public_ticket_types: { Args: { target_event: string }; Returns: (Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean })[] };
       get_public_event_tables: { Args: { target_event: string }; Returns: { id: string; event_id: string; table_zone_id: string; zone_name: string; name: string; description: string; capacity: number; base_price_amount: number; currency: string; service_fee_bps: number; sort_order: number; availability_status: "available" | "held" | "sold"; benefits: Json }[] };
+      get_public_event_by_slug: { Args: { target_slug: string }; Returns: { id: string; venue_id: string; name: string; slug: string; description: string; cover_image_url: string | null; starts_at: string; doors_open_at: string | null; ends_at: string | null; capacity: number; require_document: boolean; currency: string; tickets_enabled: boolean; tables_enabled: boolean }[] };
       create_table_zone: { Args: { target_event: string; target_name: string; target_description?: string }; Returns: string };
       create_event_table: { Args: { target_event: string; target_zone: string; target_name: string; target_description: string; target_capacity: number; target_base_price_amount: number; target_currency: string; target_service_fee_bps: number | null; target_access_gate: string | null; target_benefits: Json }; Returns: string };
       set_event_table_active: { Args: { target_table: string; target_active: boolean }; Returns: undefined };
@@ -487,7 +492,7 @@ export interface Database {
       get_promoter_table_dashboard: { Args: { target_session_hash: string }; Returns: { event_promoter_id: string; tables_sold: number; table_revenue: number }[] };
       get_promoter_event_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { event_promoter_id: string; event_name: string; event_slug: string; event_starts_at: string; event_timezone: string; public_slug: string; relation_status: EventPromoterStatus; tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; ticket_breakdown: Json; recent_sales: Json; currency: string }[] };
       get_promoter_event_table_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { tables_sold: number; table_revenue: number; table_breakdown: Json }[] };
-      duplicate_event_with_options: { Args: { target_event: string; target_name: string; target_slug: string; target_starts_at: string; preserve_promoters: boolean; preserve_tables: boolean }; Returns: string };
+      duplicate_event_with_options: { Args: { target_event: string; target_name: string; target_slug: string; target_starts_at: string; preserve_tickets: boolean; preserve_promoters: boolean; preserve_tables: boolean }; Returns: string };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

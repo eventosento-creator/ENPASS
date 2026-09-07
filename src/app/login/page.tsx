@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { AuthForms } from "@/modules/identity/ui/auth-forms";
 import { safeProducerPath } from "@/shared/lib/navigation";
+import { EnpassLogo } from "@/shared/ui/brand";
+import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export const metadata: Metadata = { title: "Ingresar" };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ mode?: string; next?: string; password?: string; authError?: string }> }) {
@@ -10,5 +12,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const initialMode = query.mode === "register" || query.mode === "magic" || query.mode === "recover" ? query.mode : "login";
   const notice = query.password === "updated" ? "Contraseña actualizada. Ya podés ingresar." : undefined;
   const errorNotice = query.authError === "invalid-link" ? "El enlace venció o ya fue utilizado. Pedí uno nuevo." : undefined;
-  return <main className="container-shell grid min-h-screen grid-rows-[auto_1fr] py-5 sm:py-10"><header className="flex items-center justify-between"><Link href="/" className="inline-flex min-h-11 items-center gap-1 text-sm text-neutral-500 hover:text-white"><ChevronLeft size={17}/>Volver</Link><Link href="/" className="text-sm font-black tracking-[-.03em]">NIGHTLIFE OS</Link></header><div className="grid place-items-center py-8"><AuthForms initialMode={initialMode} nextPath={safeProducerPath(query.next)} notice={notice} errorNotice={errorNotice}/></div></main>;
+  return <main className="container-shell grid min-h-screen grid-rows-[auto_1fr] py-5 sm:py-10"><header className="flex items-center justify-between"><Link href="/" className="inline-flex min-h-11 items-center gap-1 text-sm text-neutral-500 hover:text-white"><ChevronLeft size={17}/>Volver</Link><div className="flex items-center gap-2"><Link href="/"><EnpassLogo/></Link><ThemeToggle/></div></header><div className="grid place-items-center py-8"><AuthForms initialMode={initialMode} nextPath={safeProducerPath(query.next)} notice={notice} errorNotice={errorNotice}/></div></main>;
 }
