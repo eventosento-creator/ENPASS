@@ -10,6 +10,15 @@ export const seatMapSectionInputSchema = z.object({
   serviceFeePercent: z.union([z.literal(""), z.coerce.number().min(0).max(100)]).default(""),
 });
 
+export const seatMapSectionUpdateInputSchema = z.object({
+  eventId: z.uuid(),
+  sectionId: z.uuid(),
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(280).default(""),
+  pricePesos: z.coerce.number().nonnegative().max(100_000_000),
+  serviceFeePercent: z.union([z.literal(""), z.coerce.number().min(0).max(100)]).default(""),
+});
+
 export function pesosToMinorUnits(value: number) {
   return Math.round(value * 100);
 }

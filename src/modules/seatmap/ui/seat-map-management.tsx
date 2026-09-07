@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Grid3x3, Plus, X } from "lucide-react";
-import { createSeatMapSection, setEventSeatActive } from "../application/actions";
+import { Grid3x3, Pencil, Plus, Trash2, X } from "lucide-react";
+import { createSeatMapSection, deleteSeatMapSection, setEventSeatActive, updateSeatMapSection } from "../application/actions";
 import { seatAvailabilityLabel } from "../domain/seat-map";
 import type { EventSeat, SeatMapSection } from "@/shared/database/types";
 import { formatMoney } from "@/shared/lib/format";
@@ -13,6 +13,7 @@ type ManagedSeat = EventSeat & { availability_status: "available" | "held" | "so
 
 export function SeatMapManagement({ eventId, sections, seats, editable }: { eventId: string; sections: SeatMapSection[]; seats: ManagedSeat[]; editable: boolean }) {
   const [open, setOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<SeatMapSection | null>(null);
   const activeSections = sections.filter((section) => section.active);
   return <>
     <div className="flex flex-wrap gap-2">
@@ -20,19 +21,32 @@ export function SeatMapManagement({ eventId, sections, seats, editable }: { even
     </div>
     {!activeSections.length ? <EmptyState onCreate={() => setOpen(true)} editable={editable}/> : <div className="mt-7 grid gap-9">{activeSections.map((section) => {
       const sectionSeats = seats.filter((seat) => seat.section_id === section.id);
-      return <SectionGrid key={section.id} eventId={eventId} section={section} seats={sectionSeats} editable={editable}/>;
+      return <SectionGrid key={section.id} eventId={eventId} section={section} seats={sectionSeats} editable={editable} onEdit={() => setEditingSection(section)}/>;
     })}</div>}
     {open && <SectionDrawer eventId={eventId} close={() => setOpen(false)}/>}
+    {editingSection && <EditSectionDrawer eventId={eventId} section={editingSection} close={() => setEditingSection(null)}/>}
   </>;
 }
 
-function SectionGrid({ eventId, section, seats, editable }: { eventId: string; section: SeatMapSection; seats: ManagedSeat[]; editable: boolean }) {
+function SectionGrid({ eventId, section, seats, editable, onEdit }: { eventId: string; section: SeatMapSection; seats: ManagedSeat[]; editable: boolean; onEdit: () => void }) {
   const rows = Array.from(new Set(seats.map((seat) => seat.row_label))).sort();
   const sold = seats.filter((seat) => seat.availability_status === "sold").length;
+  const held = seats.filter((seat) => seat.availability_status === "held").length;
+  const hasActivity = sold > 0 || held > 0;
   return <section>
     <div className="flex items-end justify-between gap-4 border-b border-white/[.08] pb-3">
       <div><p className="eyebrow">Sección</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">{section.name}</h2>{section.description && <p className="mt-1 text-sm text-neutral-500">{section.description}</p>}</div>
-      <div className="text-right"><p className="text-xl font-black">{section.base_price_amount === 0 ? "Gratis" : formatMoney(section.base_price_amount, section.currency)}</p><p className="text-xs font-bold text-neutral-600">{sold}/{seats.length} vendidos</p></div>
+      <div className="flex items-start gap-3">
+        <div className="text-right"><p className="text-xl font-black">{section.base_price_amount === 0 ? "Gratis" : formatMoney(section.base_price_amount, section.currency)}</p><p className="text-xs font-bold text-neutral-600">{sold}/{seats.length} vendidos</p></div>
+        {editable && <div className="flex gap-1.5">
+          <button type="button" className="btn btn-ghost btn-icon min-h-10" aria-label={`Editar ${section.name}`} onClick={onEdit}><Pencil size={15}/></button>
+          {!hasActivity && <form action={deleteSeatMapSection} onSubmit={(event) => { if (!window.confirm(`¿Eliminar la sección "${section.name}" y sus ${seats.length} asientos?`)) event.preventDefault(); }}>
+            <input type="hidden" name="eventId" value={eventId}/>
+            <input type="hidden" name="sectionId" value={section.id}/>
+            <button type="submit" className="btn btn-ghost btn-icon min-h-10 text-red-300" aria-label={`Eliminar ${section.name}`}><Trash2 size={15}/></button>
+          </form>}
+        </div>}
+      </div>
     </div>
     <div className="mt-5 overflow-x-auto"><div className="inline-flex min-w-full flex-col items-center gap-2 py-2">
       <div className="mb-3 h-2 w-2/3 rounded-full bg-white/[.08]"/>
@@ -79,6 +93,25 @@ function SectionDrawer({ eventId, close }: { eventId: string; close: () => void 
       </div>
       <ActionMessage message={state.error}/>
       <SubmitButton className="btn btn-primary min-h-14"><Grid3x3 size={17}/>Generar sección</SubmitButton>
+    </form>
+  </Drawer>;
+}
+
+function EditSectionDrawer({ eventId, section, close }: { eventId: string; section: SeatMapSection; close: () => void }) {
+  const [state, action] = useActionState(updateSeatMapSection, {});
+  return <Drawer title="Editar sección" eyebrow="Mapa de asientos" close={close}>
+    <form action={action} className="grid gap-5">
+      <input type="hidden" name="eventId" value={eventId}/>
+      <input type="hidden" name="sectionId" value={section.id}/>
+      <label className="label">Nombre<input className="field" name="name" defaultValue={section.name} required autoFocus/></label>
+      <label className="label">Descripción <span className="text-neutral-600">(opcional)</span><input className="field" name="description" defaultValue={section.description}/></label>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="label">Precio<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span><input className="field pl-9" name="pricePesos" type="number" min="0" step="0.01" defaultValue={section.base_price_amount / 100} required/></div></label>
+        <label className="label">Fee <span className="text-neutral-600">(opcional)</span><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">%</span><input className="field pl-9" name="serviceFeePercent" type="number" min="0" max="100" step="0.01" defaultValue={section.service_fee_bps != null ? section.service_fee_bps / 100 : ""} placeholder="Usar general"/></div></label>
+      </div>
+      <p className="text-xs text-neutral-600">Las filas y asientos por fila no se pueden cambiar una vez generados. Para eso, borrá la sección (si no tiene ventas) y creá una nueva.</p>
+      <ActionMessage message={state.error}/>
+      <SubmitButton className="btn btn-primary min-h-14">Guardar cambios</SubmitButton>
     </form>
   </Drawer>;
 }

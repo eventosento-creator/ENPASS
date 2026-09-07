@@ -279,7 +279,8 @@ revoke all on function public.update_event_configuration(uuid, public.event_prof
 grant execute on function public.update_event_configuration(uuid, public.event_profile, boolean, boolean, boolean, boolean, boolean, boolean, boolean) to authenticated;
 
 -- Public discovery/event-detail: expose seatmap_enabled and fold seat pricing/availability into "from price".
-create or replace function public.get_public_event_by_slug(target_slug text)
+drop function if exists public.get_public_event_by_slug(text);
+create function public.get_public_event_by_slug(target_slug text)
 returns table (
   id uuid, venue_id uuid, name text, slug text, description text, cover_image_url text,
   starts_at timestamptz, doors_open_at timestamptz, ends_at timestamptz,
