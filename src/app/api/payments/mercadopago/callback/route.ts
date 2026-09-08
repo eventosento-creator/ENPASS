@@ -12,7 +12,11 @@ const COOKIE_NAMES = ["mp_oauth_state", "mp_oauth_verifier", "mp_oauth_org"] as 
 
 export async function GET(request: NextRequest) {
   const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const destination = (value: string) => new URL(`/app/settings?payment=${value}`, appUrl);
+  const destination = (value: string, detail?: string) => {
+    const url = new URL(`/app/settings?payment=${value}`, appUrl);
+    if (detail) url.searchParams.set("detail", detail.slice(0, 300));
+    return url;
+  };
   const cookieStore = await cookies();
   const storedState = cookieStore.get("mp_oauth_state")?.value;
   const verifier = cookieStore.get("mp_oauth_verifier")?.value;
@@ -77,8 +81,9 @@ export async function GET(request: NextRequest) {
     paymentLog("oauth.connected", { organizationId, accountId: account.id, liveMode: credentials.liveMode });
     return clearOAuthCookies(NextResponse.redirect(destination("connected")));
   } catch (error) {
-    paymentLog("oauth.connect.failed", { organizationId, errorMessage: error instanceof Error ? error.message : String(error) });
-    return clearOAuthCookies(NextResponse.redirect(destination("connection-error")));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    paymentLog("oauth.connect.failed", { organizationId, errorMessage });
+    return clearOAuthCookies(NextResponse.redirect(destination("connection-error", errorMessage)));
   }
 }
 

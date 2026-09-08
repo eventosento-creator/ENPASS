@@ -7,10 +7,10 @@ import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/pay
 import { createClient } from "@/shared/database/server";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ payment?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ payment?: string; detail?: string }> }) {
   const organization = await getCurrentOrganization();
   if (!organization) redirect("/app/onboarding");
-  const [{ payment: notice }, supabase] = await Promise.all([searchParams, createClient()]);
+  const [{ payment: notice, detail }, supabase] = await Promise.all([searchParams, createClient()]);
   const { data } = await supabase.rpc("get_payment_account_status", { target_organization: organization.id });
   const account = data?.[0];
   const environment = paymentEnvironment();
@@ -18,7 +18,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return <div className="mx-auto max-w-4xl">
     <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Configuración</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Administrá los lugares y cómo recibís el dinero de tus ventas.</p>
-    {notice && <Notice code={notice}/>}
+    {notice && <Notice code={notice} detail={detail}/>}
     <section className="card mt-8 overflow-hidden">
       <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago{connected ? ` · ${account?.live_mode ? "cobro real" : "entorno de prueba"}` : ""}</p></div></div><StatusBadge connected={connected} status={account?.status}/></div>
       <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end"><div><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[var(--accent)]" size={18}/><div><p className="text-sm font-bold">Conexión segura</p><p className="mt-1 max-w-xl text-sm leading-6 text-neutral-500">Tu cuenta se conecta de forma segura. ENPASS no muestra tus credenciales y valida cada pago automáticamente.</p></div></div>{account?.expires_at && connected && <p className="mt-4 text-xs text-neutral-600">La conexión se renueva automáticamente antes de vencer.</p>}</div>
@@ -41,7 +41,10 @@ function StatusBadge({ connected, status }: { connected: boolean; status?: strin
   return <span className={`w-fit rounded-full border px-3 py-1.5 text-xs font-bold ${connected ? "border-lime-300/20 bg-lime-300/[.08] text-lime-200" : "border-white/[.08] text-neutral-500"}`}>{label}</span>;
 }
 
-function Notice({ code }: { code: string }) {
-  const messages: Record<string, string> = { connected: "Mercado Pago quedó conectado en modo de prueba.", disconnected: "Mercado Pago fue desconectado.", cancelled: "Cancelaste la conexión antes de finalizar.", "invalid-state": "La solicitud de conexión venció. Volvé a intentarlo.", "connection-error": "No pudimos completar la conexión. Revisá las credenciales sandbox.", "config-error": "Falta completar la configuración local o el túnel HTTPS.", unauthorized: "Tu sesión venció. Iniciá sesión y volvé a intentarlo.", "disconnect-error": "No pudimos desconectar la cuenta." };
-  return <div className="mt-6 rounded-xl border border-white/[.08] bg-white/[.035] p-4 text-sm text-neutral-300">{messages[code] ?? "Se actualizó la configuración de pagos."}</div>;
+function Notice({ code, detail }: { code: string; detail?: string }) {
+  const messages: Record<string, string> = { connected: "Mercado Pago quedó conectado.", disconnected: "Mercado Pago fue desconectado.", cancelled: "Cancelaste la conexión antes de finalizar.", "invalid-state": "La solicitud de conexión venció. Volvé a intentarlo.", "connection-error": "No pudimos completar la conexión con Mercado Pago.", "config-error": "Falta completar la configuración local o el túnel HTTPS.", unauthorized: "Tu sesión venció. Iniciá sesión y volvé a intentarlo.", "disconnect-error": "No pudimos desconectar la cuenta." };
+  return <div className="mt-6 rounded-xl border border-white/[.08] bg-white/[.035] p-4 text-sm text-neutral-300">
+    <p>{messages[code] ?? "Se actualizó la configuración de pagos."}</p>
+    {detail && <p className="mt-2 break-words font-mono text-xs text-amber-200/80">{detail}</p>}
+  </div>;
 }
