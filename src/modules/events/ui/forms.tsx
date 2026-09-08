@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Armchair, CalendarDays, DoorOpen, Grid3x3, Music2, Presentation, Shield, ShoppingCart, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
+import { Armchair, CalendarDays, DoorOpen, Grid3x3, MapPin, Music2, Presentation, Shield, ShoppingCart, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createEvent, createTicketType, replaceEventCover, updateEvent, updateEventConfiguration, updateTicketType } from "../application/actions";
 import { ActionMessage } from "@/shared/ui/action-message";
@@ -9,11 +9,12 @@ import { SubmitButton } from "@/shared/ui/submit-button";
 import type { Event, TicketType, Venue } from "@/shared/database/types";
 import { EVENT_PROFILE_OPTIONS, getDefaultCapabilitiesForProfile, getEventProfileLabel, type EventCapabilities, type EventProfile, type VisibleEventCapability } from "../domain/event-profile";
 
-export function EventForm({ organizationId, venues }: { organizationId: string; venues: Venue[] }) {
+export function EventForm({ organizationId, venues, initialProfile }: { organizationId: string; venues: Venue[]; initialProfile?: string }) {
   const [state, action] = useActionState(createEvent, {});
   const [preview, setPreview] = useState<string | null>(null);
-  const [profile, setProfile] = useState<EventProfile | null>(null);
-  const [capabilities, setCapabilities] = useState<EventCapabilities>(() => getDefaultCapabilitiesForProfile("nightlife"));
+  const validInitialProfile = EVENT_PROFILE_OPTIONS.some((option) => option.value === initialProfile) ? initialProfile as EventProfile : null;
+  const [profile, setProfile] = useState<EventProfile | null>(validInitialProfile);
+  const [capabilities, setCapabilities] = useState<EventCapabilities>(() => getDefaultCapabilitiesForProfile(validInitialProfile ?? "nightlife"));
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   function previewFile(file?: File) { if (preview) URL.revokeObjectURL(preview); setPreview(file ? URL.createObjectURL(file) : null); }
   function selectProfile(nextProfile: EventProfile) {
@@ -27,6 +28,13 @@ export function EventForm({ organizationId, venues }: { organizationId: string; 
         <Icon size={22} className="text-[var(--accent)]"/><strong className="mt-8 block text-lg font-black">{option.label}</strong><span className="mt-2 block text-sm leading-5 text-neutral-500">{option.description}</span>
       </button>;
     })}</div>
+  </section>;
+  if (!venues.length) return <section className="mt-8 card p-7 text-center sm:p-10">
+    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><MapPin size={24}/></div>
+    <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-600"><span>{getEventProfileLabel(profile)}</span><button type="button" className="underline hover:text-white" onClick={() => setProfile(null)}>Cambiar</button></div>
+    <h2 className="mt-3 text-2xl font-black">Ahora, ¿dónde es?</h2>
+    <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-neutral-500">Todavía no tenés lugares cargados. La capacidad y zona horaria del venue protegen la venta.</p>
+    <a className="btn btn-primary mt-6" href={`/app/venues?next=${encodeURIComponent(`/app/events/new?profile=${profile}`)}`}>Crear lugar</a>
   </section>;
   return <form action={action} className="mt-8 grid gap-6 md:grid-cols-[240px_1fr] md:items-start">
     <input type="hidden" name="organizationId" value={organizationId}/>

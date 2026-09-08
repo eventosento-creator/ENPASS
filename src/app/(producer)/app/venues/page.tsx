@@ -3,8 +3,9 @@ import { getCurrentOrganization } from "@/modules/organizations/application/quer
 import { VenueManager } from "@/modules/organizations/ui/forms";
 import { createClient } from "@/shared/database/server";
 
-export default async function VenuesPage() {
+export default async function VenuesPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   const org = await getCurrentOrganization(); if (!org) redirect("/app/onboarding");
   const supabase = await createClient(); const { data: venues } = await supabase.from("venues").select("*").eq("organization_id", org.id).order("name");
-  return <VenueManager organizationId={org.id} venues={venues ?? []}/>;
+  return <VenueManager organizationId={org.id} venues={venues ?? []} nextPath={next}/>;
 }
