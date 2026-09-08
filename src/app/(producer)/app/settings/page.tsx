@@ -14,13 +14,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { data } = await supabase.rpc("get_payment_account_status", { target_organization: organization.id });
   const account = data?.[0];
   const environment = paymentEnvironment();
-  const connected = account?.status === "connected" && !account.live_mode;
+  const connected = account?.status === "connected";
 
   return <div className="mx-auto max-w-4xl">
     <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Configuración</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Administrá los lugares y cómo recibís el dinero de tus ventas.</p>
     {notice && <Notice code={notice}/>}
     <section className="card mt-8 overflow-hidden">
-      <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago · entorno de prueba</p></div></div><StatusBadge connected={connected} status={account?.status}/></div>
+      <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago{connected ? ` · ${account?.live_mode ? "cobro real" : "entorno de prueba"}` : ""}</p></div></div><StatusBadge connected={connected} status={account?.status}/></div>
       <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end"><div><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[var(--accent)]" size={18}/><div><p className="text-sm font-bold">Conexión segura</p><p className="mt-1 max-w-xl text-sm leading-6 text-neutral-500">Tu cuenta se conecta de forma segura. ENPASS no muestra tus credenciales y valida cada pago automáticamente.</p></div></div>{account?.expires_at && connected && <p className="mt-4 text-xs text-neutral-600">La conexión se renueva automáticamente antes de vencer.</p>}</div>
         {connected ? <form action={disconnectMercadoPago}><SubmitButton className="btn btn-ghost w-full lg:w-auto" pendingLabel="Desconectando…"><Unplug size={17}/>Desconectar</SubmitButton></form> : environment.ready ? <a className="btn btn-primary w-full lg:w-auto" href="/api/payments/mercadopago/connect">Conectar Mercado Pago <ExternalLink size={16}/></a> : <button className="btn btn-secondary w-full lg:w-auto" disabled>Conectar Mercado Pago</button>}
       </div>

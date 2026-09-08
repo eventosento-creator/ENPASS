@@ -45,8 +45,6 @@ export async function GET(request: NextRequest) {
       code,
       codeVerifier: verifier,
     });
-    if (credentials.liveMode) throw new Error("LIVE_CREDENTIALS_NOT_ALLOWED");
-
     const now = new Date();
     const admin = createAdminClient();
     const { data: account, error } = await admin.from("payment_accounts").upsert({
@@ -57,7 +55,7 @@ export async function GET(request: NextRequest) {
       access_token_encrypted: encryptCredential(credentials.accessToken),
       refresh_token_encrypted: credentials.refreshToken ? encryptCredential(credentials.refreshToken) : null,
       token_scope: credentials.scope,
-      live_mode: false,
+      live_mode: credentials.liveMode,
       expires_at: credentials.expiresInSeconds
         ? new Date(now.getTime() + credentials.expiresInSeconds * 1000).toISOString()
         : null,
@@ -74,9 +72,9 @@ export async function GET(request: NextRequest) {
       action: "oauth.connected",
       entity_type: "payment_account",
       entity_id: account.id,
-      after_data: { provider: "mercado_pago", live_mode: false },
+      after_data: { provider: "mercado_pago", live_mode: credentials.liveMode },
     });
-    paymentLog("oauth.connected", { organizationId, accountId: account.id, liveMode: false });
+    paymentLog("oauth.connected", { organizationId, accountId: account.id, liveMode: credentials.liveMode });
     return clearOAuthCookies(NextResponse.redirect(destination("connected")));
   } catch {
     return clearOAuthCookies(NextResponse.redirect(destination("connection-error")));

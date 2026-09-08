@@ -33,8 +33,6 @@ export async function POST(request: NextRequest) {
       dataId,
       secret: config.webhookSecret,
     });
-    if (webhook.live_mode) throw new Error("LIVE_WEBHOOK_NOT_ALLOWED");
-
     paymentLog("payment.webhook.received", { providerEventId: eventId, resourceId: dataId, eventType: webhook.type });
     const admin = createAdminClient();
     const { data: inserted } = await admin.from("webhook_events").upsert({

@@ -23,9 +23,6 @@ export function getMercadoPagoRuntimeConfig(): MercadoPagoRuntimeConfig {
     .some((value) => !value || value.includes("replace-with"))) {
     throw new Error("Mercado Pago no está configurado para el entorno local.");
   }
-  if (!config.sandbox) {
-    throw new Error("FASE 2A solo permite credenciales y checkout sandbox.");
-  }
 
   return config;
 }
