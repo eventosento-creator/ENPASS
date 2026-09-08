@@ -7,6 +7,7 @@ export const eventInputSchema = z.object({
   organizationId: z.uuid(), venueId: z.uuid(), name: z.string().trim().min(2).max(140),
   profile: z.enum(EVENT_PROFILES),
   description: z.string().trim().max(4000).default(""), startsAt: z.iso.datetime({ local: true }),
+  endsAt: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.iso.datetime({ local: true }).optional()),
   capacity: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.coerce.number().int().positive().max(100000).optional()),
   requireDocument: z.coerce.boolean().default(false),
   ticketsEnabled: booleanString,

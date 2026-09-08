@@ -55,7 +55,10 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
       {profile === "other" && <div><p className="label">¿Qué necesitás gestionar?</p><div className="mt-3 grid grid-cols-2 gap-2">{visibleCapabilities.map((capability) => <CapabilityButton key={capability} capability={capability} active={capabilities[capability]} onToggle={() => setCapabilities((current) => ({ ...current, [capability]: !current[capability] }))}/>)}</div></div>}
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" placeholder="Noche 2000" required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue=""><option value="" disabled>Elegí un lugar</option>{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
-      <label className="label">Fecha y hora<input className="field" name="startsAt" type="datetime-local" required/></label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="label">Inicio<input className="field" name="startsAt" type="datetime-local" required/></label>
+        <label className="label">Fin <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local"/></label>
+      </div>
       <details className="rounded-xl border border-white/[.07] p-4"><summary className="cursor-pointer text-sm font-bold text-neutral-400">Opciones del evento</summary><div className="mt-4 grid gap-4"><label className="label">Capacidad personalizada <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="capacity" type="number" min="1" placeholder="Usar capacidad del lugar"/></label><label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-24 resize-y" name="description" placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label><label className="flex items-center gap-3 text-sm text-neutral-400"><input type="checkbox" name="requireDocument" value="true"/> Solicitar DNI en el checkout</label></div></details>
     </div>
     <div className="md:col-start-2"><ActionMessage message={state.error}/></div><SubmitButton className="btn btn-primary min-h-14 md:col-start-2">Continuar a entradas</SubmitButton>

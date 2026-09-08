@@ -23,6 +23,13 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
   if (Number.isNaN(startsAtDate.getTime())) return { error: "La fecha y hora no son válidas." };
   const startsAt = startsAtDate.toISOString();
   if (startsAtDate.getTime() <= Date.now()) return { error: "La fecha del evento debe ser futura." };
+  let endsAt: string | null = null;
+  if (parsed.data.endsAt) {
+    const endsAtDate = fromZonedTime(parsed.data.endsAt, venue.timezone);
+    if (Number.isNaN(endsAtDate.getTime())) return { error: "La fecha y hora de fin no son válidas." };
+    if (endsAtDate.getTime() <= startsAtDate.getTime()) return { error: "El fin del evento debe ser posterior al inicio." };
+    endsAt = endsAtDate.toISOString();
+  }
   const eventId = crypto.randomUUID();
   const cover = formData.get("cover");
   let coverImageUrl: string | null = null;
@@ -43,7 +50,7 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     id: eventId,
     organization_id: parsed.data.organizationId, venue_id: parsed.data.venueId,
     name: parsed.data.name, slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
-    description: parsed.data.description, starts_at: startsAt, doors_open_at: null, ends_at: null,
+    description: parsed.data.description, starts_at: startsAt, doors_open_at: null, ends_at: endsAt,
     status: "draft", capacity: eventCapacity, require_document: parsed.data.requireDocument,
     profile: parsed.data.profile,
     tickets_enabled: parsed.data.ticketsEnabled,
