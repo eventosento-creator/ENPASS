@@ -76,7 +76,8 @@ export async function GET(request: NextRequest) {
     });
     paymentLog("oauth.connected", { organizationId, accountId: account.id, liveMode: credentials.liveMode });
     return clearOAuthCookies(NextResponse.redirect(destination("connected")));
-  } catch {
+  } catch (error) {
+    paymentLog("oauth.connect.failed", { organizationId, errorMessage: error instanceof Error ? error.message : String(error) });
     return clearOAuthCookies(NextResponse.redirect(destination("connection-error")));
   }
 }

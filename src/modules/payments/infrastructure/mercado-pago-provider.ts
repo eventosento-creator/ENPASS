@@ -202,7 +202,8 @@ async function requestOAuthToken(body: Record<string, string>): Promise<OAuthCre
   });
 
   if (!response.ok) {
-    throw new Error(`Mercado Pago rechazó la operación OAuth (${response.status}).`);
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Mercado Pago rechazó la operación OAuth (${response.status}): ${detail}`);
   }
 
   const parsed = oauthResponseSchema.parse(await response.json());

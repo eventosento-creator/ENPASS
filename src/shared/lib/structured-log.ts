@@ -7,6 +7,7 @@ type PaymentLogEvent =
   | "payment.approved"
   | "payment.rejected"
   | "oauth.connected"
+  | "oauth.connect.failed"
   | "oauth.disconnected"
   | "oauth.refresh.failed";
 
