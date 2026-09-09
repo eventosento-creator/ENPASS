@@ -1,10 +1,20 @@
+export type TicketEmailItem = {
+  holderName: string;
+  document: string | null;
+  ticketTypeName: string;
+  shortCode: string;
+  qrDataUrl: string;
+};
+
 export type TicketEmail = {
   to: string;
   eventName: string;
-  eventDate: string;
+  eventDateLabel: string;
+  eventTimeLabel: string;
   venueName: string;
-  ticketCount: number;
+  venueAddress: string;
   accessUrl: string;
+  tickets: TicketEmailItem[];
 };
 
 export type BuyerAccessEmail = {

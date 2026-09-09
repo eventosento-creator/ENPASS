@@ -18,18 +18,26 @@ export class SmtpEmailProvider implements EmailProvider {
   }
 
   async sendTicketDelivery(message: TicketEmail) {
-    const countLabel = message.ticketCount === 1 ? "1 acceso" : `${message.ticketCount} accesos`;
+    const countLabel = message.tickets.length === 1 ? "1 entrada" : `${message.tickets.length} entradas`;
     await this.transport.sendMail({
       from: this.from,
       to: message.to,
-      subject: `Tus accesos para ${message.eventName}`,
-      text: `¡Tu compra está confirmada!\n\n${message.eventName}\n${message.eventDate}\n${message.venueName}\n${countLabel}\n\nVer mis accesos: ${message.accessUrl}`,
+      subject: `Tus entradas para ${message.eventName}`,
+      text: `¡Tu entrada está lista!\n\n${message.eventName}\n${message.eventDateLabel} · ${message.eventTimeLabel}\n${message.venueName}\n${countLabel}\n\nVer mis accesos: ${message.accessUrl}`,
       html: emailFrame(`
-        <h1 style="margin:0 0 8px;font-size:28px;line-height:1.1;letter-spacing:-.03em;color:#0a0a0b">¡Tu entrada está lista!</h1>
-        <p style="margin:0 0 28px;font-size:14px;line-height:1.6;color:#6f6f75">Gracias por ser parte. Te dejamos el resumen de tu compra y todo lo que necesitás para el evento.</p>
-        ${ticketCard(message.eventName, message.eventDate, message.venueName, countLabel)}
-        ${accessButton(message.accessUrl)}
-        <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#9a9a9f">El enlace es personal y vence en 15 minutos. Después podés pedir uno nuevo desde Mis accesos.</p>
+        <h1 style="margin:0 0 8px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b">¡Tu entrada está lista!</h1>
+        <p style="margin:0 0 26px;font-size:14px;line-height:1.6;color:#6f6f75">Gracias por ser parte. Te dejamos ${countLabel} y toda la información del evento.</p>
+        ${message.tickets.map((ticket) => ticketCard(message.eventName, message.eventDateLabel, message.eventTimeLabel, message.venueName, message.venueAddress, ticket)).join('<div style="height:16px;line-height:16px">&nbsp;</div>')}
+        <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;display:flex">
+          <table role="presentation" style="border-collapse:collapse"><tr>
+            <td valign="top" style="padding-right:12px;font-size:18px">ℹ️</td>
+            <td valign="top">
+              <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0a0a0b">Importante</p>
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#6f6f75">Mostrá este código desde tu celular en la entrada. Cada código es único e intransferible.</p>
+            </td>
+          </tr></table>
+        </div>
+        <p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:#9a9a9f">¿Perdiste este mail? Entrá a <a href="${escapeHtml(message.accessUrl)}" style="color:#0a0a0b;font-weight:700">Mis accesos</a> con este link personal.</p>
       `),
     });
   }
@@ -38,13 +46,15 @@ export class SmtpEmailProvider implements EmailProvider {
     await this.transport.sendMail({
       from: this.from,
       to: message.to,
-      subject: "Acceso a tus compras",
-      text: `Abrí este acceso seguro para ver tus entradas y mesas: ${message.accessUrl}`,
+      subject: "Tu acceso está listo",
+      text: `Tu acceso está listo. Hacé clic para ingresar a tus entradas y mesas: ${message.accessUrl}`,
       html: emailFrame(`
-        <p style="margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9a9a9f">Acceso sin contraseña</p>
-        <h1 style="margin:0 0 14px;font-size:28px;line-height:1.1;letter-spacing:-.03em;color:#0a0a0b">Tus accesos, a un toque.</h1>
-        <p style="margin:0;font-size:14px;line-height:1.6;color:#6f6f75">Usá este acceso personal para abrir tus entradas y mesas. Vence en 15 minutos y solo puede utilizarse una vez.</p>
-        ${accessButton(message.accessUrl)}
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Tu acceso está listo</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hacé clic en el botón de abajo para ingresar a tu cuenta y ver tus entradas, mesas y próximos eventos.</p>
+        ${accessButton(message.accessUrl, "Ingresar a ENPASS")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 15 minutos.</p>
+        ${noticeBox("¿No solicitaste este acceso?", "Podés ignorar este mensaje. Si tenés dudas, escribinos a soporte@enpass.com.ar")}
       `),
     });
   }
@@ -56,11 +66,11 @@ export class SmtpEmailProvider implements EmailProvider {
       subject: `Te sumaron a ${message.eventName}`,
       text: `Hola ${message.promoterName}. Ya tenés tu link para vender entradas de ${message.eventName}. Ver mis ventas: ${message.accessUrl}`,
       html: emailFrame(`
-        <p style="margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9a9a9f">Acceso RRPP</p>
-        <h1 style="margin:0 0 14px;font-size:28px;line-height:1.1;letter-spacing:-.03em;color:#0a0a0b">Te sumaron a ${escapeHtml(message.eventName)}</h1>
-        <p style="margin:0;font-size:14px;line-height:1.6;color:#6f6f75">Hola ${escapeHtml(message.promoterName)}. Ya tenés tu link personal para compartir entradas y revisar tus ventas.</p>
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Te sumaron a ${escapeHtml(message.eventName)}</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.promoterName)}. Ya tenés tu link personal para compartir entradas y revisar tus ventas.</p>
         ${accessButton(message.accessUrl, "Ver mis ventas")}
-        <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#9a9a9f">Este acceso vence en 24 horas y solo puede utilizarse una vez.</p>
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 24 horas.</p>
       `),
     });
   }
@@ -85,40 +95,79 @@ function siteUrl(path: string) {
 }
 
 function emailFrame(content: string) {
-  const logoUrl = siteUrl("/brand/enpass-wordmark-white.png");
-  return `<!doctype html><html lang="es"><body style="margin:0;background:#f4f4f1;color:#0a0a0b;font-family:Arial,Helvetica,sans-serif">
-    <div style="max-width:560px;margin:0 auto">
-      <div style="background:#0a0a0b;padding:22px 28px">
-        <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
-          <td valign="middle"><img src="${logoUrl}" alt="ENPASS" height="22" style="display:block;height:22px;width:auto"></td>
-          <td valign="middle" align="right" style="font-size:12px;line-height:1.4;color:#b0b0b6">Tu próxima<br>experiencia te espera.</td>
-        </tr></table>
-      </div>
-      <div style="background:#ffffff;padding:32px 28px">${content}</div>
-      <div style="padding:20px 28px;text-align:center">
-        <p style="margin:0 0 4px;font-size:12px;font-weight:900;letter-spacing:-.01em;color:#0a0a0b">ENPASS</p>
-        <p style="margin:0;font-size:11px;color:#9a9a9f">Claridad. Dirección. Momentos.</p>
+  const logoUrl = siteUrl("/brand/enpass-wordmark-black.png");
+  return `<!doctype html><html lang="es"><body style="margin:0;background:#f0f0ec;color:#0a0a0b;font-family:Arial,Helvetica,sans-serif">
+    <div style="max-width:600px;margin:0 auto;padding:24px 16px">
+      <div style="border-radius:24px;background:#ffffff;overflow:hidden;box-shadow:0 1px 2px rgba(10,10,11,.04)">
+        <div style="padding:30px 32px 8px">
+          <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
+            <td valign="middle"><img src="${logoUrl}" alt="ENPASS" height="24" style="display:block;height:24px;width:auto"></td>
+            <td valign="middle" align="right" style="font-size:10px;font-weight:800;letter-spacing:.1em;line-height:1.7;color:#9a9a9f">EVENTOS<br>PERSONAS<br>MOMENTOS<br>—</td>
+          </tr></table>
+        </div>
+        <div style="padding:20px 32px 36px">${content}</div>
+        <div style="padding:22px 32px;border-top:1px solid #ececE6">
+          <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
+            <td valign="middle">
+              <img src="${logoUrl}" alt="ENPASS" height="16" style="display:block;height:16px;width:auto">
+              <p style="margin:8px 0 0;font-size:11px;color:#9a9a9f">Claridad. Dirección. Momentos.</p>
+            </td>
+            <td valign="middle" align="right">
+              <a href="https://instagram.com/enpass" style="text-decoration:none;font-size:14px;margin-left:6px">📷</a>
+              <a href="https://wa.me/5492610000000" style="text-decoration:none;font-size:14px;margin-left:6px">💬</a>
+              <a href="${siteUrl("/")}" style="text-decoration:none;font-size:11px;color:#6f6f75;margin-left:10px">enpass.com.ar</a>
+            </td>
+          </tr></table>
+        </div>
       </div>
     </div>
   </body></html>`;
 }
 
-function ticketCard(eventName: string, eventDate: string, venueName: string, countLabel: string) {
+function heroBanner() {
+  return `<div style="border-radius:16px;background:linear-gradient(155deg,#17171a 0%,#0a0a0b 75%);padding:26px 24px;margin-bottom:26px">
+    <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
+      <td valign="top" style="font-size:10px;font-weight:800;letter-spacing:.1em;line-height:1.7;color:#c8c8cd">MÁS<br>QUE EVENTOS<br>EXPERIENCIAS<br>—</td>
+      <td valign="bottom" align="right" style="font-size:10px;font-weight:800;letter-spacing:.08em;line-height:1.6;color:#c8c8cd">ENPASS<br>2024 — ∞</td>
+    </tr></table>
+  </div>`;
+}
+
+function ticketCard(eventName: string, dateLabel: string, timeLabel: string, venueName: string, venueAddress: string, ticket: { holderName: string; document: string | null; ticketTypeName: string; shortCode: string; qrDataUrl: string }) {
   return `<div style="border-radius:18px;overflow:hidden;border:1px solid #e6e6e1">
-    <div style="background:#0a0a0b;color:#ffffff;padding:22px 22px 20px">
-      <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(eventDate)}</p>
+    <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(dateLabel)} · ${escapeHtml(timeLabel)}</p>
       <p style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.15">${escapeHtml(eventName)}</p>
-      <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(venueName)}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(venueName)}${venueAddress ? `, ${escapeHtml(venueAddress)}` : ""}</p>
     </div>
-    <div style="background:#ffffff;padding:18px 22px">
-      <p style="margin:0;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">Incluye</p>
-      <p style="margin:4px 0 0;font-size:16px;font-weight:800;color:#0a0a0b">${escapeHtml(countLabel)}</p>
+    <div style="background:#ffffff;padding:20px 22px">
+      <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
+        <td valign="top" style="padding-right:8px;width:33%"><p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9a9a9f">Tipo de entrada</p><p style="margin:4px 0 0;font-size:14px;font-weight:800;color:#0a0a0b">${escapeHtml(ticket.ticketTypeName)}</p></td>
+        <td valign="top" style="padding:0 8px;width:34%"><p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9a9a9f">Nombre</p><p style="margin:4px 0 0;font-size:14px;font-weight:800;color:#0a0a0b">${escapeHtml(ticket.holderName)}</p></td>
+        ${ticket.document ? `<td valign="top" style="padding-left:8px;width:33%"><p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9a9a9f">DNI</p><p style="margin:4px 0 0;font-size:14px;font-weight:800;color:#0a0a0b">${escapeHtml(ticket.document)}</p></td>` : ""}
+      </tr></table>
+      <div style="margin-top:20px;text-align:center">
+        <img src="${ticket.qrDataUrl}" alt="Código QR" width="180" height="180" style="display:inline-block;width:180px;height:180px">
+        <p style="margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.08em;color:#0a0a0b">${escapeHtml(ticket.shortCode)}</p>
+      </div>
     </div>
   </div>`;
 }
 
+function noticeBox(title: string, description: string) {
+  return `<div style="margin-top:26px;border-radius:14px;background:#f4f4f1;padding:16px 18px">
+    <table role="presentation" style="border-collapse:collapse"><tr>
+      <td valign="top" style="padding-right:12px;font-size:18px">🔒</td>
+      <td valign="top">
+        <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0a0a0b">${escapeHtml(title)}</p>
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#6f6f75">${escapeHtml(description)}</p>
+      </td>
+    </tr></table>
+  </div>`;
+}
+
 function accessButton(accessUrl: string, label = "Ver mis accesos") {
-  return `<p style="margin:28px 0 0"><a href="${escapeHtml(accessUrl)}" style="display:block;border-radius:13px;background:#0a0a0b;color:#ffffff;padding:15px 20px;text-align:center;text-decoration:none;font-weight:900;font-size:14px">${escapeHtml(label)}</a></p>`;
+  return `<p style="margin:26px 0 0;text-align:center"><a href="${escapeHtml(accessUrl)}" style="display:inline-block;min-width:220px;border-radius:14px;background:#0a0a0b;color:#ffffff;padding:16px 26px;text-align:center;text-decoration:none;font-weight:900;font-size:14px">${escapeHtml(label)} →</a></p>`;
 }
 
 function escapeHtml(value: string) {

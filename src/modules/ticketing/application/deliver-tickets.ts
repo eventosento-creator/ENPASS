@@ -1,10 +1,11 @@
 import "server-only";
 
+import QRCode from "qrcode";
 import { createAdminClient } from "@/shared/database/admin";
-import type { Customer, Event, Order, Venue } from "@/shared/database/types";
-import { formatEventDate } from "@/shared/lib/format";
+import type { Customer, Event, Order, Ticket, TicketType, Venue } from "@/shared/database/types";
 import { ticketingLog } from "@/shared/lib/structured-log";
-import { hashEmail } from "../domain/credentials";
+import { hashEmail, hashOpaqueToken } from "../domain/credentials";
+import { decryptTicketToken } from "../infrastructure/ticket-cipher";
 import type { EmailProvider } from "../infrastructure/email-provider";
 import { SmtpEmailProvider } from "../infrastructure/smtp-email-provider";
 import { createBuyerMagicLink } from "./buyer-access";
@@ -34,32 +35,55 @@ export async function deliverTicketsForPaidOrder(
   if (!delivery.should_send) return { sent: false, skipped: true };
 
   try {
-    const [{ data: eventData }, { count: ticketCount }] = await Promise.all([
+    const [{ data: eventData }, { data: ticketRows }] = await Promise.all([
       admin.from("events").select("*").eq("id", order.event_id).single(),
-      admin.from("tickets").select("id", { count: "exact", head: true }).eq("order_id", order.id),
+      admin.from("tickets").select("*").eq("order_id", order.id).order("order_item_id").order("unit_index"),
     ]);
-    if (!eventData || !ticketCount) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");
+    if (!eventData || !ticketRows?.length) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");
     const event = eventData as Event;
+    const tickets = ticketRows as Ticket[];
     const { data: venueData } = await admin.from("venues").select("*").eq("id", event.venue_id).single();
     if (!venueData) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");
     const venue = venueData as Venue;
+
+    const typeIds = [...new Set(tickets.flatMap((ticket) => ticket.ticket_type_id ? [ticket.ticket_type_id] : []))];
+    const { data: typeRows } = typeIds.length ? await admin.from("ticket_types").select("id, name").in("id", typeIds) : { data: [] };
+    const typeNameById = new Map(((typeRows ?? []) as Pick<TicketType, "id" | "name">[]).map((type) => [type.id, type.name]));
+
+    const ticketItems = await Promise.all(tickets.filter((ticket) => ticket.status === "valid").map(async (ticket) => {
+      const payload = decryptTicketToken(ticket.qr_token_encrypted);
+      if (hashOpaqueToken(payload) !== ticket.qr_token_hash) throw new Error("TICKET_TOKEN_INTEGRITY_FAILED");
+      const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 360, color: { dark: "#050505", light: "#ffffff" } });
+      return {
+        holderName: `${ticket.holder_first_name} ${ticket.holder_last_name}`.trim(),
+        document: ticket.holder_document,
+        ticketTypeName: ticket.ticket_type_id ? (typeNameById.get(ticket.ticket_type_id) ?? "Entrada") : "Entrada",
+        shortCode: ticket.short_code,
+        qrDataUrl,
+      };
+    }));
+    if (!ticketItems.length) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");
+
     const accessUrl = await createBuyerMagicLink(customer.email);
     if (!accessUrl) throw new Error("BUYER_ACCESS_CREATE_FAILED");
+    const { dateLabel, timeLabel } = formatEventDateParts(event.starts_at, venue.timezone);
 
     await (options.provider ?? new SmtpEmailProvider()).sendTicketDelivery({
       to: customer.email,
       eventName: event.name,
-      eventDate: formatEventDate(event.starts_at, venue.timezone),
+      eventDateLabel: dateLabel,
+      eventTimeLabel: timeLabel,
       venueName: venue.name,
-      ticketCount,
+      venueAddress: venue.address,
       accessUrl,
+      tickets: ticketItems,
     });
     await admin.rpc("complete_ticket_delivery", {
       target_delivery_id: delivery.delivery_id,
       succeeded: true,
       error_message: null,
     });
-    ticketingLog("ticket.email.sent", { orderId, ticketCount });
+    ticketingLog("ticket.email.sent", { orderId, ticketCount: ticketItems.length });
     return { sent: true, skipped: false };
   } catch (error) {
     const errorCode = safeDeliveryError(error);
@@ -71,6 +95,16 @@ export async function deliverTicketsForPaidOrder(
     ticketingLog("ticket.email.failed", { orderId, errorCode });
     return { sent: false, skipped: false };
   }
+}
+
+function formatEventDateParts(value: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).formatToParts(new Date(value));
+  const valueOf = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  const weekday = valueOf("weekday");
+  return {
+    dateLabel: `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${valueOf("day")} de ${valueOf("month")}`,
+    timeLabel: `${valueOf("hour")}:${valueOf("minute")} hs`,
+  };
 }
 
 function safeDeliveryError(error: unknown) {
