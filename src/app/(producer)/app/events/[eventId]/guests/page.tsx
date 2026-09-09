@@ -6,6 +6,7 @@ import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { GuestSearch, type GuestRow } from "@/modules/events/ui/guest-search";
+import { CourtesyTicketForm } from "@/modules/orders/ui/courtesy-ticket-form";
 
 export default async function EventGuestsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -16,7 +17,7 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
 
   const [{ data: tickets }, { data: ticketTypes }, { data: eventTables }, { data: eventSeats }] = await Promise.all([
     supabase.from("tickets").select("*").eq("event_id", eventId).order("holder_last_name"),
-    supabase.from("ticket_types").select("id, name").eq("event_id", eventId),
+    supabase.from("ticket_types").select("id, name, active").eq("event_id", eventId).order("sort_order"),
     supabase.from("event_tables").select("id, name").eq("event_id", eventId),
     supabase.from("event_seats").select("id, label").eq("event_id", eventId),
   ]);
@@ -48,6 +49,7 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
       <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Invitados</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{guests.length} {guests.length === 1 ? "entrada emitida" : "entradas emitidas"} · {checkedInCount} con ingreso registrado</p></div>
     </header>
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
+    {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}
     <section className="mt-8">
       {guests.length ? <GuestSearch guests={guests}/> : <div className="mt-2"><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
     </section>

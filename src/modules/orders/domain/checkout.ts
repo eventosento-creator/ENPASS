@@ -14,3 +14,10 @@ export const checkoutSchema = z.object({
     catch { ctx.addIssue({ code: "custom", message: "Selección inválida" }); return z.NEVER; }
   }),
 });
+
+export const courtesyTicketInputSchema = z.object({
+  eventId: z.uuid(), ticketTypeId: z.uuid(),
+  firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80),
+  email: z.email(),
+  quantity: z.coerce.number().int().min(1).max(10),
+});
