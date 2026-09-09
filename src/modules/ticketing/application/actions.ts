@@ -44,15 +44,15 @@ export async function resendTickets(formData: FormData) {
   const { data: order } = await supabase.from("orders").select("id, event_id, organization_id, status")
     .eq("id", parsed.data.orderId).eq("organization_id", organization.id).maybeSingle();
   if (!order || order.event_id !== parsed.data.eventId || order.status !== "paid") {
-    redirect(`/app/events/${parsed.data.eventId}?delivery=not-allowed`);
+    redirect(`/app/events/${parsed.data.eventId}/tickets?delivery=not-allowed`);
   }
 
   let result: Awaited<ReturnType<typeof deliverTicketsForPaidOrder>>;
   try {
     result = await deliverTicketsForPaidOrder(order.id, { force: true });
   } catch {
-    redirect(`/app/events/${parsed.data.eventId}?delivery=failed`);
+    redirect(`/app/events/${parsed.data.eventId}/tickets?delivery=failed`);
   }
-  revalidatePath(`/app/events/${parsed.data.eventId}`);
-  redirect(`/app/events/${parsed.data.eventId}?delivery=${result.sent ? "sent" : "failed"}`);
+  revalidatePath(`/app/events/${parsed.data.eventId}/tickets`);
+  redirect(`/app/events/${parsed.data.eventId}/tickets?delivery=${result.sent ? "sent" : "failed"}`);
 }

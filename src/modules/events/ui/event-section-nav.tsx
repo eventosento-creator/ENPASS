@@ -5,7 +5,7 @@ import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: "summary" | "tickets" | "guests" | "promoters" | "tables" | "seatmap" | "access" | "pos"; capabilities: EventCapabilities; profile?: EventProfile }) {
   const items = [
     { href: `/app/events/${eventId}`, label: "Resumen", key: "summary" },
-    { href: `/app/events/${eventId}#entradas`, label: "Entradas", key: "tickets" },
+    { href: `/app/events/${eventId}/tickets`, label: "Entradas", key: "tickets" },
     { href: `/app/events/${eventId}/guests`, label: "Invitados", key: "guests" },
     { href: `/app/events/${eventId}/promoters`, label: "RRPP", key: "promoters" },
     { href: `/app/events/${eventId}/tables`, label: "Mesas", key: "tables" },
