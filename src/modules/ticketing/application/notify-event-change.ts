@@ -9,7 +9,8 @@ import { createBuyerMagicLink } from "./buyer-access";
 import { formatEventDateParts } from "./deliver-tickets";
 import { getValidTicketHolderEmails } from "./ticket-holder-emails";
 
-export async function sendEventReminders(eventId: string, options: { provider?: EmailProvider } = {}) {
+export async function notifyEventChange(eventId: string, changedFields: string[], options: { provider?: EmailProvider } = {}) {
+  if (!changedFields.length) return { sent: 0, failed: 0, total: 0 };
   const admin = createAdminClient();
   const { data: eventData } = await admin.from("events").select("*").eq("id", eventId).single();
   if (!eventData) throw new Error("EVENT_NOT_FOUND");
@@ -29,13 +30,14 @@ export async function sendEventReminders(eventId: string, options: { provider?: 
     try {
       const accessUrl = await createBuyerMagicLink(email);
       if (!accessUrl) throw new Error("BUYER_ACCESS_CREATE_FAILED");
-      await provider.sendEventReminder({
+      await provider.sendEventChangeNotice({
         to: email,
         eventName: event.name,
         eventDateLabel: dateLabel,
         eventTimeLabel: timeLabel,
         venueName: venue.name,
         venueAddress: venue.address,
+        changedFields,
         accessUrl,
       });
       sent += 1;
@@ -43,7 +45,6 @@ export async function sendEventReminders(eventId: string, options: { provider?: 
       failed += 1;
     }
   }
-  ticketingLog("event.reminder.sent", { eventId, sent, failed, total: emails.length });
-  await admin.from("events").update({ reminder_sent_at: new Date().toISOString() }).eq("id", eventId);
+  ticketingLog("event.change.notified", { eventId, sent, failed, total: emails.length, changedFields: changedFields.join(",") });
   return { sent, failed, total: emails.length };
 }

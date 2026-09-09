@@ -9,6 +9,7 @@ import { slugify } from "@/shared/lib/format";
 import { eventConfigurationSchema, eventInputSchema, eventUpdateSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { sendEventReminders } from "@/modules/ticketing/application/send-event-reminders";
+import { notifyEventChange } from "@/modules/ticketing/application/notify-event-change";
 
 export async function sendEventReminderAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = formData.get("eventId");
@@ -119,7 +120,7 @@ export async function updateEvent(_: ActionState, formData: FormData): Promise<A
 
   const supabase = await createClient();
   const [{ data: event }, { data: venue }] = await Promise.all([
-    supabase.from("events").select("slug, status, organization_id").eq("id", parsed.data.eventId).single(),
+    supabase.from("events").select("slug, status, organization_id, starts_at, doors_open_at, venue_id").eq("id", parsed.data.eventId).single(),
     supabase.from("venues").select("timezone").eq("id", parsed.data.venueId).single(),
   ]);
   if (!event || !venue) return { error: "No encontramos el evento o el lugar." };
@@ -154,6 +155,16 @@ export async function updateEvent(_: ActionState, formData: FormData): Promise<A
   revalidatePath("/app/events");
   revalidatePath("/app");
   revalidatePath("/");
+
+  if (event.status === "published") {
+    const changedFields: string[] = [];
+    if (new Date(startsAt).getTime() !== new Date(event.starts_at).getTime()) changedFields.push("la fecha y hora");
+    if (parsed.data.venueId !== event.venue_id) changedFields.push("el lugar");
+    if (changedFields.length) {
+      try { await notifyEventChange(parsed.data.eventId, changedFields); } catch { /* Best-effort; the edit itself already succeeded. */ }
+    }
+  }
+
   return { success: "Cambios guardados." };
 }
 
