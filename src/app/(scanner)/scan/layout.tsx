@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Scanner de accesos",
   description: "Control operativo de accesos ENPASS",
   robots: { index: false, follow: false },
+  manifest: "/scan/manifest.webmanifest",
 };
 
 export const viewport: Viewport = { themeColor: "#090909" };
