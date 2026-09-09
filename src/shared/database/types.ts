@@ -18,6 +18,7 @@ export type Event = {
   profile: EventProfile; tickets_enabled: boolean; promoters_enabled: boolean;
   tables_enabled: boolean; access_enabled: boolean; pos_enabled: boolean; inventory_enabled: boolean;
   seatmap_enabled: boolean;
+  reminder_sent_at: string | null;
 };
 export type EventProfile = "nightlife" | "concert" | "festival" | "conference" | "sports" | "expo" | "private_event" | "other";
 export type TicketType = {
@@ -420,7 +421,7 @@ export interface Database {
       organizations: { Row: Organization; Insert: Partial<Organization> & Pick<Organization, "name" | "slug">; Update: Partial<Organization>; Relationships: [] };
       organization_members: { Row: { organization_id: string; user_id: string; role: "owner" | "admin" }; Insert: { organization_id: string; user_id: string; role: "owner" | "admin" }; Update: { role?: "owner" | "admin" }; Relationships: [] };
       venues: { Row: Venue; Insert: Omit<Venue, "id"> & { id?: string }; Update: Partial<Venue>; Relationships: [] };
-      events: { Row: Event; Insert: Omit<Event, "id" | "published_at"> & { id?: string; published_at?: string | null; created_by: string }; Update: Partial<Event>; Relationships: [] };
+      events: { Row: Event; Insert: Omit<Event, "id" | "published_at" | "reminder_sent_at"> & { id?: string; published_at?: string | null; reminder_sent_at?: string | null; created_by: string }; Update: Partial<Event>; Relationships: [] };
       sale_phases: { Row: { id: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out: boolean }; Insert: { id?: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out?: boolean }; Update: { name?: string; sort_order?: number; activate_next_when_sold_out?: boolean }; Relationships: [] };
       ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available"> & { id?: string; publicly_available?: boolean }; Update: Partial<TicketType>; Relationships: [] };
       product_categories: { Row: ProductCategory; Insert: Partial<ProductCategory> & Pick<ProductCategory, "organization_id" | "name">; Update: Partial<ProductCategory>; Relationships: [] };

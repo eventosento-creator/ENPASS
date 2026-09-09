@@ -8,6 +8,23 @@ import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
 import { eventConfigurationSchema, eventInputSchema, eventUpdateSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
 import type { ActionState } from "@/modules/identity/application/actions";
+import { sendEventReminders } from "@/modules/ticketing/application/send-event-reminders";
+
+export async function sendEventReminderAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const eventId = formData.get("eventId");
+  if (typeof eventId !== "string") return { error: "Evento inválido." };
+  const supabase = await createClient();
+  const { data: event } = await supabase.from("events").select("id").eq("id", eventId).maybeSingle();
+  if (!event) return { error: "No tenés permiso sobre este evento." };
+  try {
+    const result = await sendEventReminders(eventId);
+    revalidatePath(`/app/events/${eventId}`);
+    if (!result.total) return { error: "Todavía no hay compradores con entradas válidas para este evento." };
+    return { success: `Recordatorio enviado a ${result.sent} de ${result.total} compradores.` };
+  } catch {
+    return { error: "No pudimos enviar los recordatorios. Intentá de nuevo." };
+  }
+}
 
 export async function createEvent(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = eventInputSchema.safeParse(Object.fromEntries(formData));

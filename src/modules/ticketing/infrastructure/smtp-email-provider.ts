@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { BuyerAccessEmail, EmailProvider, PromoterInviteEmail, TicketEmail } from "./email-provider";
+import type { BuyerAccessEmail, EmailProvider, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -79,6 +79,29 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.promoterName)}. Ya tenés tu link personal para compartir entradas y revisar tus ventas.</p>
         ${accessButton(message.accessUrl, "Ver mis ventas")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 24 horas.</p>
+      `),
+    });
+  }
+
+  async sendEventReminder(message: EventReminderEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Falta poco para ${message.eventName}`,
+      text: `¡Falta poco!\n\n${message.eventName}\n${message.eventDateLabel} · ${message.eventTimeLabel}\n${message.venueName}\n\nVer mi entrada: ${message.accessUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Falta poco!</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Tu evento es mañana. Te dejamos los datos para que no se te pase nada.</p>
+        <div style="margin-top:24px;border-radius:18px;overflow:hidden;border:1px solid #e6e6e1">
+          <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(message.eventDateLabel)} · ${escapeHtml(message.eventTimeLabel)}</p>
+            <p style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.15">${escapeHtml(message.eventName)}</p>
+            <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(message.venueName)}${message.venueAddress ? `, ${escapeHtml(message.venueAddress)}` : ""}</p>
+          </div>
+        </div>
+        ${accessButton(message.accessUrl, "Ver mi entrada")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira pronto.</p>
       `),
     });
   }

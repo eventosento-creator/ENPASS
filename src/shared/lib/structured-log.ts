@@ -28,7 +28,8 @@ type TicketingLogEvent =
   | "ticket.email.sent"
   | "ticket.email.failed"
   | "buyer.access.requested"
-  | "buyer.access.granted";
+  | "buyer.access.granted"
+  | "event.reminder.sent";
 
 export function ticketingLog(event: TicketingLogEvent, fields: Record<string, SafeLogValue> = {}) {
   console.info(JSON.stringify({

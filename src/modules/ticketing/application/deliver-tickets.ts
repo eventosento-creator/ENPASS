@@ -97,7 +97,7 @@ export async function deliverTicketsForPaidOrder(
   }
 }
 
-function formatEventDateParts(value: string, timeZone: string) {
+export function formatEventDateParts(value: string, timeZone: string) {
   const parts = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).formatToParts(new Date(value));
   const valueOf = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   const weekday = valueOf("weekday");

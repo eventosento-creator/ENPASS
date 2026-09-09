@@ -7,6 +7,7 @@ import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { GuestSearch, type GuestRow } from "@/modules/events/ui/guest-search";
 import { CourtesyTicketForm } from "@/modules/orders/ui/courtesy-ticket-form";
+import { SendReminderButton } from "@/modules/events/ui/send-reminder-button";
 
 export default async function EventGuestsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -46,7 +47,8 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
 
   return <>
     <header className="flex flex-wrap items-end justify-between gap-5">
-      <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Invitados</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{guests.length} {guests.length === 1 ? "entrada emitida" : "entradas emitidas"} · {checkedInCount} con ingreso registrado</p></div>
+      <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Invitados</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{guests.length} {guests.length === 1 ? "entrada emitida" : "entradas emitidas"} · {checkedInCount} con ingreso registrado{event.reminder_sent_at && ` · Recordatorio enviado`}</p></div>
+      <SendReminderButton eventId={event.id}/>
     </header>
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
     {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}

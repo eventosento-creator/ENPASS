@@ -29,8 +29,19 @@ export type PromoterInviteEmail = {
   accessUrl: string;
 };
 
+export type EventReminderEmail = {
+  to: string;
+  eventName: string;
+  eventDateLabel: string;
+  eventTimeLabel: string;
+  venueName: string;
+  venueAddress: string;
+  accessUrl: string;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
   sendPromoterInvite(message: PromoterInviteEmail): Promise<void>;
+  sendEventReminder(message: EventReminderEmail): Promise<void>;
 }
