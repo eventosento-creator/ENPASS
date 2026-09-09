@@ -3,7 +3,7 @@ export type TicketEmailItem = {
   document: string | null;
   ticketTypeName: string;
   shortCode: string;
-  qrDataUrl: string;
+  qrPng: Buffer;
 };
 
 export type TicketEmail = {

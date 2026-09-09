@@ -53,13 +53,13 @@ export async function deliverTicketsForPaidOrder(
     const ticketItems = await Promise.all(tickets.filter((ticket) => ticket.status === "valid").map(async (ticket) => {
       const payload = decryptTicketToken(ticket.qr_token_encrypted);
       if (hashOpaqueToken(payload) !== ticket.qr_token_hash) throw new Error("TICKET_TOKEN_INTEGRITY_FAILED");
-      const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 1, width: 360, color: { dark: "#050505", light: "#ffffff" } });
+      const qrPng = await QRCode.toBuffer(payload, { errorCorrectionLevel: "M", margin: 1, width: 360, color: { dark: "#050505", light: "#ffffff" } });
       return {
         holderName: `${ticket.holder_first_name} ${ticket.holder_last_name}`.trim(),
         document: ticket.holder_document,
         ticketTypeName: ticket.ticket_type_id ? (typeNameById.get(ticket.ticket_type_id) ?? "Entrada") : "Entrada",
         shortCode: ticket.short_code,
-        qrDataUrl,
+        qrPng,
       };
     }));
     if (!ticketItems.length) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");

@@ -19,15 +19,23 @@ export class SmtpEmailProvider implements EmailProvider {
 
   async sendTicketDelivery(message: TicketEmail) {
     const countLabel = message.tickets.length === 1 ? "1 entrada" : `${message.tickets.length} entradas`;
+    const cids = message.tickets.map((_, index) => `qr-${index}-${Date.now()}`);
+    const attachments = message.tickets.map((ticket, index) => ({
+      filename: `qr-${index + 1}.png`,
+      content: ticket.qrPng,
+      cid: cids[index],
+      contentType: "image/png",
+    }));
     await this.transport.sendMail({
       from: this.from,
       to: message.to,
       subject: `Tus entradas para ${message.eventName}`,
       text: `¡Tu entrada está lista!\n\n${message.eventName}\n${message.eventDateLabel} · ${message.eventTimeLabel}\n${message.venueName}\n${countLabel}\n\nVer mis accesos: ${message.accessUrl}`,
+      attachments,
       html: emailFrame(`
         <h1 style="margin:0 0 8px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b">¡Tu entrada está lista!</h1>
         <p style="margin:0 0 26px;font-size:14px;line-height:1.6;color:#6f6f75">Gracias por ser parte. Te dejamos ${countLabel} y toda la información del evento.</p>
-        ${message.tickets.map((ticket) => ticketCard(message.eventName, message.eventDateLabel, message.eventTimeLabel, message.venueName, message.venueAddress, ticket)).join('<div style="height:16px;line-height:16px">&nbsp;</div>')}
+        ${message.tickets.map((ticket, index) => ticketCard(message.eventName, message.eventDateLabel, message.eventTimeLabel, message.venueName, message.venueAddress, ticket, cids[index]!)).join('<div style="height:16px;line-height:16px">&nbsp;</div>')}
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;display:flex">
           <table role="presentation" style="border-collapse:collapse"><tr>
             <td valign="top" style="padding-right:12px;font-size:18px">ℹ️</td>
@@ -133,7 +141,7 @@ function heroBanner() {
   </div>`;
 }
 
-function ticketCard(eventName: string, dateLabel: string, timeLabel: string, venueName: string, venueAddress: string, ticket: { holderName: string; document: string | null; ticketTypeName: string; shortCode: string; qrDataUrl: string }) {
+function ticketCard(eventName: string, dateLabel: string, timeLabel: string, venueName: string, venueAddress: string, ticket: { holderName: string; document: string | null; ticketTypeName: string; shortCode: string }, qrCid: string) {
   return `<div style="border-radius:18px;overflow:hidden;border:1px solid #e6e6e1">
     <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
       <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(dateLabel)} · ${escapeHtml(timeLabel)}</p>
@@ -147,7 +155,7 @@ function ticketCard(eventName: string, dateLabel: string, timeLabel: string, ven
         ${ticket.document ? `<td valign="top" style="padding-left:8px;width:33%"><p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9a9a9f">DNI</p><p style="margin:4px 0 0;font-size:14px;font-weight:800;color:#0a0a0b">${escapeHtml(ticket.document)}</p></td>` : ""}
       </tr></table>
       <div style="margin-top:20px;text-align:center">
-        <img src="${ticket.qrDataUrl}" alt="Código QR" width="180" height="180" style="display:inline-block;width:180px;height:180px">
+        <img src="cid:${qrCid}" alt="Código QR" width="180" height="180" style="display:inline-block;width:180px;height:180px">
         <p style="margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.08em;color:#0a0a0b">${escapeHtml(ticket.shortCode)}</p>
       </div>
     </div>
