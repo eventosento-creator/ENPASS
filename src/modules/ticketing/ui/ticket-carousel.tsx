@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Expand, MapPin, ShieldCheck, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Expand, MapPin, ShieldCheck, X } from "lucide-react";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import type { TicketPresentation } from "../application/queries";
 import { formatEventDate } from "@/shared/lib/format";
@@ -27,7 +27,8 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
 
   if (!ticket) return null;
   const hasMultiple = tickets.length > 1;
-  const status = statusContent(ticket.status);
+  const usedUp = ticket.usedEntries >= ticket.maxEntries;
+  const status = statusContent(ticket.status, usedUp);
   function finishSwipe(clientX: number) {
     if (touchStart.current === null || !hasMultiple) return;
     const distance = clientX - touchStart.current;
@@ -48,14 +49,15 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
 
         <div className="mt-6 rounded-[1.35rem] bg-white p-4 text-[#090909] sm:p-6">
           {ticket.status === "valid" && ticket.qrSvg ? <>
+            {usedUp && <p className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-black/[.04] py-2.5 text-xs font-bold text-neutral-600"><CheckCircle2 size={14}/>Ya ingresaste con esta entrada</p>}
             <div className="ticket-qr mx-auto aspect-square w-full max-w-[360px]" aria-label={`Código QR de la credencial ${ticket.shortCode}`} dangerouslySetInnerHTML={{ __html: ticket.qrSvg }}/>
             <button type="button" className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0b0b0c] px-4 font-extrabold text-white" onClick={() => setFullscreen(true)}><Expand size={18}/> Ver QR grande</button>
           </> : <div className="grid min-h-72 place-items-center px-5 text-center"><div><status.icon className="mx-auto" size={36}/><h3 className="mt-4 text-xl font-black">{status.title}</h3><p className="mt-2 text-sm leading-6 text-neutral-600">{status.description}</p></div></div>}
         </div>
 
         <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/[.08] pt-5">
-          <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-neutral-600">{ticket.credentialKind === "table" ? `MESA · ${ticket.ticketTypeName}` : ticket.ticketTypeName}</p><p className="mt-2 text-lg font-extrabold">{ticket.holderName}</p><p className="mt-1 font-mono text-sm tracking-[.12em] text-neutral-500">#{ticket.shortCode}</p>{ticket.maxEntries > 1 && <p className="mt-2 text-xs font-black text-[var(--accent)]">{ticket.usedEntries} / {ticket.maxEntries} ingresos utilizados</p>}</div>
-          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${ticket.status === "valid" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-white/[.07] text-neutral-300"}`}>{status.label}</span>
+          <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-neutral-600">{ticket.credentialKind === "table" ? `MESA · ${ticket.ticketTypeName}` : ticket.ticketTypeName}</p><p className="mt-2 text-lg font-extrabold">{ticket.holderName}</p><p className="mt-1 font-mono text-sm tracking-[.12em] text-neutral-500">#{ticket.shortCode}</p>{ticket.usedEntries > 0 && <p className="mt-2 text-xs font-black text-[var(--accent)]">{ticket.usedEntries} / {ticket.maxEntries} ingresos utilizados</p>}</div>
+          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${ticket.status === "valid" && !usedUp ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-white/[.07] text-neutral-300"}`}>{status.label}</span>
         </div>
         {ticket.status === "valid" && <p className="mt-5 flex items-center gap-2 text-xs leading-5 text-neutral-500"><ShieldCheck size={15} className="shrink-0 text-[var(--accent)]"/> {ticket.credentialKind === "table" ? `Este QR permite hasta ${ticket.maxEntries} ingresos y suma uno por cada validación.` : "Presentá este QR en el ingreso. El código corto sirve como referencia de soporte."}</p>}
       </div>
@@ -77,8 +79,9 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
   </>;
 }
 
-function statusContent(status: TicketPresentation["status"]) {
+function statusContent(status: TicketPresentation["status"], usedUp: boolean) {
   if (status === "refunded") return { label: "Reembolsada", title: "Entrada reembolsada", description: "Este QR ya no es válido.", icon: ShieldCheck };
   if (status === "cancelled") return { label: "Cancelada", title: "Entrada cancelada", description: "Esta credencial ya no permite el ingreso.", icon: ShieldCheck };
+  if (usedUp) return { label: "Ya ingresó", title: "Entrada válida", description: "", icon: ShieldCheck };
   return { label: "Válida", title: "Entrada válida", description: "", icon: ShieldCheck };
 }
