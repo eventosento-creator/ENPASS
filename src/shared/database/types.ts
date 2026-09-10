@@ -416,6 +416,26 @@ export type CheckIn = {
   scanned_at: string;
 };
 
+export type LegalDocumentType = "terms_buyer" | "refund_policy" | "privacy_policy" | "organizer_agreement";
+export type LegalDocumentStatus = "draft" | "active" | "superseded";
+export type LegalDocument = {
+  id: string; type: LegalDocumentType; version: string; effective_from: string;
+  content_hash: string; status: LegalDocumentStatus; content: string; created_at: string;
+};
+export type LegalAcceptance = {
+  id: string; legal_document_id: string; order_id: string | null; organization_id: string | null;
+  user_id: string | null; email: string; accepted_at: string;
+  source: "checkout" | "producer_agreement" | "admin"; metadata: Json;
+};
+export type ArrepentimientoEligibilityStatus = "PENDING" | "ELIGIBLE" | "INELIGIBLE" | "MANUAL_REVIEW";
+export type ArrepentimientoRequest = {
+  id: string; organization_id: string; order_id: string; requester_email: string;
+  eligibility_status: ArrepentimientoEligibilityStatus; ticket_ids: string[];
+  ineligibility_reason: string | null; management_code: string;
+  verification_token_hash: string; verification_expires_at: string;
+  confirmed_at: string | null; created_at: string;
+};
+
 // Only the subset currently consumed by the application is declared here.
 export interface Database {
   public: {
@@ -473,6 +493,9 @@ export interface Database {
       scanner_activation_rate_limits: { Row: { fingerprint_hash: string; window_started_at: string; failed_attempts: number; blocked_until: string | null; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       checkins: { Row: CheckIn; Insert: never; Update: never; Relationships: [] };
       audit_logs: { Row: { id: number; organization_id: string; actor_user_id: string | null; action: string; entity_type: string; entity_id: string | null; before_data: Json | null; after_data: Json | null; created_at: string }; Insert: { organization_id: string; actor_user_id?: string | null; action: string; entity_type: string; entity_id?: string | null; before_data?: Json | null; after_data?: Json | null; created_at?: string }; Update: never; Relationships: [] };
+      legal_documents: { Row: LegalDocument; Insert: never; Update: never; Relationships: [] };
+      legal_acceptances: { Row: LegalAcceptance; Insert: never; Update: never; Relationships: [] };
+      arrepentimiento_requests: { Row: ArrepentimientoRequest; Insert: never; Update: never; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {
@@ -494,8 +517,11 @@ export interface Database {
       get_event_pos_overview: { Args: { target_event: string }; Returns: { total_revenue: number; sale_count: number; cash_revenue: number; card_revenue: number; mercado_pago_revenue: number; bank_transfer_revenue: number; open_sessions: number; currency: string }[] };
       get_event_pos_location_metrics: { Args: { target_event: string }; Returns: { sales_location_id: string; location_name: string; revenue: number; sale_count: number; device_count: number }[] };
       get_event_pos_product_metrics: { Args: { target_event: string }; Returns: { product_id: string; product_name: string; quantity_sold: number; revenue: number }[] };
-      create_guest_checkout: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json }; Returns: { order_public_id: string; expires_at: string }[] };
-      create_guest_checkout_attributed: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; target_attribution_session_hash: string | null }; Returns: { order_public_id: string; expires_at: string }[] };
+      create_guest_checkout: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; accepted_terms_document_id: string; accepted_refund_policy_document_id: string }; Returns: { order_public_id: string; expires_at: string }[] };
+      create_guest_checkout_attributed: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; target_attribution_session_hash: string | null; accepted_terms_document_id: string; accepted_refund_policy_document_id: string }; Returns: { order_public_id: string; expires_at: string }[] };
+      get_active_legal_document: { Args: { target_type: LegalDocumentType }; Returns: LegalDocument };
+      start_arrepentimiento_request: { Args: { order_public_id: string; requester_email: string; verification_token_hash: string; verification_expires_at: string }; Returns: { matched: boolean; management_code: string | null }[] };
+      confirm_arrepentimiento_request: { Args: { raw_token: string }; Returns: { eligibility_status: ArrepentimientoEligibilityStatus; management_code: string; ineligibility_reason: string | null }[] };
       create_courtesy_checkout: { Args: { target_event: string; target_ticket_type: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; quantity: number }; Returns: { order_public_id: string }[] };
       update_customer_notes: { Args: { target_customer: string; target_notes: string; target_tags: string[] }; Returns: undefined };
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };

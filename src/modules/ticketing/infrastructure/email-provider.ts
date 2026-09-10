@@ -50,10 +50,24 @@ export type EventChangeEmail = {
   accessUrl: string;
 };
 
+export type ArrepentimientoVerificationEmail = {
+  to: string;
+  confirmUrl: string;
+};
+
+export type ArrepentimientoReceivedEmail = {
+  to: string;
+  managementCode: string;
+  eligible: boolean;
+  reason?: string | null;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
   sendPromoterInvite(message: PromoterInviteEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
+  sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;
+  sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail): Promise<void>;
 }

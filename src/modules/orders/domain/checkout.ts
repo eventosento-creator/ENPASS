@@ -13,6 +13,9 @@ export const checkoutSchema = z.object({
     try { return z.array(checkoutSelectionSchema).min(1).max(20).parse(JSON.parse(value)); }
     catch { ctx.addIssue({ code: "custom", message: "Selección inválida" }); return z.NEVER; }
   }),
+  acceptedTermsDocumentId: z.uuid(),
+  acceptedRefundPolicyDocumentId: z.uuid(),
+  acceptedTerms: z.literal("on", { error: "Debés aceptar los Términos y la Política de Reembolsos" }),
 });
 
 export const courtesyTicketInputSchema = z.object({

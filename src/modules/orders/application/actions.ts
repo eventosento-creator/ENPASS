@@ -18,6 +18,8 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
     target_event: parsed.data.eventId, buyer_first_name: parsed.data.firstName, buyer_last_name: parsed.data.lastName,
     buyer_email: parsed.data.email, buyer_phone: parsed.data.phone, buyer_document: parsed.data.document,
     selections: parsed.data.selections, target_attribution_session_hash: attributionSessionHash,
+    accepted_terms_document_id: parsed.data.acceptedTermsDocumentId,
+    accepted_refund_policy_document_id: parsed.data.acceptedRefundPolicyDocumentId,
   });
   const order = data?.[0];
   if (error || !order) return { error: "No pudimos completar la reserva. Es posible que esa disponibilidad ya haya cambiado." };

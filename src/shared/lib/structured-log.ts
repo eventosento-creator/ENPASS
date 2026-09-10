@@ -40,6 +40,19 @@ export function ticketingLog(event: TicketingLogEvent, fields: Record<string, Sa
   }));
 }
 
+type LegalLogEvent =
+  | "legal.acceptance.recorded"
+  | "arrepentimiento.requested"
+  | "arrepentimiento.confirmed";
+
+export function legalLog(event: LegalLogEvent, fields: Record<string, SafeLogValue> = {}) {
+  console.info(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event,
+    ...fields,
+  }));
+}
+
 type PromoterLogEvent =
   | "promoter.attribution.created"
   | "promoter.attribution.skipped"

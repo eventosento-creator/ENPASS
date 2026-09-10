@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { BuyerAccessEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -126,6 +126,41 @@ export class SmtpEmailProvider implements EmailProvider {
         </div>
         ${accessButton(message.accessUrl, "Ver mi entrada")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Tu entrada sigue siendo válida, no hace falta que hagas nada.</p>
+      `),
+    });
+  }
+  async sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: "Confirmá tu solicitud de arrepentimiento",
+      text: `Recibimos tu solicitud de arrepentimiento. Confirmala desde este enlace: ${message.confirmUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Confirmá tu solicitud</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Recibimos un pedido de arrepentimiento para una compra asociada a este email. Para continuar, confirmalo desde el botón de abajo.</p>
+        ${accessButton(message.confirmUrl, "Confirmar solicitud")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 30 minutos.</p>
+        ${noticeBox("¿No pediste esto?", "Podés ignorar este mensaje con tranquilidad, no se va a procesar ningún cambio sin tu confirmación.")}
+      `),
+    });
+  }
+
+  async sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail) {
+    const subject = message.eligible ? "Tu solicitud de arrepentimiento fue registrada" : "Tu solicitud de arrepentimiento no es elegible";
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject,
+      text: `Código de gestión: ${message.managementCode}\n\n${message.eligible ? "Tu solicitud cumple las condiciones del derecho de arrepentimiento. Te vamos a contactar con los próximos pasos." : `Tu solicitud no cumple las condiciones: ${message.reason ?? "revisá la Política de Reembolsos."}`}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">${message.eligible ? "Solicitud registrada" : "Solicitud no elegible"}</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${message.eligible ? "Tu pedido cumple con las condiciones del derecho de arrepentimiento. Guardá el código de gestión de tu solicitud." : escapeHtml(message.reason ?? "Tu pedido no cumple con las condiciones del derecho de arrepentimiento.")}</p>
+        <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
+          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">Código de gestión</p>
+          <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:#0a0a0b">${escapeHtml(message.managementCode)}</p>
+        </div>
       `),
     });
   }

@@ -33,8 +33,11 @@ function NavTab({ active, href, label, icon: Icon, labelClassName = "hidden sm:i
 }
 
 export function PublicFooter() {
-  return <footer className="container-shell flex flex-col gap-3 border-t border-white/[.07] py-8 text-xs text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
-    <EnpassLogo/>
-    <div className="flex flex-wrap gap-5"><Link href="/eventos" className="hover:text-white">Eventos</Link><Link href={"/mis-entradas" as never} className="hover:text-white">Mis entradas</Link><Link href="/crear-evento" className="hover:text-white">Crear eventos</Link><Link href="/login" className="hover:text-white">Ingresar</Link></div>
+  return <footer className="container-shell flex flex-col gap-4 border-t border-white/[.07] py-8 text-xs text-neutral-600">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <EnpassLogo/>
+      <div className="flex flex-wrap gap-5"><Link href="/eventos" className="hover:text-white">Eventos</Link><Link href={"/mis-entradas" as never} className="hover:text-white">Mis entradas</Link><Link href="/crear-evento" className="hover:text-white">Crear eventos</Link><Link href="/login" className="hover:text-white">Ingresar</Link></div>
+    </div>
+    <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-white/[.05] pt-4"><Link href={"/terminos" as never} className="hover:text-white">Términos y Condiciones</Link><Link href={"/privacidad" as never} className="hover:text-white">Privacidad</Link><Link href={"/reembolsos" as never} className="hover:text-white">Reembolsos</Link><Link href={"/arrepentimiento" as never} className="hover:text-white">Botón de Arrepentimiento</Link></div>
   </footer>;
 }
