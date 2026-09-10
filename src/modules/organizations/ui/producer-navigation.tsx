@@ -16,7 +16,7 @@ export function ProducerNavigation({ mobile = false }: { mobile?: boolean }) {
   return <nav aria-label={mobile ? "Navegación móvil" : "Navegación del productor"} className={mobile ? "grid grid-cols-4 gap-1" : "grid gap-1"}>
     {items.map(({ href, label, icon: Icon }) => {
       const active = href === "/app" ? pathname === href : pathname.startsWith(href);
-      return <Link aria-current={active ? "page" : undefined} href={href} key={href} className={mobile ? `grid min-h-14 place-items-center gap-1 rounded-xl text-[11px] font-bold transition ${active ? "bg-white/[.07] text-white" : "text-neutral-500"}` : `flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${active ? "bg-white/[.07] text-white" : "text-neutral-500 hover:bg-white/[.04] hover:text-white"}`}>
+      return <Link aria-current={active ? "page" : undefined} href={href} key={href} className={mobile ? `grid min-h-14 place-items-center gap-1 rounded-xl text-[11px] font-bold transition ${active ? "bg-white/[.07] text-white" : "text-neutral-500"}` : `flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${active ? "border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-xs)]" : "text-neutral-500 hover:bg-white/[.04] hover:text-white"}`}>
         <Icon size={mobile ? 19 : 18}/>{label}
       </Link>;
     })}

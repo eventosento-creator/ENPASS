@@ -1,13 +1,16 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Armchair, Check, Plus, UsersRound, X } from "lucide-react";
+import { Armchair, BookOpen, Check, Layers, Plus, QrCode, Tag, UsersRound, X } from "lucide-react";
 import { createEventTable, createTableZone, setEventTableActive } from "../application/actions";
 import { tableAvailabilityLabel } from "../domain/table";
 import type { AccessGate, EventTable, TableEntitlementTemplate, TableZone } from "@/shared/database/types";
 import { formatMoney } from "@/shared/lib/format";
 import { ActionMessage } from "@/shared/ui/action-message";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { ColorDot } from "@/shared/ui/color-dot";
+import { HowItWorksCard } from "@/shared/ui/how-it-works-card";
 
 type ManagedTable = EventTable & {
   availability_status: "available" | "held" | "sold";
@@ -24,12 +27,30 @@ export function TableManagement({ eventId, zones, tables, gates, editable }: { e
       <button className="btn btn-secondary" type="button" onClick={() => setZoneOpen(true)} disabled={!editable}><Plus size={17}/>Nuevo sector</button>
       <button className="btn btn-primary" type="button" onClick={() => setTableOpen(true)} disabled={!editable || activeZones.length === 0}><Plus size={17}/>Agregar mesa</button>
     </div>
-    {!activeZones.length ? <EmptyState onCreate={() => setZoneOpen(true)} editable={editable}/> : <div className="mt-7 grid gap-8">{activeZones.map((zone) => {
-      const zoneTables = tables.filter((table) => table.table_zone_id === zone.id);
-      return <section key={zone.id}><div className="flex items-end justify-between gap-4 border-b border-white/[.08] pb-3"><div><p className="eyebrow">Sector</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">{zone.name}</h2>{zone.description && <p className="mt-1 text-sm text-neutral-500">{zone.description}</p>}</div><span className="text-xs font-bold text-neutral-600">{zoneTables.length} {zoneTables.length === 1 ? "mesa" : "mesas"}</span></div>
-        {zoneTables.length ? <div className="mt-4 grid gap-3 lg:grid-cols-2">{zoneTables.map((table) => <TableCard eventId={eventId} table={table} editable={editable} key={table.id}/>)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-neutral-500">Todavía no hay mesas en este sector.</div>}
-      </section>;
-    })}</div>}
+    {!activeZones.length ? <div className="mt-7"><EmptyState icon={Armchair} title="Organizá tus mesas por sector" description="Creá VIP, Terraza o el nombre que uses. Después agregá cada mesa con capacidad, precio y beneficios." action={editable && <button className="btn btn-primary" type="button" onClick={() => setZoneOpen(true)}><Plus size={17}/>Crear primer sector</button>}/></div> : <div className="mt-7 grid gap-6 lg:grid-cols-[280px_1fr]">
+      <aside className="card h-fit p-5"><div className="flex items-center gap-2"><Layers size={17} className="text-[var(--accent)]"/><h2 className="font-black">Sectores</h2></div><p className="mt-2 text-xs leading-5 text-neutral-500">Organizá tus mesas por sectores y definí capacidad, precios y beneficios.</p><ul className="mt-4 grid gap-1">{activeZones.map((zone, index) => {
+        const count = tables.filter((table) => table.table_zone_id === zone.id).length;
+        return <li key={zone.id}><a href={`#zone-${zone.id}`} className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 text-sm font-bold transition hover:bg-white/[.04]"><span className="flex items-center gap-2.5"><ColorDot index={index}/>{zone.name}</span><span className="text-xs font-semibold text-neutral-500">{count} {count === 1 ? "mesa" : "mesas"}</span></a></li>;
+      })}</ul></aside>
+      <div className="grid gap-8">{activeZones.map((zone) => {
+        const zoneTables = tables.filter((table) => table.table_zone_id === zone.id);
+        return <section id={`zone-${zone.id}`} key={zone.id}><div className="flex items-end justify-between gap-4 border-b border-white/[.08] pb-3"><div><p className="eyebrow">Sector</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">{zone.name}</h2>{zone.description && <p className="mt-1 text-sm text-neutral-500">{zone.description}</p>}</div><span className="text-xs font-bold text-neutral-600">{zoneTables.length} {zoneTables.length === 1 ? "mesa" : "mesas"}</span></div>
+          {zoneTables.length ? <div className="mt-4 grid gap-3 lg:grid-cols-2">{zoneTables.map((table) => <TableCard eventId={eventId} table={table} editable={editable} key={table.id}/>)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-neutral-500">Todavía no hay mesas en este sector.</div>}
+        </section>;
+      })}
+      <div className="card p-5"><p className="text-[10px] font-black uppercase tracking-wider text-neutral-600">Cada mesa incluye</p><div className="mt-3 flex flex-wrap gap-2">
+        <span className="flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 py-1.5 text-xs font-bold"><UsersRound size={14}/>Capacidad</span>
+        <span className="flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 py-1.5 text-xs font-bold"><Tag size={14}/>Precio</span>
+        <span className="flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 py-1.5 text-xs font-bold"><Check size={14}/>Beneficios</span>
+        <span className="flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 py-1.5 text-xs font-bold"><QrCode size={14}/>QR grupal</span>
+      </div></div>
+      </div>
+    </div>}
+    <div className="mt-8"><HowItWorksCard steps={[
+      { icon: Layers, title: "Creá sectores", description: "Ej.: VIP, Terraza, General." },
+      { icon: Plus, title: "Agregá mesas", description: "Definí capacidad, precio y beneficios." },
+      { icon: QrCode, title: "Compartí el QR", description: "Cada mesa tiene un QR grupal para reservas." },
+    ]} action={<span className="flex items-center gap-1.5 text-xs font-bold text-neutral-500"><BookOpen size={14}/>Ver guía completa</span>}/></div>
     {zoneOpen && <ZoneDrawer eventId={eventId} close={() => setZoneOpen(false)}/>}
     {tableOpen && (
       <TableDrawer eventId={eventId} zones={activeZones} gates={gates} close={() => setTableOpen(false)}/>
@@ -70,8 +91,4 @@ function TableDrawer({ eventId, zones, gates, close }: { eventId: string; zones:
 
 function Drawer({ title, eyebrow, close, children }: { title: string; eyebrow: string; close: () => void; children: React.ReactNode }) {
   return <div className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-sm sm:items-center sm:justify-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><section className="max-h-[94dvh] w-full overflow-y-auto rounded-t-[1.5rem] border border-white/10 bg-[var(--surface)] p-5 shadow-2xl sm:max-w-2xl sm:rounded-[1.5rem] sm:p-7" role="dialog" aria-modal="true" aria-label={title}><div className="mb-6 flex items-start justify-between gap-4"><div><p className="eyebrow">{eyebrow}</p><h2 className="mt-2 text-2xl font-black tracking-[-.035em]">{title}</h2></div><button type="button" aria-label="Cerrar" className="btn btn-ghost btn-icon min-h-11" onClick={close}><X size={18}/></button></div>{children}</section></div>;
-}
-
-function EmptyState({ onCreate, editable }: { onCreate: () => void; editable: boolean }) {
-  return <div className="card mt-7 px-6 py-14 text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white/[.04] text-neutral-600"><Armchair size={26}/></div><h2 className="mt-5 text-xl font-black">Organizá tus mesas por sector</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">Creá VIP, Terraza o el nombre que uses. Después agregá cada mesa con capacidad, precio y beneficios.</p>{editable && <button className="btn btn-primary mt-6" type="button" onClick={onCreate}><Plus size={17}/>Crear primer sector</button>}</div>;
 }

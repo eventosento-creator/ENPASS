@@ -1,13 +1,15 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Grid3x3, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Grid3x3, LayoutGrid, Pencil, Plus, Trash2, X } from "lucide-react";
 import { createSeatMapSection, deleteSeatMapSection, setEventSeatActive, updateSeatMapSection } from "../application/actions";
 import { seatAvailabilityLabel } from "../domain/seat-map";
 import type { EventSeat, SeatMapSection } from "@/shared/database/types";
 import { formatMoney } from "@/shared/lib/format";
 import { ActionMessage } from "@/shared/ui/action-message";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { ColorDot } from "@/shared/ui/color-dot";
 
 type ManagedSeat = EventSeat & { availability_status: "available" | "held" | "sold" };
 
@@ -19,10 +21,16 @@ export function SeatMapManagement({ eventId, sections, seats, editable }: { even
     <div className="flex flex-wrap gap-2">
       <button className="btn btn-primary" type="button" onClick={() => setOpen(true)} disabled={!editable}><Plus size={17}/>Nueva sección de asientos</button>
     </div>
-    {!activeSections.length ? <EmptyState onCreate={() => setOpen(true)} editable={editable}/> : <div className="mt-7 grid gap-9">{activeSections.map((section) => {
-      const sectionSeats = seats.filter((seat) => seat.section_id === section.id);
-      return <SectionGrid key={section.id} eventId={eventId} section={section} seats={sectionSeats} editable={editable} onEdit={() => setEditingSection(section)}/>;
-    })}</div>}
+    {!activeSections.length ? <div className="mt-7"><EmptyState icon={Grid3x3} title="Armá tu mapa de asientos" description="Definí filas y asientos por fila, y generamos automáticamente cada asiento numerado." action={editable && <button className="btn btn-primary" type="button" onClick={() => setOpen(true)}><Plus size={17}/>Crear primera sección</button>}/></div> : <div className="mt-7 grid gap-6 lg:grid-cols-[280px_1fr]">
+      <aside className="card h-fit p-5"><div className="flex items-center gap-2"><LayoutGrid size={17} className="text-[var(--accent)]"/><h2 className="font-black">Secciones</h2></div><ul className="mt-4 grid gap-1">{activeSections.map((section, index) => {
+        const count = seats.filter((seat) => seat.section_id === section.id).length;
+        return <li key={section.id}><a href={`#section-${section.id}`} className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 text-sm font-bold transition hover:bg-white/[.04]"><span className="flex items-center gap-2.5"><ColorDot index={index}/>{section.name}</span><span className="text-xs font-semibold text-neutral-500">{count}</span></a></li>;
+      })}</ul></aside>
+      <div className="grid gap-9">{activeSections.map((section) => {
+        const sectionSeats = seats.filter((seat) => seat.section_id === section.id);
+        return <div id={`section-${section.id}`} key={section.id}><SectionGrid eventId={eventId} section={section} seats={sectionSeats} editable={editable} onEdit={() => setEditingSection(section)}/></div>;
+      })}</div>
+    </div>}
     {open && <SectionDrawer eventId={eventId} close={() => setOpen(false)}/>}
     {editingSection && <EditSectionDrawer eventId={eventId} section={editingSection} close={() => setEditingSection(null)}/>}
   </>;
@@ -118,8 +126,4 @@ function EditSectionDrawer({ eventId, section, close }: { eventId: string; secti
 
 function Drawer({ title, eyebrow, close, children }: { title: string; eyebrow: string; close: () => void; children: React.ReactNode }) {
   return <div className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-sm sm:items-center sm:justify-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><section className="max-h-[94dvh] w-full overflow-y-auto rounded-t-[1.5rem] border border-white/10 bg-[var(--surface)] p-5 shadow-2xl sm:max-w-2xl sm:rounded-[1.5rem] sm:p-7" role="dialog" aria-modal="true" aria-label={title}><div className="mb-6 flex items-start justify-between gap-4"><div><p className="eyebrow">{eyebrow}</p><h2 className="mt-2 text-2xl font-black tracking-[-.035em]">{title}</h2></div><button type="button" aria-label="Cerrar" className="btn btn-ghost btn-icon min-h-11" onClick={close}><X size={18}/></button></div>{children}</section></div>;
-}
-
-function EmptyState({ onCreate, editable }: { onCreate: () => void; editable: boolean }) {
-  return <div className="card mt-7 px-6 py-14 text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white/[.04] text-neutral-600"><Grid3x3 size={26}/></div><h2 className="mt-5 text-xl font-black">Armá tu mapa de asientos</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">Definí filas y asientos por fila, y generamos automáticamente cada asiento numerado.</p>{editable && <button className="btn btn-primary mt-6" type="button" onClick={onCreate}><Plus size={17}/>Crear primera sección</button>}</div>;
 }

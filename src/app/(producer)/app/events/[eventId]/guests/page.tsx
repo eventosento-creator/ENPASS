@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Mail, Send, Users } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
@@ -8,6 +8,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { GuestSearch, type GuestRow } from "@/modules/events/ui/guest-search";
 import { CourtesyTicketForm } from "@/modules/orders/ui/courtesy-ticket-form";
 import { SendReminderButton } from "@/modules/events/ui/send-reminder-button";
+import { HowItWorksCard } from "@/shared/ui/how-it-works-card";
 
 export default async function EventGuestsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -52,8 +53,13 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
     </header>
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
     {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}
-    <section className="mt-8">
-      {guests.length ? <GuestSearch guests={guests}/> : <div className="mt-2"><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
+    <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_300px] xl:items-start">
+      {guests.length ? <GuestSearch guests={guests}/> : <div><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
+      <HowItWorksCard title="Cómo funciona" layout="column" steps={[
+        { icon: Mail, title: "Las cortesías se envían por mail", description: "Agregá una cortesía y la persona recibirá su entrada por correo electrónico." },
+        { icon: CheckCircle2, title: "Podés hacer seguimiento", description: "Vas a ver quién confirmó, quién ingresó y quién aún no lo hizo." },
+        { icon: Send, title: "Reenviá el acceso cuando quieras", description: "Si la persona no encuentra el mail, podés reenviarlo desde acá." },
+      ]}/>
     </section>
   </>;
 }

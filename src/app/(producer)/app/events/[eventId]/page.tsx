@@ -13,6 +13,7 @@ import { DuplicateEventForm } from "@/modules/events/ui/duplicate-event-form";
 import { ShareEventButton } from "@/modules/events/ui/share-event-button";
 import { EventActionsMenu } from "@/modules/events/ui/event-actions-menu";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { StatCard } from "@/shared/ui/stat-card";
 
 export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ error?: string; published?: string }> }) {
   const { eventId } = await params; const query = await searchParams; const supabase = await createClient();
@@ -48,6 +49,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
       <MiniStat icon={UserRoundCheck} label="Ventas vía RRPP" value={formatMoney(ticketAttribution.promoterRevenue + tableAttribution.promoter_table_revenue, event.currency)} href={capabilities.promoters ? `/app/events/${event.id}/promoters` : undefined}/>
       <MiniStat icon={ShoppingCart} label="Ventas directas" value={formatMoney(ticketAttribution.directRevenue + tableAttribution.direct_table_revenue, event.currency)}/>
     </div></section>
+    {/* MiniStat kept local: compact inline layout (divide-x row) has no equivalent in the shared StatCard. */}
     <section className="mt-8 grid items-start gap-6 xl:grid-cols-[1fr_380px]">
       <div className="card p-5 sm:p-7"><div className="flex items-center justify-between gap-4"><div className="flex items-center gap-2"><FileText size={18} className="text-[var(--accent)]"/><h2 className="section-title">Información del evento</h2></div><Link href={`/app/events/${event.id}/edit`} className="btn btn-ghost min-h-9 px-3 text-xs"><Pencil size={14}/>Editar</Link></div><div className="mt-4 divide-y divide-white/[.07] border-y border-white/[.07]"><InfoRow icon={CalendarDays} label="Cuándo" value={formatEventDate(event.starts_at, venue.timezone)}/>{event.doors_open_at && <InfoRow icon={DoorOpen} label="Puertas" value={formatEventDate(event.doors_open_at, venue.timezone)}/>}<InfoRow icon={MapPin} label="Dónde" value={`${venue.name} · ${venue.address}, ${venue.city}`}/><InfoRow icon={Ticket} label="Documento" value={event.require_document ? "Se solicita DNI" : "No se solicita DNI"}/><div className="flex items-start gap-3 py-4"><span className="mt-0.5 size-2 shrink-0 rounded-full" style={{ backgroundColor: capabilities.access ? "var(--success)" : "var(--border)" }}/><div><p className="text-sm font-bold">{capabilities.access ? "Habilitado" : "No configurado"}</p><p className="mt-0.5 text-xs text-neutral-500">{capabilities.access ? "Los asistentes pueden ingresar con su entrada." : "Activá el control de acceso para validar entradas en la puerta."}</p></div></div></div>{event.description && <p className="mt-5 text-sm leading-7 text-neutral-400">{event.description}</p>}{capabilities.tables && tableMetrics.total_tables > 0 && <Link href={`/app/events/${event.id}/tables`} className="btn btn-secondary mt-5"><Armchair size={17}/>Gestionar mesas</Link>}</div>
       <div className="grid gap-6">
@@ -63,10 +65,6 @@ export default async function EventDetailPage({ params, searchParams }: { params
     </section>
     {event.status === "draft" && <form action={publishEvent} className="sticky-action sticky bottom-20 z-10 mt-6 md:bottom-4"><input type="hidden" name="eventId" value={event.id}/><button className="btn btn-primary min-h-14 w-full shadow-2xl">Publicar evento</button></form>}
   </>;
-}
-const statTones: Record<string, string> = { emerald: "bg-emerald-500/10 text-emerald-600", blue: "bg-blue-500/10 text-blue-600", violet: "bg-violet-500/10 text-violet-600", neutral: "bg-neutral-500/10 text-neutral-500" };
-function StatCard({ icon: Icon, tone, label, value, sublabel }: { icon: typeof Wallet; tone: keyof typeof statTones; label: string; value: string; sublabel: string }) {
-  return <div className="card p-5"><div className="flex items-center gap-3"><span className={`grid size-10 place-items-center rounded-xl ${statTones[tone]}`}><Icon size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">{label}</p></div><p className="mt-4 text-2xl font-black">{value}</p><p className="mt-1 text-xs text-neutral-500">{sublabel}</p></div>;
 }
 function MiniStat({ icon: Icon, label, value, href }: { icon: typeof Clock; label: string; value: string; href?: string }) {
   const content = <><span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-600"><Icon size={14}/>{label}</span><p className="mt-2 text-xl font-black">{value}</p></>;

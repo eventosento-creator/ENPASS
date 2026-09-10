@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search, UsersRound, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatMoney } from "@/shared/lib/format";
+import { StatCard } from "@/shared/ui/stat-card";
 
 export type CustomerRow = {
   id: string;
@@ -28,8 +29,8 @@ export function CustomerSearch({ customers, totalRevenue }: { customers: Custome
 
   return <div className="mt-8">
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="card p-5"><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Clientes</p><p className="mt-2 text-2xl font-black">{customers.length}</p></div>
-      <div className="card p-5"><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Facturación total</p><p className="mt-2 text-2xl font-black">{formatMoney(totalRevenue, customers[0]?.currency ?? "ARS")}</p></div>
+      <StatCard icon={UsersRound} tone="blue" label="Clientes" value={String(customers.length)}/>
+      <StatCard icon={Wallet} tone="emerald" label="Facturación total" value={formatMoney(totalRevenue, customers[0]?.currency ?? "ARS")}/>
     </div>
     <label className="field mt-6 flex items-center gap-2.5 px-4"><Search size={16} className="shrink-0 text-neutral-500"/><input className="min-w-0 flex-1 border-0 bg-transparent p-0 outline-none" placeholder="Buscar por nombre, email o teléfono" value={query} onChange={(event) => setQuery(event.target.value)}/></label>
     <p className="mt-3 text-xs font-bold text-neutral-500">{filtered.length} {filtered.length === 1 ? "cliente" : "clientes"}{query && ` de ${customers.length}`}</p>
