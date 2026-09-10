@@ -13,8 +13,3 @@ export function PublicEventCard({ event, priority = false, favorited = false }: 
     <FavoriteButton eventId={event.id} initiallyFavorited={favorited} className="right-2.5 top-2.5"/>
   </div>;
 }
-
-export function PublicEventGrid({ events, priorityCount = 0, favoritedIds = [] }: { events: DiscoveryEvent[]; priorityCount?: number; favoritedIds?: string[] }) {
-  const favoritedSet = new Set(favoritedIds);
-  return <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 lg:gap-x-6">{events.map((event, index) => <PublicEventCard event={event} priority={index < priorityCount} favorited={favoritedSet.has(event.id)} key={event.id}/>)}</div>;
-}

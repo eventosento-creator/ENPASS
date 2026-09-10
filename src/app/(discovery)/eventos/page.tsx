@@ -6,7 +6,7 @@ import { getFavoritedEventIds } from "@/modules/discovery/application/favorites"
 import { filterDiscoveryEvents, getDiscoveryCities, parseDiscoveryFilters } from "@/modules/discovery/domain/discovery";
 import { DiscoveryFilters } from "@/modules/discovery/ui/discovery-filters";
 import { DiscoveryHeroCarousel } from "@/modules/discovery/ui/discovery-hero-carousel";
-import { PublicEventGrid } from "@/modules/discovery/ui/public-event-card";
+import { PublicEventCarousel } from "@/modules/discovery/ui/public-event-carousel";
 import { EmptyState } from "@/shared/ui/empty-state";
 
 export const metadata: Metadata = { title: "Eventos", description: "Encontrá tu próxima fecha: fiestas y eventos con entradas disponibles en ENPASS." };
@@ -23,6 +23,6 @@ export default async function EventsDiscoveryPage({ searchParams }: { searchPara
     {showHero && <section className="relative left-1/2 mt-8 w-screen -translate-x-1/2"><DiscoveryHeroCarousel events={events.slice(0, 5)}/></section>}
     <div className="container-shell"><section className="mt-8"><DiscoveryFilters cities={cities} filters={filters}/></section><section className="mt-10">{filtered.length ? <>
     <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Próximos eventos</p><h2 className="mt-1.5 text-2xl font-black tracking-[-.02em] sm:text-3xl">No te pierdas lo que se viene</h2></div>{hasActiveFilters && <Link href="/eventos" className="btn btn-secondary shrink-0">Ver todos los eventos<ArrowRight size={16}/></Link>}</div>
-    <PublicEventGrid events={filtered} priorityCount={2} favoritedIds={favoritedIds}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la categoría, la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></div>
+    <PublicEventCarousel events={filtered} priorityCount={2} favoritedIds={favoritedIds}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la categoría, la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></div>
   </main>;
 }
