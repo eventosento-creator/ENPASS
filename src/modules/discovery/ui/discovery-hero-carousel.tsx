@@ -29,7 +29,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
             className="absolute inset-0"
             priority={index === (loop ? 1 : 0)}
             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 86vw, 80vw"
-            fit="contain"
+            fit="cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"/>
           <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[.1em] text-black shadow-lg">
