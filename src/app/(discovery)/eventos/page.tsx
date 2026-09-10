@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarX2 } from "lucide-react";
+import { ArrowRight, CalendarX2 } from "lucide-react";
 import { getPublicDiscoveryEvents } from "@/modules/discovery/application/queries";
+import { getFavoritedEventIds } from "@/modules/discovery/application/favorites";
 import { filterDiscoveryEvents, getDiscoveryCities, parseDiscoveryFilters } from "@/modules/discovery/domain/discovery";
 import { DiscoveryFilters } from "@/modules/discovery/ui/discovery-filters";
 import { DiscoveryHeroCarousel } from "@/modules/discovery/ui/discovery-hero-carousel";
@@ -10,11 +11,14 @@ import { EmptyState } from "@/shared/ui/empty-state";
 
 export const metadata: Metadata = { title: "Eventos", description: "Encontrá tu próxima fecha: fiestas y eventos con entradas disponibles en ENPASS." };
 
-export default async function EventsDiscoveryPage({ searchParams }: { searchParams: Promise<{ city?: string | string[]; when?: string | string[] }> }) {
-  const [query, events] = await Promise.all([searchParams, getPublicDiscoveryEvents()]);
+export default async function EventsDiscoveryPage({ searchParams }: { searchParams: Promise<{ city?: string | string[]; when?: string | string[]; category?: string | string[] }> }) {
+  const [query, events, favoritedIds] = await Promise.all([searchParams, getPublicDiscoveryEvents(), getFavoritedEventIds()]);
   const filters = parseDiscoveryFilters(query);
   const filtered = filterDiscoveryEvents(events, filters);
   const cities = getDiscoveryCities(events);
-  const showHero = !filters.city && filters.when === "all" && events.length > 0;
-  return <main className="container-shell pb-16 pt-9 sm:pt-14"><header className="max-w-2xl"><p className="eyebrow">Próximas fechas</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-6xl">Eventos</h1><p className="mt-4 text-lg text-neutral-400">Encontrá tu próxima fecha.</p></header>{showHero && <section className="mt-8"><DiscoveryHeroCarousel events={events.slice(0, 5)}/></section>}<section className="mt-8 max-w-2xl"><DiscoveryFilters cities={cities} filters={filters}/></section><section className="mt-10">{filtered.length ? <><p className="mb-5 text-sm text-neutral-500">{filtered.length} {filtered.length === 1 ? "evento" : "eventos"}</p><PublicEventGrid events={filtered} priorityCount={2}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></main>;
+  const hasActiveFilters = Boolean(filters.city) || filters.when !== "all" || Boolean(filters.category);
+  const showHero = !hasActiveFilters && events.length > 0;
+  return <main className="container-shell pb-16 pt-9 sm:pt-14"><header className="max-w-2xl"><p className="eyebrow">Próximas fechas</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-6xl">Eventos</h1><p className="mt-4 text-lg text-neutral-400">Encontrá tu próxima fecha.</p></header>{showHero && <section className="mt-8"><DiscoveryHeroCarousel events={events.slice(0, 5)}/></section>}<section className="mt-8"><DiscoveryFilters cities={cities} filters={filters}/></section><section className="mt-10">{filtered.length ? <>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Próximos eventos</p><h2 className="mt-1.5 text-2xl font-black tracking-[-.02em] sm:text-3xl">No te pierdas lo que se viene</h2></div>{hasActiveFilters && <Link href="/eventos" className="btn btn-secondary shrink-0">Ver todos los eventos<ArrowRight size={16}/></Link>}</div>
+    <PublicEventGrid events={filtered} priorityCount={2} favoritedIds={favoritedIds}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la categoría, la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></main>;
 }

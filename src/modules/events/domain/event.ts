@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { EVENT_PROFILES } from "./event-profile";
+import { EVENT_DISCOVERY_CATEGORIES, EVENT_PROFILES } from "./event-profile";
 
 const booleanString = z.enum(["true", "false"]).transform((value) => value === "true");
 
 export const eventInputSchema = z.object({
   organizationId: z.uuid(), venueId: z.uuid(), name: z.string().trim().min(2).max(140),
   profile: z.enum(EVENT_PROFILES),
+  discoveryCategory: z.enum(EVENT_DISCOVERY_CATEGORIES),
   description: z.string().trim().max(4000).default(""), startsAt: z.iso.datetime({ local: true }),
   endsAt: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.iso.datetime({ local: true }).optional()),
   capacity: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.coerce.number().int().positive().max(100000).optional()),
@@ -33,6 +34,7 @@ export const eventUpdateSchema = z.object({
   eventId: z.uuid(),
   venueId: z.uuid(),
   name: z.string().trim().min(2).max(140),
+  discoveryCategory: z.enum(EVENT_DISCOVERY_CATEGORIES),
   description: z.string().trim().max(4000).default(""),
   startsAt: z.iso.datetime({ local: true }),
   doorsOpenAt: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.iso.datetime({ local: true }).optional()),

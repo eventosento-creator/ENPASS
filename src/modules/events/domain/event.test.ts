@@ -9,7 +9,7 @@ describe("ticket type money", () => {
 describe("event updates", () => {
   const valid = {
     eventId: crypto.randomUUID(), venueId: crypto.randomUUID(), name: "Neon Ritual",
-    description: "Una noche distinta", startsAt: "2026-09-20T23:00", doorsOpenAt: "2026-09-20T22:00",
+    discoveryCategory: "party", description: "Una noche distinta", startsAt: "2026-09-20T23:00", doorsOpenAt: "2026-09-20T22:00",
     endsAt: "2026-09-21T06:00", capacity: "500", requireDocument: "true",
   };
 

@@ -7,11 +7,12 @@ import { createEvent, createTicketType, replaceEventCover, updateEvent, updateEv
 import { ActionMessage } from "@/shared/ui/action-message";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import type { Event, TicketType, Venue } from "@/shared/database/types";
-import { EVENT_PROFILE_OPTIONS, getDefaultCapabilitiesForProfile, getEventProfileLabel, type EventCapabilities, type EventProfile, type VisibleEventCapability } from "../domain/event-profile";
+import { EVENT_DISCOVERY_CATEGORY_OPTIONS, EVENT_PROFILE_OPTIONS, getDefaultCapabilitiesForProfile, getEventProfileLabel, type EventCapabilities, type EventDiscoveryCategory, type EventProfile, type VisibleEventCapability } from "../domain/event-profile";
 
 export function EventForm({ organizationId, venues, initialProfile }: { organizationId: string; venues: Venue[]; initialProfile?: string }) {
   const [state, action] = useActionState(createEvent, {});
   const [preview, setPreview] = useState<string | null>(null);
+  const [discoveryCategory, setDiscoveryCategory] = useState<EventDiscoveryCategory>("party");
   const validInitialProfile = EVENT_PROFILE_OPTIONS.some((option) => option.value === initialProfile) ? initialProfile as EventProfile : null;
   const [profile, setProfile] = useState<EventProfile | null>(validInitialProfile);
   const [capabilities, setCapabilities] = useState<EventCapabilities>(() => getDefaultCapabilitiesForProfile(validInitialProfile ?? "nightlife"));
@@ -53,6 +54,7 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
     <div className="surface grid gap-5 p-5 sm:p-7">
       <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[.07] p-4"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-600">Tipo de evento</span><p className="mt-1 font-black">{getEventProfileLabel(profile)}</p></div><button className="btn btn-ghost min-h-10 px-3 text-xs" type="button" onClick={() => setProfile(null)}>Cambiar</button></div>
       {profile === "other" && <div><p className="label">¿Qué necesitás gestionar?</p><div className="mt-3 grid grid-cols-2 gap-2">{visibleCapabilities.map((capability) => <CapabilityButton key={capability} capability={capability} active={capabilities[capability]} onToggle={() => setCapabilities((current) => ({ ...current, [capability]: !current[capability] }))}/>)}</div></div>}
+      <label className="label">Categoría<select className="field" name="discoveryCategory" value={discoveryCategory} onChange={(change) => setDiscoveryCategory(change.target.value as EventDiscoveryCategory)}>{EVENT_DISCOVERY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="text-xs font-normal text-neutral-600">Así lo van a encontrar en los filtros de /eventos.</span></label>
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" placeholder="Noche 2000" required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue=""><option value="" disabled>Elegí un lugar</option>{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
       <div className="grid gap-5 sm:grid-cols-2">
@@ -103,10 +105,12 @@ function CapabilityButton({ capability, active, onToggle }: { capability: Visibl
 
 export function EventEditForm({ event, venues, timezone }: { event: Event; venues: Venue[]; timezone: string }) {
   const [state, action] = useActionState(updateEvent, {});
+  const [discoveryCategory, setDiscoveryCategory] = useState<EventDiscoveryCategory>(event.discovery_category);
   const localValue = (value: string | null) => value ? formatInTimeZone(value, timezone, "yyyy-MM-dd'T'HH:mm") : "";
   return <form action={action} className="mt-8 grid gap-6">
     <input type="hidden" name="eventId" value={event.id}/>
     <div className="surface grid gap-5 p-5 sm:p-7">
+      <label className="label">Categoría<select className="field" name="discoveryCategory" value={discoveryCategory} onChange={(change) => setDiscoveryCategory(change.target.value as EventDiscoveryCategory)}>{EVENT_DISCOVERY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" defaultValue={event.name} required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue={event.venue_id}>{venues.map(venue => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
       <label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-28 resize-y" name="description" defaultValue={event.description} placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label>

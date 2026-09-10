@@ -70,3 +70,24 @@ export function getEventCapabilities(event: {
 export function changeEventProfile<T extends { profile: EventProfile }>(event: T, profile: EventProfile): T {
   return { ...event, profile };
 }
+
+export const EVENT_DISCOVERY_CATEGORIES = [
+  "party", "concert", "conference", "talk", "seminar", "networking", "educational", "theater",
+] as const;
+
+export type EventDiscoveryCategory = (typeof EVENT_DISCOVERY_CATEGORIES)[number];
+
+export const EVENT_DISCOVERY_CATEGORY_OPTIONS: ReadonlyArray<{ value: EventDiscoveryCategory; label: string }> = [
+  { value: "party", label: "Fiestas" },
+  { value: "concert", label: "Recitales" },
+  { value: "conference", label: "Conferencias" },
+  { value: "talk", label: "Charlas" },
+  { value: "seminar", label: "Seminarios" },
+  { value: "networking", label: "Networking" },
+  { value: "educational", label: "Educativos" },
+  { value: "theater", label: "Teatro" },
+];
+
+export function getDiscoveryCategoryLabel(category: EventDiscoveryCategory) {
+  return EVENT_DISCOVERY_CATEGORY_OPTIONS.find((option) => option.value === category)?.label ?? "Fiestas";
+}

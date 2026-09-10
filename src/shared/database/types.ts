@@ -19,8 +19,10 @@ export type Event = {
   tables_enabled: boolean; access_enabled: boolean; pos_enabled: boolean; inventory_enabled: boolean;
   seatmap_enabled: boolean;
   reminder_sent_at: string | null;
+  discovery_category: EventDiscoveryCategory;
 };
 export type EventProfile = "nightlife" | "concert" | "festival" | "conference" | "sports" | "expo" | "private_event" | "other";
+export type EventDiscoveryCategory = "party" | "concert" | "conference" | "talk" | "seminar" | "networking" | "educational" | "theater";
 export type TicketType = {
   id: string; organization_id: string; event_id: string; sale_phase_id: string | null; name: string; description: string;
   price_amount: number; currency: string; quantity: number; max_per_order: number;
@@ -443,7 +445,7 @@ export interface Database {
       organizations: { Row: Organization; Insert: Partial<Organization> & Pick<Organization, "name" | "slug">; Update: Partial<Organization>; Relationships: [] };
       organization_members: { Row: { organization_id: string; user_id: string; role: "owner" | "admin" }; Insert: { organization_id: string; user_id: string; role: "owner" | "admin" }; Update: { role?: "owner" | "admin" }; Relationships: [] };
       venues: { Row: Venue; Insert: Omit<Venue, "id"> & { id?: string }; Update: Partial<Venue>; Relationships: [] };
-      events: { Row: Event; Insert: Omit<Event, "id" | "published_at" | "reminder_sent_at"> & { id?: string; published_at?: string | null; reminder_sent_at?: string | null; created_by: string }; Update: Partial<Event>; Relationships: [] };
+      events: { Row: Event; Insert: Omit<Event, "id" | "published_at" | "reminder_sent_at" | "discovery_category"> & { id?: string; published_at?: string | null; reminder_sent_at?: string | null; discovery_category?: EventDiscoveryCategory; created_by: string }; Update: Partial<Event>; Relationships: [] };
       sale_phases: { Row: { id: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out: boolean }; Insert: { id?: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out?: boolean }; Update: { name?: string; sort_order?: number; activate_next_when_sold_out?: boolean }; Relationships: [] };
       ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available"> & { id?: string; publicly_available?: boolean }; Update: Partial<TicketType>; Relationships: [] };
       product_categories: { Row: ProductCategory; Insert: Partial<ProductCategory> & Pick<ProductCategory, "organization_id" | "name">; Update: Partial<ProductCategory>; Relationships: [] };
@@ -536,7 +538,9 @@ export interface Database {
       delete_seat_map_section: { Args: { target_section: string }; Returns: undefined };
       set_event_seat_active: { Args: { target_seat: string; target_active: boolean }; Returns: undefined };
       get_public_event_seats: { Args: { target_event: string }; Returns: { id: string; event_id: string; section_id: string; section_name: string; row_label: string; seat_number: number; label: string; base_price_amount: number; currency: string; service_fee_bps: number | null; sort_order: number; availability_status: "available" | "held" | "sold" }[] };
-      get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean }[] };
+      get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean; discovery_category: EventDiscoveryCategory }[] };
+      toggle_event_favorite: { Args: { target_event: string; target_session_hash: string }; Returns: boolean };
+      get_favorited_event_ids: { Args: { target_session_hash: string }; Returns: string[] };
       get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean }[] };
       complete_free_order: { Args: { target_order_public_id: string }; Returns: string };
       disconnect_payment_account: { Args: { target_organization: string }; Returns: undefined };

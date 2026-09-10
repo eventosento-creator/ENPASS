@@ -71,6 +71,7 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     description: parsed.data.description, starts_at: startsAt, doors_open_at: null, ends_at: endsAt,
     status: "draft", capacity: eventCapacity, require_document: parsed.data.requireDocument,
     profile: parsed.data.profile,
+    discovery_category: parsed.data.discoveryCategory,
     tickets_enabled: parsed.data.ticketsEnabled,
     promoters_enabled: parsed.data.promotersEnabled,
     tables_enabled: parsed.data.tablesEnabled,
@@ -149,6 +150,7 @@ export async function updateEvent(_: ActionState, formData: FormData): Promise<A
     console.error(JSON.stringify({ level: "error", event: "event.update.failed", eventId: parsed.data.eventId, code: error.code, detail: error.message }));
     return { error: eventMutationError(error.message) };
   }
+  await supabase.from("events").update({ discovery_category: parsed.data.discoveryCategory }).eq("id", parsed.data.eventId);
 
   revalidatePath(`/app/events/${parsed.data.eventId}`);
   revalidatePath(`/e/${event.slug}`);

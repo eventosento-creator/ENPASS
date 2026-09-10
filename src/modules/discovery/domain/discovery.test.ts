@@ -6,6 +6,7 @@ const base: DiscoveryEvent = {
   starts_at: "2026-08-21T03:00:00.000Z", currency: "ARS", venue_name: "Club",
   venue_address: "Calle 1", city: "Mendoza", province: "Mendoza",
   timezone: "America/Argentina/Mendoza", from_price_amount: 1000000, has_availability: true,
+  discovery_category: "party",
 };
 
 describe("discovery filters", () => {

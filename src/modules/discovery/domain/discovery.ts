@@ -1,5 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { slugify } from "@/shared/lib/format";
+import { EVENT_DISCOVERY_CATEGORIES, type EventDiscoveryCategory } from "@/modules/events/domain/event-profile";
 
 export const discoveryWhenValues = ["all", "today", "tomorrow", "weekend"] as const;
 export type DiscoveryWhen = (typeof discoveryWhenValues)[number];
@@ -19,22 +20,26 @@ export type DiscoveryEvent = {
   timezone: string;
   from_price_amount: number | null;
   has_availability: boolean;
+  discovery_category: EventDiscoveryCategory;
 };
 
-export type DiscoveryFilters = { city?: string; when: DiscoveryWhen };
+export type DiscoveryFilters = { city?: string; when: DiscoveryWhen; category?: EventDiscoveryCategory };
 
-export function parseDiscoveryFilters(input: { city?: string | string[]; when?: string | string[] }): DiscoveryFilters {
+export function parseDiscoveryFilters(input: { city?: string | string[]; when?: string | string[]; category?: string | string[] }): DiscoveryFilters {
   const cityValue = Array.isArray(input.city) ? input.city[0] : input.city;
   const whenValue = Array.isArray(input.when) ? input.when[0] : input.when;
+  const categoryValue = Array.isArray(input.category) ? input.category[0] : input.category;
   return {
     city: cityValue?.trim() ? slugify(cityValue) : undefined,
     when: discoveryWhenValues.includes(whenValue as DiscoveryWhen) ? whenValue as DiscoveryWhen : "all",
+    category: EVENT_DISCOVERY_CATEGORIES.includes(categoryValue as EventDiscoveryCategory) ? categoryValue as EventDiscoveryCategory : undefined,
   };
 }
 
 export function filterDiscoveryEvents(events: DiscoveryEvent[], filters: DiscoveryFilters, now = new Date()) {
   return events
     .filter(event => !filters.city || slugify(event.city) === filters.city)
+    .filter(event => !filters.category || event.discovery_category === filters.category)
     .filter(event => matchesWhen(event, filters.when, now))
     .toSorted((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 }
