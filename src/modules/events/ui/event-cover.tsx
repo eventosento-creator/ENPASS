@@ -7,11 +7,15 @@ type EventCoverProps = {
   className?: string;
   priority?: boolean;
   sizes?: string;
+  fit?: "cover" | "contain";
 };
 
-export function EventCover({ src, alt, className, priority = false, sizes = "(max-width: 768px) 100vw, 50vw" }: EventCoverProps) {
+export function EventCover({ src, alt, className, priority = false, sizes = "(max-width: 768px) 100vw, 50vw", fit = "cover" }: EventCoverProps) {
   return <div className={cn("event-cover relative overflow-hidden bg-[var(--surface-raised)]", className)}>
-    {src ? <Image src={src} alt={alt} fill sizes={sizes} priority={priority} loading={priority ? "eager" : undefined} className="object-cover transition duration-500 group-hover:scale-[1.02]"/> : <Fallback/>}
+    {src ? (fit === "contain" ? <>
+      <Image aria-hidden src={src} alt="" fill sizes={sizes} className="scale-110 object-cover opacity-60 blur-2xl"/>
+      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} loading={priority ? "eager" : undefined} className="object-contain"/>
+    </> : <Image src={src} alt={alt} fill sizes={sizes} priority={priority} loading={priority ? "eager" : undefined} className="object-cover transition duration-500 group-hover:scale-[1.02]"/>) : <Fallback/>}
     <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/5"/>
   </div>;
 }

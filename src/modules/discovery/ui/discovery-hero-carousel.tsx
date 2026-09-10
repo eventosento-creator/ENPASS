@@ -27,7 +27,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
           href={`/e/${event.slug}`}
           data-slide
           key={event.id}
-          className="group relative aspect-[16/9] w-[86%] shrink-0 snap-center overflow-hidden rounded-[1.5rem] border border-white/[.08] shadow-[var(--shadow-lg)] sm:w-[70%] lg:w-[58%]"
+          className="group relative aspect-[4/3] w-[86%] shrink-0 snap-center overflow-hidden rounded-[1.5rem] border border-white/[.08] shadow-[var(--shadow-lg)] sm:aspect-[16/9] sm:w-[70%] lg:w-[58%]"
         >
           <EventCover
             src={event.cover_image_url}
@@ -35,6 +35,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
             className="absolute inset-0"
             priority={index === 0}
             sizes="(max-width: 640px) 86vw, (max-width: 1024px) 70vw, 58vw"
+            fit="contain"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"/>
           <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[.1em] text-black shadow-lg">
@@ -42,7 +43,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
             <span aria-hidden className={`size-1.5 rounded-full ${event.has_availability ? "bg-emerald-500" : "bg-red-500"}`}/>
           </span>
           <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-            <h2 className="max-w-lg text-2xl font-black leading-[1.02] tracking-[-.03em] text-white sm:text-4xl">{event.name}</h2>
+            <h2 className="line-clamp-2 max-w-lg text-2xl font-black leading-[1.08] tracking-[-.03em] text-white sm:text-3xl">{event.name}</h2>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-white/80 sm:text-sm">
               <span className="flex items-center gap-1.5"><CalendarDays size={14}/>{formatEventDate(event.starts_at, event.timezone)}</span>
               <span className="flex items-center gap-1.5"><MapPin size={14}/>{event.venue_name} · {event.city}</span>
