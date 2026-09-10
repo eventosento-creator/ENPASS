@@ -18,7 +18,11 @@ export default async function EventsDiscoveryPage({ searchParams }: { searchPara
   const cities = getDiscoveryCities(events);
   const hasActiveFilters = Boolean(filters.city) || filters.when !== "all" || Boolean(filters.category);
   const showHero = !hasActiveFilters && events.length > 0;
-  return <main className="container-shell pb-16 pt-9 sm:pt-14"><header className="max-w-2xl"><p className="eyebrow">Próximas fechas</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-6xl">Eventos</h1><p className="mt-4 text-lg text-neutral-400">Encontrá tu próxima fecha.</p></header>{showHero && <section className="mt-8"><DiscoveryHeroCarousel events={events.slice(0, 5)}/></section>}<section className="mt-8"><DiscoveryFilters cities={cities} filters={filters}/></section><section className="mt-10">{filtered.length ? <>
+  return <main className="pb-16 pt-9 sm:pt-14">
+    <div className="container-shell"><header className="max-w-2xl"><p className="eyebrow">Próximas fechas</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-6xl">Eventos</h1><p className="mt-4 text-lg text-neutral-400">Encontrá tu próxima fecha.</p></header></div>
+    {showHero && <section className="relative left-1/2 mt-8 w-screen -translate-x-1/2"><DiscoveryHeroCarousel events={events.slice(0, 5)}/></section>}
+    <div className="container-shell"><section className="mt-8"><DiscoveryFilters cities={cities} filters={filters}/></section><section className="mt-10">{filtered.length ? <>
     <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Próximos eventos</p><h2 className="mt-1.5 text-2xl font-black tracking-[-.02em] sm:text-3xl">No te pierdas lo que se viene</h2></div>{hasActiveFilters && <Link href="/eventos" className="btn btn-secondary shrink-0">Ver todos los eventos<ArrowRight size={16}/></Link>}</div>
-    <PublicEventGrid events={filtered} priorityCount={2} favoritedIds={favoritedIds}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la categoría, la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></main>;
+    <PublicEventGrid events={filtered} priorityCount={2} favoritedIds={favoritedIds}/></> : <EmptyState icon={CalendarX2} title="No encontramos eventos con esos filtros" description="Probá cambiar la categoría, la fecha o la ciudad." action={<Link href="/eventos" className="btn btn-secondary">Ver todos los eventos</Link>}/>}</section></div>
+  </main>;
 }
