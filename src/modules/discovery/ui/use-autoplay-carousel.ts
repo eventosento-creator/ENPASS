@@ -42,7 +42,10 @@ export function useAutoplayCarousel(itemCount: number) {
       indexRef.current = index;
     }
 
-    goTo(1, "instant");
+    // Defer the initial jump a frame: scrolling immediately on mount can leave `fill` images
+    // inside the just-scrolled slide with a stale (zero) layout box until something else
+    // forces a reflow, rendering them blank until the user interacts with the page.
+    const rafId = requestAnimationFrame(() => requestAnimationFrame(() => goTo(1, "instant")));
 
     function handleScrollSettle() {
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
@@ -79,6 +82,7 @@ export function useAutoplayCarousel(itemCount: number) {
     }
 
     return () => {
+      cancelAnimationFrame(rafId);
       if (autoplayInterval) clearInterval(autoplayInterval);
       if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);

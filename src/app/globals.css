@@ -147,6 +147,7 @@ html[data-theme="light"] .footer-inverted .theme-icon-light { display: none; }
 html[data-theme="light"] .footer-inverted .theme-icon-dark { display: inline-flex; }
 
 @keyframes shimmer { to { background-position-x: -200%; } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 @media (min-width: 768px) {
   .container-shell { width: min(100% - 3rem, 1120px); }
