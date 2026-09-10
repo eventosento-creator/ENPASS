@@ -52,19 +52,19 @@ function FacebookIcon() {
 
 export function PublicFooter() {
   const year = new Date().getFullYear();
-  return <footer className="border-t border-white/[.07]">
+  return <footer className="footer-inverted bg-[var(--footer-bg)]">
     <div className="container-shell grid gap-10 py-12 sm:grid-cols-[1.3fr_auto_1fr_1fr] sm:gap-8">
       <div className="max-w-sm">
         <EnpassLogo/>
-        <p className="mt-4 text-[11px] font-black uppercase tracking-[.14em] text-neutral-500">Eventos · Personas · Momentos</p>
-        <p className="mt-2 text-sm leading-6 text-neutral-500">Entradas, mesas y accesos para experiencias que conectan.</p>
-        <div className="mt-5 flex items-center gap-4 text-neutral-500">
-          <a href="https://www.instagram.com/enpass.arg/" target="_blank" rel="noreferrer" aria-label="Instagram de ENPASS" className="hover:text-white"><InstagramIcon/></a>
-          <a href="https://www.facebook.com/profile.php?id=61594279708620" target="_blank" rel="noreferrer" aria-label="Facebook de ENPASS" className="hover:text-white"><FacebookIcon/></a>
-          <a href="mailto:enpass.gf@gmail.com" aria-label="Escribirnos por email" className="hover:text-white"><Mail aria-hidden size={18}/></a>
+        <p className="mt-4 text-[11px] font-black uppercase tracking-[.14em] text-[var(--footer-muted)]">Eventos · Personas · Momentos</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--footer-muted)]">Entradas, mesas y accesos para experiencias que conectan.</p>
+        <div className="mt-5 flex items-center gap-4 text-[var(--footer-muted)]">
+          <a href="https://www.instagram.com/enpass.arg/" target="_blank" rel="noreferrer" aria-label="Instagram de ENPASS" className="hover:text-[var(--footer-text)]"><InstagramIcon/></a>
+          <a href="https://www.facebook.com/profile.php?id=61594279708620" target="_blank" rel="noreferrer" aria-label="Facebook de ENPASS" className="hover:text-[var(--footer-text)]"><FacebookIcon/></a>
+          <a href="mailto:enpass.gf@gmail.com" aria-label="Escribirnos por email" className="hover:text-[var(--footer-text)]"><Mail aria-hidden size={18}/></a>
         </div>
       </div>
-      <div className="hidden w-px bg-white/[.07] sm:block"/>
+      <div className="hidden w-px bg-[var(--footer-border)] sm:block"/>
       <FooterColumn title="Explorar" links={[
         { href: "/eventos", label: "Eventos" },
         { href: "/mis-entradas" as never, label: "Mis entradas" },
@@ -78,10 +78,10 @@ export function PublicFooter() {
         { href: "/arrepentimiento" as never, label: "Botón de Arrepentimiento" },
       ]}/>
     </div>
-    <div className="border-t border-white/[.06]">
-      <div className="container-shell flex flex-col gap-2 py-5 text-xs text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
+    <div className="border-t border-[var(--footer-border)]">
+      <div className="container-shell flex flex-col gap-2 py-5 text-xs text-[var(--footer-muted)] sm:flex-row sm:items-center sm:justify-between">
         <p>© ENPASS · {year}. Todos los derechos reservados.</p>
-        <a href="https://enpass.com.ar" className="inline-flex items-center gap-1 hover:text-white">enpass.com.ar ↗</a>
+        <a href="https://enpass.com.ar" className="inline-flex items-center gap-1 hover:text-[var(--footer-text)]">enpass.com.ar ↗</a>
       </div>
     </div>
   </footer>;
@@ -89,7 +89,7 @@ export function PublicFooter() {
 
 function FooterColumn({ title, links }: { title: string; links: { href: Parameters<typeof Link>[0]["href"]; label: string }[] }) {
   return <div>
-    <p className="text-sm font-bold text-[var(--text)]">{title}</p>
-    <div className="mt-4 flex flex-col gap-3 text-sm text-neutral-500">{links.map((link) => <Link key={link.label} href={link.href} className="hover:text-white">{link.label}</Link>)}</div>
+    <p className="text-sm font-bold text-[var(--footer-text)]">{title}</p>
+    <div className="mt-4 flex flex-col gap-3 text-sm text-[var(--footer-muted)]">{links.map((link) => <Link key={link.label} href={link.href} className="hover:text-[var(--footer-text)]">{link.label}</Link>)}</div>
   </div>;
 }

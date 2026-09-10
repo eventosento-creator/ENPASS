@@ -31,6 +31,11 @@
   --highlight-top: inset 0 1px 0 rgb(255 255 255 / 60%);
   --ease-spring: cubic-bezier(.16, 1, .3, 1);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --footer-bg: #080809;
+  --footer-text: #f7f7f5;
+  --footer-text-secondary: #b0b0b6;
+  --footer-muted: #77777f;
+  --footer-border: rgb(255 255 255 / 8%);
 }
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -54,6 +59,11 @@ html[data-theme="dark"] {
   --shadow-card: 0 24px 64px rgb(0 0 0 / 24%);
   --shadow-float: 0 28px 90px rgb(0 0 0 / 48%);
   --highlight-top: inset 0 1px 0 rgb(255 255 255 / 7%);
+  --footer-bg: #f4f4f1;
+  --footer-text: #0a0a0b;
+  --footer-text-secondary: #3c3c40;
+  --footer-muted: #6f6f75;
+  --footer-border: rgb(8 8 9 / 9%);
 }
 @layer base {
   * { box-sizing: border-box; }
@@ -128,6 +138,13 @@ html[data-theme="light"] .text-lime-200,
 html[data-theme="light"] .text-lime-300 { color: #236500; }
 html[data-theme="light"] .skeleton { background: linear-gradient(100deg, #e5e5e1 20%, #f4f4f0 38%, #e5e5e1 58%); background-size: 200% 100%; }
 html[data-theme="light"] .ticket-shell { background: linear-gradient(155deg, #fff 0%, #f3f3ef 70%); }
+
+/* The footer always uses the opposite theme's palette (black on a light site, white on a dark site), so its
+   logo must show the opposite wordmark variant from the rest of the page too. */
+.footer-inverted .theme-icon-light { display: inline-flex; }
+.footer-inverted .theme-icon-dark { display: none; }
+html[data-theme="light"] .footer-inverted .theme-icon-light { display: none; }
+html[data-theme="light"] .footer-inverted .theme-icon-dark { display: inline-flex; }
 
 @keyframes shimmer { to { background-position-x: -200%; } }
 
