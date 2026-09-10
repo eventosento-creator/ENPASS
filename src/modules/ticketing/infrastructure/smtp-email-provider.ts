@@ -62,7 +62,7 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hacé clic en el botón de abajo para ingresar a tu cuenta y ver tus entradas, mesas y próximos eventos.</p>
         ${accessButton(message.accessUrl, "Ingresar a ENPASS")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 15 minutos.</p>
-        ${noticeBox("¿No solicitaste este acceso?", "Podés ignorar este mensaje. Si tenés dudas, escribinos a soporte@enpass.com.ar")}
+        ${noticeBox("¿No solicitaste este acceso?", "Podés ignorar este mensaje. Si tenés dudas, escribinos a enpass.gf@gmail.com")}
       `),
     });
   }
@@ -203,9 +203,9 @@ function emailFrame(content: string) {
               <p style="margin:8px 0 0;font-size:11px;color:#9a9a9f">Claridad. Dirección. Momentos.</p>
             </td>
             <td valign="middle" align="right">
-              <a href="https://instagram.com/enpass" style="text-decoration:none;font-size:14px;margin-left:6px">📷</a>
-              <a href="https://wa.me/5492610000000" style="text-decoration:none;font-size:14px;margin-left:6px">💬</a>
-              <a href="${siteUrl("/")}" style="text-decoration:none;font-size:11px;color:#6f6f75;margin-left:10px">enpass.com.ar</a>
+              <a href="https://www.instagram.com/enpass.arg/" style="text-decoration:none;font-size:14px;margin-left:6px">📷</a>
+              <a href="https://www.facebook.com/profile.php?id=61594279708620" style="text-decoration:none;font-size:14px;margin-left:6px">👍</a>
+              <a href="mailto:enpass.gf@gmail.com" style="text-decoration:none;font-size:11px;color:#6f6f75;margin-left:10px">enpass.gf@gmail.com</a>
             </td>
           </tr></table>
         </div>

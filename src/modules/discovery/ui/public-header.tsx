@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LogIn, Ticket } from "lucide-react";
+import { CalendarDays, LogIn, Mail, Ticket } from "lucide-react";
 import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
@@ -32,10 +32,18 @@ function NavTab({ active, href, label, icon: Icon, labelClassName = "hidden sm:i
   ><Icon aria-hidden size={16}/><span className={labelClassName}>{label}</span></Link>;
 }
 
+function InstagramIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+}
+
+function FacebookIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>;
+}
+
 export function PublicFooter() {
   return <footer className="container-shell flex flex-col gap-4 border-t border-white/[.07] py-8 text-xs text-neutral-600">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <EnpassLogo/>
+      <div className="flex items-center gap-4"><EnpassLogo/><div className="flex items-center gap-3"><a href="https://www.instagram.com/enpass.arg/" target="_blank" rel="noreferrer" aria-label="Instagram de ENPASS" className="text-neutral-500 hover:text-white"><InstagramIcon/></a><a href="https://www.facebook.com/profile.php?id=61594279708620" target="_blank" rel="noreferrer" aria-label="Facebook de ENPASS" className="text-neutral-500 hover:text-white"><FacebookIcon/></a><a href="mailto:enpass.gf@gmail.com" aria-label="Escribirnos por email" className="text-neutral-500 hover:text-white"><Mail aria-hidden size={16}/></a></div></div>
       <div className="flex flex-wrap gap-5"><Link href="/eventos" className="hover:text-white">Eventos</Link><Link href={"/mis-entradas" as never} className="hover:text-white">Mis entradas</Link><Link href="/crear-evento" className="hover:text-white">Crear eventos</Link><Link href="/login" className="hover:text-white">Ingresar</Link></div>
     </div>
     <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-white/[.05] pt-4"><Link href={"/terminos" as never} className="hover:text-white">Términos y Condiciones</Link><Link href={"/privacidad" as never} className="hover:text-white">Privacidad</Link><Link href={"/reembolsos" as never} className="hover:text-white">Reembolsos</Link><Link href={"/arrepentimiento" as never} className="hover:text-white">Botón de Arrepentimiento</Link></div>
