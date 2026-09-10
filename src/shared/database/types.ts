@@ -104,6 +104,8 @@ export type Customer = {
   email: string;
   phone: string | null;
   document: string | null;
+  notes: string;
+  tags: string[];
   created_at: string;
 };
 
@@ -495,6 +497,7 @@ export interface Database {
       create_guest_checkout: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json }; Returns: { order_public_id: string; expires_at: string }[] };
       create_guest_checkout_attributed: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: Json; target_attribution_session_hash: string | null }; Returns: { order_public_id: string; expires_at: string }[] };
       create_courtesy_checkout: { Args: { target_event: string; target_ticket_type: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; quantity: number }; Returns: { order_public_id: string }[] };
+      update_customer_notes: { Args: { target_customer: string; target_notes: string; target_tags: string[] }; Returns: undefined };
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };
       get_public_ticket_types: { Args: { target_event: string }; Returns: (Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean })[] };
       get_public_event_tables: { Args: { target_event: string }; Returns: { id: string; event_id: string; table_zone_id: string; zone_name: string; name: string; description: string; capacity: number; base_price_amount: number; currency: string; service_fee_bps: number; sort_order: number; availability_status: "available" | "held" | "sold"; benefits: Json }[] };

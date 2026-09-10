@@ -11,7 +11,7 @@ export default async function ClientsPage() {
   const supabase = await createClient();
 
   const [{ data: customers }, { data: orders }] = await Promise.all([
-    supabase.from("customers").select("id, first_name, last_name, email, phone").eq("organization_id", org.id),
+    supabase.from("customers").select("id, first_name, last_name, email, phone, tags").eq("organization_id", org.id),
     supabase.from("orders").select("customer_id, event_id, total_amount, currency, created_at").eq("organization_id", org.id).eq("status", "paid"),
   ]);
 
@@ -37,6 +37,7 @@ export default async function ClientsPage() {
         name: `${customer.first_name} ${customer.last_name}`.trim() || "Sin nombre",
         email: customer.email,
         phone: customer.phone,
+        tags: customer.tags,
         totalSpent: stats?.total ?? 0,
         currency: stats?.currency ?? "ARS",
         orderCount: stats?.orderCount ?? 0,

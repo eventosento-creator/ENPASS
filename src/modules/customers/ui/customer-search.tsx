@@ -10,6 +10,7 @@ export type CustomerRow = {
   name: string;
   email: string;
   phone: string | null;
+  tags: string[];
   totalSpent: number;
   currency: string;
   orderCount: number;
@@ -22,7 +23,7 @@ export function CustomerSearch({ customers, totalRevenue }: { customers: Custome
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return customers;
-    return customers.filter((customer) => customer.name.toLowerCase().includes(normalized) || customer.email.toLowerCase().includes(normalized) || customer.phone?.toLowerCase().includes(normalized));
+    return customers.filter((customer) => customer.name.toLowerCase().includes(normalized) || customer.email.toLowerCase().includes(normalized) || customer.phone?.toLowerCase().includes(normalized) || customer.tags.some((tag) => tag.toLowerCase().includes(normalized)));
   }, [customers, query]);
 
   return <div className="mt-8">
@@ -34,7 +35,7 @@ export function CustomerSearch({ customers, totalRevenue }: { customers: Custome
     <p className="mt-3 text-xs font-bold text-neutral-500">{filtered.length} {filtered.length === 1 ? "cliente" : "clientes"}{query && ` de ${customers.length}`}</p>
     <div className="mt-4 card overflow-hidden">
       {filtered.length ? <div className="divide-y divide-white/[.06]">{filtered.map((customer) => <Link href={`/app/clientes/${customer.id}` as never} key={customer.id} className="flex items-center justify-between gap-4 p-4 transition hover:bg-white/[.03] sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center">
-        <div className="min-w-0"><p className="truncate font-bold">{customer.name}</p><p className="mt-0.5 truncate text-xs text-neutral-500">{customer.email}</p></div>
+        <div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate font-bold">{customer.name}</p>{customer.tags.slice(0, 2).map((tag) => <span key={tag} className="shrink-0 rounded-full bg-[var(--accent)]/10 px-2 py-0.5 text-[9px] font-black uppercase text-[var(--accent)]">{tag}</span>)}</div><p className="mt-0.5 truncate text-xs text-neutral-500">{customer.email}</p></div>
         <div className="hidden text-right sm:block"><p className="text-sm font-black">{formatMoney(customer.totalSpent, customer.currency)}</p><p className="text-[11px] text-neutral-600">Gastado</p></div>
         <div className="hidden text-right sm:block"><p className="text-sm font-black">{customer.orderCount}</p><p className="text-[11px] text-neutral-600">{customer.orderCount === 1 ? "Compra" : "Compras"}</p></div>
         <div className="hidden text-right sm:block"><p className="text-sm font-black">{customer.eventCount}</p><p className="text-[11px] text-neutral-600">{customer.eventCount === 1 ? "Evento" : "Eventos"}</p></div>
