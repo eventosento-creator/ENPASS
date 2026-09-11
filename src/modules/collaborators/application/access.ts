@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/shared/database/server";
 import { generateOpaqueToken, hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { SmtpEmailProvider } from "@/modules/ticketing/infrastructure/smtp-email-provider";
+import { collaboratorLog } from "@/shared/lib/structured-log";
 import type { EventCollaborator } from "../domain/collaborator";
 
 export async function inviteEventCollaborator(eventId: string, email: string) {
@@ -21,10 +22,15 @@ export async function inviteEventCollaborator(eventId: string, email: string) {
     target_email: email,
     target_token_hash: hashOpaqueToken(rawToken),
   });
-  if (error) throw new Error("COLLABORATOR_INVITE_CREATE_FAILED");
+  if (error) {
+    collaboratorLog("event_collaborator.invite.created", { eventId, failed: true, code: error.code, message: error.message });
+    throw new Error("COLLABORATOR_INVITE_CREATE_FAILED");
+  }
+  collaboratorLog("event_collaborator.invite.created", { eventId });
 
   const acceptUrl = new URL("/invite/aceptar", appUrl());
   acceptUrl.searchParams.set("token", rawToken);
+  let emailSent = false;
   try {
     await new SmtpEmailProvider().sendCollaboratorInvite({
       to: email,
@@ -32,10 +38,13 @@ export async function inviteEventCollaborator(eventId: string, email: string) {
       inviterName,
       acceptUrl: acceptUrl.toString(),
     });
-  } catch {
-    // La invitación queda creada igual; el organizador puede reenviarla.
+    emailSent = true;
+    collaboratorLog("event_collaborator.invite.email_sent", { eventId });
+  } catch (sendError) {
+    const message = sendError instanceof Error ? sendError.message : String(sendError);
+    collaboratorLog("event_collaborator.invite.email_failed", { eventId, message });
   }
-  return { acceptUrl: acceptUrl.toString() };
+  return { acceptUrl: acceptUrl.toString(), emailSent };
 }
 
 export async function acceptEventCollaboratorInvitation(rawToken: string) {

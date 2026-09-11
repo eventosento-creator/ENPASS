@@ -6,6 +6,7 @@ import { inviteCollaborator, removeCollaborator } from "../application/actions";
 import type { EventCollaborator } from "../domain/collaborator";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { ActionMessage } from "@/shared/ui/action-message";
+import { ShareLinkButtons } from "@/modules/promoters/ui/share-link-buttons";
 
 export function CollaboratorsCard({ eventId, collaborators }: { eventId: string; collaborators: EventCollaborator[] }) {
   const [state, action] = useActionState(inviteCollaborator, {});
@@ -26,5 +27,6 @@ export function CollaboratorsCard({ eventId, collaborators }: { eventId: string;
       <SubmitButton className="btn btn-primary shrink-0" pendingLabel="Invitando…"><UserPlus size={16}/>Invitar</SubmitButton>
     </form>
     <div className="mt-2"><ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/></div>
+    {state.acceptUrl && <div className="mt-3"><ShareLinkButtons url={state.acceptUrl} shareLabel="Compartir invitación" compact/></div>}
   </div>;
 }

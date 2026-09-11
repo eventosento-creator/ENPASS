@@ -35,7 +35,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const duplicatedStartsAt = formatInTimeZone(new Date(new Date(event.starts_at).getTime() + 7 * 86_400_000), venue.timezone, "yyyy-MM-dd'T'HH:mm");
   const totalRevenue = ticketAttribution.promoterRevenue + ticketAttribution.directRevenue + tableAttribution.promoter_table_revenue + tableAttribution.direct_table_revenue + tableMetrics.table_revenue;
   const capacityPct = event.capacity > 0 ? Math.min(100, Math.round(((ticketInventory + tableInventory) / event.capacity) * 100)) : 0;
-  const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://enpass.vercel.app"}/e/${event.slug}`;
+  const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://enpass.com.ar"}/e/${event.slug}`;
   const primaryTicketType = (ticketTypes ?? [])[(ticketTypes ?? []).length - 1];
   const primaryTicketStock = primaryTicketType ? Math.max(0, primaryTicketType.quantity - ticketMetrics.tickets_issued) : 0;
   return <>

@@ -69,3 +69,16 @@ export function promoterLog(event: PromoterLogEvent, fields: Record<string, Safe
     ...fields,
   }));
 }
+
+type CollaboratorLogEvent =
+  | "event_collaborator.invite.created"
+  | "event_collaborator.invite.email_sent"
+  | "event_collaborator.invite.email_failed";
+
+export function collaboratorLog(event: CollaboratorLogEvent, fields: Record<string, SafeLogValue> = {}) {
+  console.info(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event,
+    ...fields,
+  }));
+}
