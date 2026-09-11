@@ -16,8 +16,8 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const { data } = await supabase.auth.getClaims();
-  if (request.nextUrl.pathname.startsWith("/app") && !data?.claims) {
+  const { data } = await supabase.auth.getUser();
+  if (request.nextUrl.pathname.startsWith("/app") && !data?.user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
@@ -25,4 +25,6 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/app/:path*", "/login"] };
+export const config = {
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico|brand/|demo/|robots.txt|sitemap.xml).*)"],
+};

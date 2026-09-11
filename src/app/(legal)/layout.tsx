@@ -1,5 +1,8 @@
 import { PublicFooter, PublicHeader } from "@/modules/discovery/ui/public-header";
+import { createClient } from "@/shared/database/server";
 
-export default function LegalLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen"><PublicHeader/>{children}<PublicFooter/></div>;
+export default async function LegalLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return <div className="min-h-screen"><PublicHeader isAuthenticated={!!user}/>{children}<PublicFooter/></div>;
 }

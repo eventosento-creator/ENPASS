@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarDays, LogIn, Mail, Ticket } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogIn, Mail, Ticket } from "lucide-react";
 import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
-export function PublicHeader() {
+export function PublicHeader({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const pathname = usePathname();
   const isEventos = pathname === "/eventos" || pathname?.startsWith("/e/");
   const isMisEntradas = pathname?.startsWith("/mis-entradas") || pathname?.startsWith("/order/");
@@ -26,7 +26,9 @@ export function PublicHeader() {
       <nav aria-label="Navegación principal" className="flex items-center gap-0.5 text-sm sm:gap-1">
         <NavTab active={isEventos} href="/eventos" label="Eventos" icon={CalendarDays}/>
         <NavTab active={isMisEntradas} href={"/mis-entradas" as never} label="Mis entradas" icon={Ticket} labelClassName="hidden lg:inline"/>
-        <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.08] px-2.5 py-2 text-neutral-400 transition hover:border-white/[.14] hover:text-white sm:ml-1 sm:px-3" href="/login"><LogIn aria-hidden size={16}/><span className="hidden md:inline">Ingresar</span></Link>
+        {isAuthenticated
+          ? <Link aria-label="Ir a mi panel" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent)] px-2.5 py-2 text-[var(--on-accent)] transition hover:brightness-105 sm:ml-1 sm:px-3" href="/app"><LayoutDashboard aria-hidden size={16}/><span className="hidden md:inline">Ir al panel</span></Link>
+          : <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.08] px-2.5 py-2 text-neutral-400 transition hover:border-white/[.14] hover:text-white sm:ml-1 sm:px-3" href="/login"><LogIn aria-hidden size={16}/><span className="hidden md:inline">Ingresar</span></Link>}
         <ThemeToggle className="rounded-full"/>
       </nav>
     </div>
