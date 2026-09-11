@@ -11,6 +11,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const query = await searchParams;
   const initialMode = query.mode === "register" || query.mode === "magic" || query.mode === "recover" ? query.mode : "login";
   const notice = query.password === "updated" ? "Contraseña actualizada. Ya podés ingresar." : undefined;
-  const errorNotice = query.authError === "invalid-link" ? "El enlace venció o ya fue utilizado. Pedí uno nuevo." : undefined;
+  const errorNotice = query.authError === "invalid-link" ? "El enlace venció o ya fue utilizado. Pedí uno nuevo."
+    : query.authError === "google-unavailable" ? "No pudimos iniciar sesión con Google. Probá con email y contraseña."
+    : undefined;
   return <main className="container-shell grid min-h-screen grid-rows-[auto_1fr] py-5 sm:py-10"><header className="flex items-center justify-between"><Link href="/" className="inline-flex min-h-11 items-center gap-1 text-sm text-neutral-500 hover:text-white"><ChevronLeft size={17}/>Volver</Link><div className="flex items-center gap-2"><Link href="/"><EnpassLogo/></Link><ThemeToggle/></div></header><div className="grid place-items-center py-8"><AuthForms initialMode={initialMode} nextPath={safeProducerPath(query.next)} notice={notice} errorNotice={errorNotice}/></div></main>;
 }

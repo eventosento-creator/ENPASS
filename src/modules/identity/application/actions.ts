@@ -19,6 +19,18 @@ function authCallback(next: "/app" | "/actualizar-clave") {
   return callback.toString();
 }
 
+export async function signInWithGoogle(nextPath: string) {
+  const supabase = await createClient();
+  const callback = new URL(authCallback("/app"));
+  callback.searchParams.set("next", safeProducerPath(nextPath));
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: callback.toString() },
+  });
+  if (error || !data.url) redirect("/login?authError=google-unavailable" as never);
+  redirect(data.url as never);
+}
+
 export async function login(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = credentialsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Ingresá un email válido y una contraseña de al menos 8 caracteres." };
