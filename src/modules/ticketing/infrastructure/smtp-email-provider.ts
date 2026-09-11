@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -79,6 +79,22 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.promoterName)}. Ya tenés tu link personal para compartir entradas y revisar tus ventas.</p>
         ${accessButton(message.accessUrl, "Ver mis ventas")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 24 horas.</p>
+      `),
+    });
+  }
+
+  async sendCollaboratorInvite(message: CollaboratorInviteEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Te invitaron a ${message.eventName}`,
+      text: `${message.inviterName} te invitó a colaborar en ${message.eventName}. Aceptá la invitación: ${message.acceptUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Te invitaron a colaborar</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${escapeHtml(message.inviterName)} te sumó al equipo de <strong>${escapeHtml(message.eventName)}</strong> en ENPASS.</p>
+        ${accessButton(message.acceptUrl, "Aceptar invitación")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal y expira en 7 días.</p>
       `),
     });
   }

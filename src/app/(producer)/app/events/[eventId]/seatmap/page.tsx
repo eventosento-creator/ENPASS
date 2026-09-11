@@ -4,6 +4,7 @@ import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { SeatMapManagement } from "@/modules/seatmap/ui/seat-map-management";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 
 export default async function EventSeatMapPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -16,7 +17,8 @@ export default async function EventSeatMapPage({ params }: { params: Promise<{ e
     supabase.from("seat_holds").select("event_seat_id, status, expires_at").eq("event_id", eventId).in("status", ["active", "consumed", "refund_review"]),
   ]);
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.seatmap) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="Asientos"/>;
   const now = new Date().getTime();
   const managedSeats = (seats ?? []).map((seat) => {

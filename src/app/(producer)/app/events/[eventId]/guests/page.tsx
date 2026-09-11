@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Mail, Send, Users } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { GuestSearch, type GuestRow } from "@/modules/events/ui/guest-search";
 import { CourtesyTicketForm } from "@/modules/orders/ui/courtesy-ticket-form";
@@ -15,7 +16,8 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
 
   const [{ data: tickets }, { data: ticketTypes }, { data: eventTables }, { data: eventSeats }] = await Promise.all([
     supabase.from("tickets").select("*").eq("event_id", eventId).order("holder_last_name"),

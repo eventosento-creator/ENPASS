@@ -29,6 +29,13 @@ export type PromoterInviteEmail = {
   accessUrl: string;
 };
 
+export type CollaboratorInviteEmail = {
+  to: string;
+  eventName: string;
+  inviterName: string;
+  acceptUrl: string;
+};
+
 export type EventReminderEmail = {
   to: string;
   eventName: string;
@@ -66,6 +73,7 @@ export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
   sendPromoterInvite(message: PromoterInviteEmail): Promise<void>;
+  sendCollaboratorInvite(message: CollaboratorInviteEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
   sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;

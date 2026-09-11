@@ -9,3 +9,11 @@ export async function getCurrentOrganization() {
   const { data: organization } = await supabase.from("organizations").select("*").eq("id", membership.organization_id).single();
   return organization ? { ...organization, role: membership.role } : null;
 }
+
+export async function getCollaboratorEventIds() {
+  const supabase = await createClient();
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return [];
+  const { data } = await supabase.from("event_collaborators").select("event_id").eq("user_id", user.user.id);
+  return (data ?? []).map((row) => row.event_id);
+}

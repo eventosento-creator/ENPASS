@@ -8,6 +8,7 @@ import { revokeScannerAuthorization, revokeScannerSession } from "@/modules/acce
 import type { CheckInResult } from "@/shared/database/types";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 import { StatCard } from "@/shared/ui/stat-card";
 import { EmptyState } from "@/shared/ui/empty-state";
@@ -17,7 +18,8 @@ export default async function EventAccessPage({ params }: { params: Promise<{ ev
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.access) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="Control de acceso"/>;
   const [ticketTypesResult, gatesResult, rulesResult, authorizationsResult, sessionsResult, metricsResult, recentResult, checkinsResult] = await Promise.all([
     supabase.from("ticket_types").select("*").eq("event_id", eventId).order("sort_order"),

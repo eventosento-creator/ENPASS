@@ -8,6 +8,7 @@ import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { ResendTicketsButton } from "@/modules/ticketing/ui/resend-tickets-button";
 import { ShareEventButton } from "@/modules/events/ui/share-event-button";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 import type { TicketDeliveryStatus } from "@/shared/database/types";
 
@@ -17,7 +18,8 @@ export default async function EventTicketsPage({ params, searchParams }: { param
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.tickets) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="Entradas"/>;
 
   const [{ data: ticketTypes }, { data: metricsData }, { data: sales }] = await Promise.all([

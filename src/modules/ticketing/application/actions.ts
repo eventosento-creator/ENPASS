@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { createClient } from "@/shared/database/server";
 import { deliverTicketsForPaidOrder } from "./deliver-tickets";
 import { BUYER_ACCESS_RESPONSE, BUYER_SESSION_COOKIE, requestBuyerAccess, revokeBuyerSession } from "./buyer-access";
@@ -38,11 +37,11 @@ export async function resendTickets(formData: FormData) {
   }).safeParse({ orderId: formData.get("orderId"), eventId: formData.get("eventId") });
   if (!parsed.success) redirect("/app/events?delivery=invalid");
 
-  const organization = await getCurrentOrganization();
-  if (!organization) redirect("/login?next=/app");
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/app");
   const { data: order } = await supabase.from("orders").select("id, event_id, organization_id, status")
-    .eq("id", parsed.data.orderId).eq("organization_id", organization.id).maybeSingle();
+    .eq("id", parsed.data.orderId).eq("event_id", parsed.data.eventId).maybeSingle();
   if (!order || order.event_id !== parsed.data.eventId || order.status !== "paid") {
     redirect(`/app/events/${parsed.data.eventId}/tickets?delivery=not-allowed`);
   }

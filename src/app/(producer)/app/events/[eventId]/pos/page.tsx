@@ -3,13 +3,16 @@ import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 import { EventPosManagement } from "@/modules/pos/ui/event-pos-management";
 
 export default async function EventPosPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params; const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
-  if (!event) notFound(); const capabilities = getEventCapabilities(event);
+  if (!event) notFound();
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.pos) return <><EventSectionNav eventId={eventId} active="pos" capabilities={capabilities} profile={event.profile}/><DisabledEventModule eventId={eventId} eventName={event.name} moduleName={getPosModuleLabel(event.profile)}/></>;
   const [{ data: products }, { data: eventProducts }, { data: locations }, { data: locationProducts }, { data: devices }, { data: sessions }, { data: overviewData }, { data: locationMetrics }, { data: productMetrics }] = await Promise.all([
     supabase.from("products").select("id, name, category_id, default_price_amount, currency, active").eq("organization_id", event.organization_id).order("name"),

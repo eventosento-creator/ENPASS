@@ -11,8 +11,9 @@ const items = [
   { href: "/app/settings", label: "Ajustes", icon: Settings },
 ] as const;
 
-export function ProducerNavigation({ mobile = false }: { mobile?: boolean }) {
+export function ProducerNavigation({ mobile = false, collaboratorOnly = false }: { mobile?: boolean; collaboratorOnly?: boolean }) {
   const pathname = usePathname();
+  if (collaboratorOnly) return null;
   return <nav aria-label={mobile ? "Navegación móvil" : "Navegación del productor"} className={mobile ? "grid grid-cols-4 gap-1" : "grid gap-1"}>
     {items.map(({ href, label, icon: Icon }) => {
       const active = href === "/app" ? pathname === href : pathname.startsWith(href);

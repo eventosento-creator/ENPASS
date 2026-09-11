@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, CalendarDays, CalendarPlus, CircleDollarSign, DoorOpen, Gauge, Ticket } from "lucide-react";
-import { getCurrentOrganization } from "@/modules/organizations/application/queries";
+import { getCollaboratorEventIds, getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { createClient } from "@/shared/database/server";
 import { formatCompactEventDate } from "@/shared/lib/format";
 import { EventCover } from "@/modules/events/ui/event-cover";
@@ -12,7 +12,10 @@ import { EmptyState } from "@/shared/ui/empty-state";
 
 export default async function DashboardPage() {
   const organization = await getCurrentOrganization();
-  if (!organization) redirect("/app/onboarding");
+  if (!organization) {
+    const collaboratorEventIds = await getCollaboratorEventIds();
+    redirect(collaboratorEventIds.length > 0 ? `/app/events/${collaboratorEventIds[0]}` : "/app/onboarding");
+  }
   const supabase = await createClient();
   const now = new Date().toISOString();
   const [{ data: events }, { data: venues }, { data: holds }, { data: metricsData }] = await Promise.all([

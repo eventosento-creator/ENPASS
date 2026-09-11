@@ -498,6 +498,8 @@ export interface Database {
       legal_documents: { Row: LegalDocument; Insert: never; Update: never; Relationships: [] };
       legal_acceptances: { Row: LegalAcceptance; Insert: never; Update: never; Relationships: [] };
       arrepentimiento_requests: { Row: ArrepentimientoRequest; Insert: never; Update: never; Relationships: [] };
+      event_collaborators: { Row: { id: string; event_id: string; organization_id: string; user_id: string; invited_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
+      event_collaborator_invitations: { Row: { id: string; event_id: string; organization_id: string; email: string; token_hash: string; invited_by: string; expires_at: string; accepted_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {
@@ -598,6 +600,11 @@ export interface Database {
       get_promoter_event_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { event_promoter_id: string; event_name: string; event_slug: string; event_starts_at: string; event_timezone: string; public_slug: string; relation_status: EventPromoterStatus; tickets_sold: number; ticket_revenue: number; confirmed_commission: number; visits: number; ticket_breakdown: Json; recent_sales: Json; currency: string }[] };
       get_promoter_event_table_dashboard: { Args: { target_session_hash: string; target_event_promoter: string }; Returns: { tables_sold: number; table_revenue: number; table_breakdown: Json }[] };
       duplicate_event_with_options: { Args: { target_event: string; target_name: string; target_slug: string; target_starts_at: string; preserve_tickets: boolean; preserve_promoters: boolean; preserve_tables: boolean; preserve_products: boolean; preserve_sales_locations: boolean }; Returns: string };
+      can_manage_event: { Args: { target_event: string }; Returns: boolean };
+      create_event_collaborator_invitation: { Args: { target_event: string; target_email: string; target_token_hash: string }; Returns: undefined };
+      accept_event_collaborator_invitation: { Args: { raw_token_hash: string }; Returns: string };
+      remove_event_collaborator: { Args: { target_event: string; target_user: string }; Returns: undefined };
+      get_event_collaborators: { Args: { target_event: string }; Returns: { collaborator_id: string; user_id: string; email: string; created_at: string }[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

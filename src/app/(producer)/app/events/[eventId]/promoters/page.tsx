@@ -6,6 +6,7 @@ import { formatMoney } from "@/shared/lib/format";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { AddPromoterDrawer } from "@/modules/promoters/ui/promoter-forms";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 import { StatCard } from "@/shared/ui/stat-card";
 import { EmptyState } from "@/shared/ui/empty-state";
@@ -16,7 +17,8 @@ export default async function EventPromotersPage({ params }: { params: Promise<{
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.promoters) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="RRPP"/>;
 
   await supabase.rpc("reconcile_event_promoter_commissions", { target_event: eventId });

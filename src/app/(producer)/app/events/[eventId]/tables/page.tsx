@@ -4,6 +4,7 @@ import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { TableManagement } from "@/modules/tables/ui/table-management";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
+import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { DisabledEventModule } from "@/modules/events/ui/disabled-event-module";
 
 export default async function EventTablesPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -18,7 +19,8 @@ export default async function EventTablesPage({ params }: { params: Promise<{ ev
     supabase.from("access_gates").select("*").eq("event_id", eventId).eq("active", true).order("name"),
   ]);
   if (!event) notFound();
-  const capabilities = getEventCapabilities(event);
+  const isManager = (await getEventViewerRole(event.organization_id)) === "manager";
+  const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
   if (!capabilities.tables) return <DisabledEventModule eventId={event.id} eventName={event.name} moduleName="Mesas"/>;
   const now = new Date().getTime();
   const managedTables = (tables ?? []).map((table) => {
