@@ -23,18 +23,18 @@ export function AuthForms({ initialMode = "login", nextPath = "/app", notice, er
   const [state, formAction] = useActionState(action, {});
   return <div className="card w-full max-w-md p-5 sm:p-8">
     <p className="eyebrow">Creá tu evento o fiesta</p><h1 className="mt-3 text-3xl font-black tracking-[-.04em]">{mode === "login" ? "Entrá a tu espacio" : mode === "register" ? "Creá tu cuenta" : mode === "magic" ? "Acceso por email" : "Recuperá tu contraseña"}</h1><p className="mt-3 text-sm leading-6 text-neutral-500">{mode === "login" ? "Administrá tus eventos, ventas y accesos." : mode === "register" ? "Empezá con tu organización y primer evento." : mode === "magic" ? "Te enviamos un enlace seguro para ingresar." : "Recibí un enlace seguro para elegir una contraseña nueva."}</p>
-    {(mode === "login" || mode === "register") && <>
-      <form action={signInWithGoogle.bind(null, nextPath)} className="mt-7">
-        <button type="submit" className="btn-secondary flex w-full items-center justify-center gap-2"><GoogleIcon/>Continuar con Google</button>
-      </form>
-      <div className="my-5 flex items-center gap-3 text-xs text-neutral-400"><span className="h-px flex-1 bg-[var(--border)]"/>o<span className="h-px flex-1 bg-[var(--border)]"/></div>
-    </>}
-    <form action={formAction} className={(mode === "login" || mode === "register") ? "grid gap-4" : "mt-7 grid gap-4"}>
+    <form action={formAction} className="mt-7 grid gap-4">
       <input type="hidden" name="next" value={nextPath}/>
       <label className="label">Email<input className="field" name="email" type="email" autoComplete="email" required /></label>
       {(mode === "login" || mode === "register") && <PasswordField label="Contraseña" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"}/>}
       <ActionMessage message={notice} tone="success"/><ActionMessage message={errorNotice}/><ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/><SubmitButton pendingLabel="Enviando…">{mode === "login" ? "Ingresar" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}</SubmitButton>
     </form>
+    {(mode === "login" || mode === "register") && <>
+      <div className="my-5 flex items-center gap-3 text-xs text-neutral-400"><span className="h-px flex-1 bg-[var(--border)]"/>o<span className="h-px flex-1 bg-[var(--border)]"/></div>
+      <form action={signInWithGoogle.bind(null, nextPath)}>
+        <button type="submit" className="btn btn-secondary w-full"><GoogleIcon/>Continuar con Google</button>
+      </form>
+    </>}
     <div className="mt-5 flex flex-wrap gap-2 text-sm text-neutral-400">
       <button type="button" className="underline" onClick={() => setMode(mode === "login" ? "register" : "login")}>{mode === "login" ? "No tengo cuenta" : "Ya tengo cuenta"}</button>
       <span>·</span><button type="button" className="underline" onClick={() => setMode("magic")}>Usar magic link</button>
