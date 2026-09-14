@@ -202,7 +202,11 @@ export async function updateTicketType(_: ActionState, formData: FormData): Prom
   if (!parsed.success) return { error: "Revisá nombre, precio, cantidad y máximo por compra." };
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("status").eq("id", parsed.data.eventId).eq("organization_id", parsed.data.organizationId).single();
-  if (!event || event.status !== "draft") return { error: "Solo podés editar entradas mientras el evento está en borrador." };
+  if (!event || ["finished", "cancelled"].includes(event.status)) return { error: "Este evento ya no admite cambios en las entradas." };
+  const { data: holds } = await supabase.from("ticket_holds").select("quantity").eq("ticket_type_id", parsed.data.ticketTypeId)
+    .or(`status.eq.consumed,and(status.eq.active,expires_at.gt.${new Date().toISOString()})`);
+  const sold = (holds ?? []).reduce((total, hold) => total + hold.quantity, 0);
+  if (parsed.data.quantity < sold) return { error: `No podés bajar el cupo por debajo de lo ya vendido o reservado (${sold}).` };
   const { error } = await supabase.from("ticket_types").update({
     name: parsed.data.name,
     price_amount: pesosToMinorUnits(parsed.data.pricePesos),
