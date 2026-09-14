@@ -28,6 +28,7 @@ export type CreateProviderCheckoutInput = {
   items: CheckoutItem[];
   grossAmount: number;
   serviceFeeAmount: number;
+  /** Amount MP retains for the ENPASS account via marketplace_fee — equal to serviceFeeAmount. */
   platformFeeAmount: number;
   currency: string;
   expiresAt: string;
