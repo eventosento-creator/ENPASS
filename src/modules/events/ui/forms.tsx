@@ -57,7 +57,7 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
       <label className="label">Categoría<select className="field" name="discoveryCategory" value={discoveryCategory} onChange={(change) => setDiscoveryCategory(change.target.value as EventDiscoveryCategory)}>{EVENT_DISCOVERY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="text-xs font-normal text-neutral-600">Así lo van a encontrar en los filtros de /eventos.</span></label>
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" placeholder="Noche 2000" required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue=""><option value="" disabled>Elegí un lugar</option>{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5">
         <label className="label">Inicio<input className="field" name="startsAt" type="datetime-local" required/></label>
         <label className="label">Fin <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local"/></label>
       </div>
@@ -114,11 +114,11 @@ export function EventEditForm({ event, venues, timezone }: { event: Event; venue
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" defaultValue={event.name} required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue={event.venue_id}>{venues.map(venue => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
       <label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-28 resize-y" name="description" defaultValue={event.description} placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5">
         <label className="label">Inicio del evento<input className="field" name="startsAt" type="datetime-local" defaultValue={localValue(event.starts_at)} required/></label>
         <label className="label">Apertura de puertas <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="doorsOpenAt" type="datetime-local" defaultValue={localValue(event.doors_open_at)}/></label>
       </div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5">
         <label className="label">Cierre <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local" defaultValue={localValue(event.ends_at)}/></label>
         <label className="label">Capacidad<input className="field" name="capacity" type="number" min="1" max="100000" defaultValue={event.capacity} required/></label>
       </div>
