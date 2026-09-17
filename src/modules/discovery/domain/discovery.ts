@@ -23,16 +23,18 @@ export type DiscoveryEvent = {
   discovery_category: EventDiscoveryCategory;
 };
 
-export type DiscoveryFilters = { city?: string; when: DiscoveryWhen; category?: EventDiscoveryCategory };
+export type DiscoveryFilters = { city?: string; when: DiscoveryWhen; category?: EventDiscoveryCategory; q?: string };
 
-export function parseDiscoveryFilters(input: { city?: string | string[]; when?: string | string[]; category?: string | string[] }): DiscoveryFilters {
+export function parseDiscoveryFilters(input: { city?: string | string[]; when?: string | string[]; category?: string | string[]; q?: string | string[] }): DiscoveryFilters {
   const cityValue = Array.isArray(input.city) ? input.city[0] : input.city;
   const whenValue = Array.isArray(input.when) ? input.when[0] : input.when;
   const categoryValue = Array.isArray(input.category) ? input.category[0] : input.category;
+  const qValue = Array.isArray(input.q) ? input.q[0] : input.q;
   return {
     city: cityValue?.trim() ? slugify(cityValue) : undefined,
     when: discoveryWhenValues.includes(whenValue as DiscoveryWhen) ? whenValue as DiscoveryWhen : "all",
     category: EVENT_DISCOVERY_CATEGORIES.includes(categoryValue as EventDiscoveryCategory) ? categoryValue as EventDiscoveryCategory : undefined,
+    q: qValue?.trim() ? qValue.trim().slice(0, 80) : undefined,
   };
 }
 
@@ -41,7 +43,20 @@ export function filterDiscoveryEvents(events: DiscoveryEvent[], filters: Discove
     .filter(event => !filters.city || slugify(event.city) === filters.city)
     .filter(event => !filters.category || event.discovery_category === filters.category)
     .filter(event => matchesWhen(event, filters.when, now))
+    .filter(event => matchesQuery(event, filters.q))
     .toSorted((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+}
+
+export function matchesQuery(event: Pick<DiscoveryEvent, "name" | "venue_name" | "city">, q: string | undefined) {
+  if (!q) return true;
+  const needle = normalizeForSearch(q);
+  return normalizeForSearch(event.name).includes(needle)
+    || normalizeForSearch(event.venue_name).includes(needle)
+    || normalizeForSearch(event.city).includes(needle);
+}
+
+function normalizeForSearch(value: string) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 export function getStartingPrice(types: Array<{ price_amount: number; active: boolean; sale_open: boolean; available_quantity: number; publicly_available?: boolean }>) {

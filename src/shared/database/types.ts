@@ -505,6 +505,8 @@ export interface Database {
     Functions: {
       create_organization: { Args: { org_name: string; org_slug: string }; Returns: string };
       publish_event: { Args: { target_event: string }; Returns: undefined };
+      cancel_event: { Args: { target_event: string }; Returns: undefined };
+      set_event_sold_out: { Args: { target_event: string; target_sold_out: boolean }; Returns: undefined };
       update_event_details: { Args: { target_event: string; target_venue: string; target_name: string; target_description: string; target_starts_at: string; target_doors_open_at: string | null; target_ends_at: string | null; target_capacity: number; target_require_document: boolean }; Returns: undefined };
       update_event_configuration: { Args: { target_event: string; target_profile: EventProfile; target_tickets_enabled: boolean; target_promoters_enabled: boolean; target_tables_enabled: boolean; target_access_enabled: boolean; target_pos_enabled: boolean; target_inventory_enabled: boolean; target_seatmap_enabled: boolean }; Returns: undefined };
       create_pos_device_authorization: { Args: { target_event: string; target_location: string; device_name: string; target_pin: string; target_code_expires_at: string; target_session_expires_at: string }; Returns: string };

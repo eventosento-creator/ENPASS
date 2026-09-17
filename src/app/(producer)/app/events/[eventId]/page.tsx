@@ -1,24 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Armchair, BarChart3, CalendarDays, Clock, DoorOpen, ExternalLink, FileText, MailWarning, MapPin, Pencil, ShoppingCart, Ticket, UserRoundCheck, Users, Wallet, Zap } from "lucide-react";
+import { Armchair, BarChart3, CalendarDays, Clock, DoorOpen, ExternalLink, FileText, MailWarning, MapPin, PackageX, Pencil, RotateCcw, ShoppingCart, Ticket, UserRoundCheck, Users, Wallet, Zap } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/shared/database/server";
 import { formatEventDate, formatMoney } from "@/shared/lib/format";
 import { EventCoverUpload } from "@/modules/events/ui/forms";
-import { publishEvent } from "@/modules/events/application/actions";
+import { publishEvent, setEventSoldOut } from "@/modules/events/application/actions";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { EventStatusBadge } from "@/modules/events/ui/event-status-badge";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { DuplicateEventForm } from "@/modules/events/ui/duplicate-event-form";
 import { ShareEventButton } from "@/modules/events/ui/share-event-button";
 import { EventActionsMenu } from "@/modules/events/ui/event-actions-menu";
+import { CancelEventButton } from "@/modules/events/ui/cancel-event-button";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { getEventCollaborators } from "@/modules/collaborators/application/access";
 import { CollaboratorsCard } from "@/modules/collaborators/ui/collaborators-card";
 import { StatCard } from "@/shared/ui/stat-card";
 
-export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ error?: string; published?: string }> }) {
+export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ error?: string; published?: string; cancelled?: string; soldOut?: string; reopened?: string }> }) {
   const { eventId } = await params; const query = await searchParams; const supabase = await createClient();
   const [{ data: event }, { data: ticketTypes }, { data: eventTables }, { data: holds }, { data: tableHolds }, { data: metricsData }, { data: tableMetricsData }, { data: attributionData }, { data: tableAttributionData }] = await Promise.all([supabase.from("events").select("*").eq("id", eventId).single(), supabase.from("ticket_types").select("*").eq("event_id", eventId).order("sort_order"), supabase.from("event_tables").select("id, capacity, active").eq("event_id", eventId), supabase.from("ticket_holds").select("quantity").eq("event_id", eventId).eq("status", "active").gt("expires_at", new Date().toISOString()), supabase.from("table_holds").select("event_table_id").eq("event_id", eventId).eq("status", "active").gt("expires_at", new Date().toISOString()), supabase.rpc("get_event_ticket_metrics", { target_event: eventId }), supabase.rpc("get_event_table_metrics", { target_event: eventId }), supabase.rpc("get_event_attribution_metrics", { target_event: eventId }), supabase.rpc("get_event_table_attribution_metrics", { target_event: eventId })]);
   if (!event) notFound();
@@ -43,9 +44,16 @@ export default async function EventDetailPage({ params, searchParams }: { params
       {capabilities.access && ["published", "sold_out"].includes(event.status) && <Link href={`/app/events/${event.id}/access`} className="btn btn-secondary w-full justify-start"><DoorOpen size={16}/>Abrir accesos</Link>}
       <DuplicateEventForm eventId={event.id} eventName={event.name} timezone={venue.timezone} defaultStartsAt={duplicatedStartsAt} capabilities={capabilities}/>
       <EventCoverUpload organizationId={event.organization_id} eventId={event.id}/>
+      {event.status === "published" && <form action={setEventSoldOut}><input type="hidden" name="eventId" value={event.id}/><input type="hidden" name="soldOut" value="true"/><button className="btn btn-ghost w-full justify-start"><PackageX size={16}/>Marcar agotado</button></form>}
+      {event.status === "sold_out" && <form action={setEventSoldOut}><input type="hidden" name="eventId" value={event.id}/><input type="hidden" name="soldOut" value="false"/><button className="btn btn-ghost w-full justify-start"><RotateCcw size={16}/>Reabrir venta</button></form>}
+      {!["finished", "cancelled"].includes(event.status) && <CancelEventButton eventId={event.id}/>}
     </EventActionsMenu>}</div></div></section>
     <EventSectionNav eventId={event.id} active="summary" capabilities={capabilities}/>
-    {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm">No se pudo publicar: revisá que la fecha sea futura y el inventario no supere la capacidad.</p>}{query.published && <p className="status-success mt-6 rounded-xl p-4 text-sm">Evento publicado. Ya podés compartirlo.</p>}
+    {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm">{query.error}</p>}
+    {query.published && <p className="status-success mt-6 rounded-xl p-4 text-sm">Evento publicado. Ya podés compartirlo.</p>}
+    {query.cancelled && <p className="status-danger mt-6 rounded-xl p-4 text-sm">Evento cancelado. Ya no se pueden comprar entradas nuevas; las ventas existentes no se reembolsaron automáticamente.</p>}
+    {query.soldOut && <p className="status-warning mt-6 rounded-xl p-4 text-sm">Evento marcado como agotado. Ya no se venden entradas nuevas.</p>}
+    {query.reopened && <p className="status-success mt-6 rounded-xl p-4 text-sm">La venta volvió a estar abierta.</p>}
     <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard icon={Wallet} tone="emerald" label="Ventas pagadas" value={String(ticketMetrics.paid_orders)} sublabel="Ahora mismo"/>
       {capabilities.tickets && <StatCard icon={Ticket} tone="blue" label="Entradas emitidas" value={String(ticketMetrics.tickets_issued)} sublabel="Total de entradas"/>}

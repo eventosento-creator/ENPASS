@@ -260,9 +260,32 @@ export async function publishEvent(formData: FormData) {
   if (typeof eventId !== "string") return;
   const supabase = await createClient();
   const { error } = await supabase.rpc("publish_event", { target_event: eventId });
-  if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent("No se pudo publicar: revisá que la fecha sea futura y el inventario no supere la capacidad.")}`);
   revalidatePath(`/app/events/${eventId}`);
   redirect(`/app/events/${eventId}?published=1`);
+}
+
+export async function cancelEvent(formData: FormData) {
+  const eventId = formData.get("eventId");
+  if (typeof eventId !== "string") return;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_event", { target_event: eventId });
+  if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent("No se pudo cancelar el evento.")}`);
+  revalidatePath(`/app/events/${eventId}`);
+  revalidatePath("/app/events");
+  redirect(`/app/events/${eventId}?cancelled=1`);
+}
+
+export async function setEventSoldOut(formData: FormData) {
+  const eventId = formData.get("eventId");
+  const soldOut = formData.get("soldOut") === "true";
+  if (typeof eventId !== "string") return;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_event_sold_out", { target_event: eventId, target_sold_out: soldOut });
+  if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent(soldOut ? "No se pudo marcar como agotado." : "No se pudo reabrir la venta.")}`);
+  revalidatePath(`/app/events/${eventId}`);
+  revalidatePath("/app/events");
+  redirect(`/app/events/${eventId}?${soldOut ? "soldOut=1" : "reopened=1"}`);
 }
 
 const duplicateEventSchema = z.object({
