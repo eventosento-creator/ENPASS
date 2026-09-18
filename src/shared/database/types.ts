@@ -4,6 +4,7 @@ export type Organization = {
   id: string; name: string; slug: string; default_currency: string;
   service_fee_bps: number; fee_payer: "buyer" | "producer" | "mixed";
   platform_fee_bps: number; table_service_fee_bps: number | null;
+  courtesy_issue_cost_amount: number; courtesy_checkin_cost_amount: number;
 };
 export type Venue = {
   id: string; organization_id: string; name: string; address: string; city: string;
@@ -129,6 +130,8 @@ export type Order = {
   sales_location_id: string | null;
   pos_session_id: string | null;
   pos_idempotency_key: string | null;
+  created_by: string | null;
+  is_courtesy: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -572,7 +575,7 @@ export interface Database {
       get_scanner_session: { Args: { target_session_hash: string }; Returns: { scanner_session_id: string; event_id: string; event_name: string; gate_id: string; gate_name: string; permission: ScannerPermission; event_timezone: string; expires_at: string }[] };
       revoke_scanner_session: { Args: { target_session: string }; Returns: undefined };
       revoke_current_scanner_session: { Args: { target_session_hash: string }; Returns: undefined };
-      check_in_ticket: { Args: { target_session_hash: string; target_qr_hash: string; target_idempotency_key: string }; Returns: { result: CheckInResult; checkin_id: string | null; ticket_id: string | null; holder_name: string | null; ticket_type_name: string | null; sector: string | null; short_code: string | null; used_entries: number | null; max_entries: number | null; first_used_at: string | null; first_used_gate_name: string | null; valid_from: string | null; valid_until: string | null; suggested_gate_name: string | null; scanned_at: string }[] };
+      check_in_ticket: { Args: { target_session_hash: string; target_qr_hash: string; target_idempotency_key: string }; Returns: { result: CheckInResult; checkin_id: string | null; ticket_id: string | null; holder_name: string | null; ticket_type_name: string | null; sector: string | null; short_code: string | null; used_entries: number | null; max_entries: number | null; first_used_at: string | null; first_used_gate_name: string | null; valid_from: string | null; valid_until: string | null; suggested_gate_name: string | null; scanned_at: string; is_courtesy: boolean | null }[] };
       supervisor_override_checkin: { Args: { target_session_hash: string; target_checkin: string; target_reason: "wrong_gate" | "outside_window" | "supervisor_exception"; target_idempotency_key: string }; Returns: Json };
       get_supervisor_ticket_preview: { Args: { target_session_hash: string; target_short_code: string }; Returns: Json };
       supervisor_manual_checkin: { Args: { target_session_hash: string; target_short_code: string; target_idempotency_key: string }; Returns: Json };

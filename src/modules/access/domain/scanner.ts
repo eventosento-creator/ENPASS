@@ -68,6 +68,7 @@ export type CheckInResponse = {
   valid_until: string | null;
   suggested_gate_name: string | null;
   scanned_at: string;
+  is_courtesy: boolean | null;
   override?: boolean;
 };
 
