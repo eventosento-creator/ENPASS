@@ -37,7 +37,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
             <span aria-hidden className={`size-1.5 rounded-full ${event.has_availability ? "bg-emerald-500" : "bg-red-500"}`}/>
           </span>
           <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
-            <h2 className="line-clamp-2 max-w-lg text-2xl font-black leading-[1.08] tracking-[-.03em] text-white sm:text-4xl">{event.name}</h2>
+            <h2 className="line-clamp-2 max-w-lg text-2xl font-black leading-[1.08] tracking-[-.03em] !text-white sm:text-4xl">{event.name}</h2>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-white/80 sm:text-sm">
               <span className="flex items-center gap-1.5"><CalendarDays size={14}/>{formatEventDate(event.starts_at, event.timezone)}</span>
               <span className="flex items-center gap-1.5"><MapPin size={14}/>{event.venue_name} · {event.city}</span>
@@ -51,8 +51,8 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
       })}
     </div>
     {events.length > 1 && <>
-      <button type="button" aria-label="Ver evento anterior" onClick={() => manualScroll(-1)} className="absolute left-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/30 text-white backdrop-blur transition hover:bg-black/50 sm:grid lg:left-6"><ChevronLeft size={18}/></button>
-      <button type="button" aria-label="Ver siguiente evento" onClick={() => manualScroll(1)} className="absolute right-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/30 text-white backdrop-blur transition hover:bg-black/50 sm:grid lg:right-6"><ChevronRight size={18}/></button>
+      <button type="button" aria-label="Ver evento anterior" onClick={() => manualScroll(-1)} className="absolute left-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/30 !text-white backdrop-blur transition hover:bg-black/50 sm:grid lg:left-6"><ChevronLeft size={18}/></button>
+      <button type="button" aria-label="Ver siguiente evento" onClick={() => manualScroll(1)} className="absolute right-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/30 !text-white backdrop-blur transition hover:bg-black/50 sm:grid lg:right-6"><ChevronRight size={18}/></button>
       <div className="mt-4 flex items-center justify-center gap-2">{events.map((event, dotIndex) => <button
         key={event.id}
         type="button"

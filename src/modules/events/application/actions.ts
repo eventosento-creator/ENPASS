@@ -260,7 +260,12 @@ export async function publishEvent(formData: FormData) {
   if (typeof eventId !== "string") return;
   const supabase = await createClient();
   const { error } = await supabase.rpc("publish_event", { target_event: eventId });
-  if (error) redirect(`/app/events/${eventId}?error=${encodeURIComponent("No se pudo publicar: revisá que la fecha sea futura y el inventario no supere la capacidad.")}`);
+  if (error) {
+    const message = error.message.includes("PAYMENT_ACCOUNT_REQUIRED")
+      ? "Conectá Mercado Pago antes de publicar: este evento tiene entradas, mesas o asientos pagos y nadie va a poder comprarlos sin eso."
+      : "No se pudo publicar: revisá que la fecha sea futura y el inventario no supere la capacidad.";
+    redirect(`/app/events/${eventId}?error=${encodeURIComponent(message)}`);
+  }
   revalidatePath(`/app/events/${eventId}`);
   redirect(`/app/events/${eventId}?published=1`);
 }
