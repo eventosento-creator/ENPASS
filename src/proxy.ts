@@ -25,8 +25,12 @@ export async function proxy(request: NextRequest) {
 
   const eventSlugMatch = request.nextUrl.pathname.match(/^\/e\/([^/]+)$/);
   if (eventSlugMatch) {
-    const { data: eventRows } = await supabase.rpc("get_public_event_by_slug", { target_slug: eventSlugMatch[1] });
-    if (!eventRows?.[0]) return notFoundResponse();
+    const { data: eventRows, error } = await supabase.rpc("get_public_event_by_slug", { target_slug: eventSlugMatch[1] });
+    // Only show a hard 404 when the lookup cleanly succeeded with zero rows. A transient
+    // network/DB error here must NOT be treated as "not found" — that would turn a blip
+    // into a false 404 for a real, published event. On error, fall through and let the
+    // page's own (more resilient) lookup decide.
+    if (!error && !eventRows?.[0]) return notFoundResponse();
   }
 
   return response;
