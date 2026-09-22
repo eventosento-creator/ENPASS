@@ -507,6 +507,7 @@ export interface Database {
     Views: Record<string, never>;
     Functions: {
       create_organization: { Args: { org_name: string; org_slug: string }; Returns: string };
+      is_platform_admin: { Args: Record<string, never>; Returns: boolean };
       publish_event: { Args: { target_event: string }; Returns: undefined };
       cancel_event: { Args: { target_event: string }; Returns: undefined };
       set_event_sold_out: { Args: { target_event: string; target_sold_out: boolean }; Returns: undefined };

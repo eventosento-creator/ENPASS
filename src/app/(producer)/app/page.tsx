@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, CalendarDays, CalendarPlus, CircleDollarSign, DoorOpen, ExternalLink, Gauge, Ticket } from "lucide-react";
-import { getCollaboratorEventIds, getCurrentOrganization } from "@/modules/organizations/application/queries";
+import { getCollaboratorEventIds, getCurrentOrganization, isPlatformAdmin } from "@/modules/organizations/application/queries";
 import { createClient } from "@/shared/database/server";
 import { formatCompactEventDate } from "@/shared/lib/format";
 import { EventCover } from "@/modules/events/ui/event-cover";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 export default async function DashboardPage() {
   const organization = await getCurrentOrganization();
   if (!organization) {
+    if (await isPlatformAdmin()) redirect("/app/admin/organizations" as never);
     const collaboratorEventIds = await getCollaboratorEventIds();
     redirect(collaboratorEventIds.length > 0 ? `/app/events/${collaboratorEventIds[0]}` : "/app/onboarding");
   }
