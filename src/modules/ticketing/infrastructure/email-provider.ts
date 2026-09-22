@@ -57,6 +57,16 @@ export type EventChangeEmail = {
   accessUrl: string;
 };
 
+export type SaleNotificationEmail = {
+  to: string;
+  eventName: string;
+  buyerName: string;
+  itemsSummary: string;
+  totalAmount: number;
+  currency: string;
+  dashboardUrl: string;
+};
+
 export type ArrepentimientoVerificationEmail = {
   to: string;
   confirmUrl: string;
@@ -76,6 +86,7 @@ export interface EmailProvider {
   sendCollaboratorInvite(message: CollaboratorInviteEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
+  sendSaleNotification(message: SaleNotificationEmail): Promise<void>;
   sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;
   sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail): Promise<void>;
 }

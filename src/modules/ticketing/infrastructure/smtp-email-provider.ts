@@ -1,7 +1,8 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
+import { formatMoney } from "@/shared/lib/format";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -118,6 +119,30 @@ export class SmtpEmailProvider implements EmailProvider {
         </div>
         ${accessButton(message.accessUrl, "Ver mi entrada")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira pronto.</p>
+      `),
+    });
+  }
+
+  async sendSaleNotification(message: SaleNotificationEmail) {
+    const formattedTotal = formatMoney(message.totalAmount, message.currency);
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Nueva venta: ${message.eventName}`,
+      text: `¡Vendiste una entrada!\n\n${message.eventName}\n${message.itemsSummary}\nComprador: ${message.buyerName}\nTotal: ${formattedTotal}\n\nVer en el panel: ${message.dashboardUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Vendiste una entrada!</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center"><strong>${escapeHtml(message.eventName)}</strong></p>
+        <div style="margin-top:24px;border-radius:18px;overflow:hidden;border:1px solid #e6e6e1">
+          <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">Comprador</p>
+            <p style="margin:0;font-size:18px;font-weight:900;letter-spacing:-.02em;line-height:1.3">${escapeHtml(message.buyerName)}</p>
+            <p style="margin:10px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(message.itemsSummary)}</p>
+            <p style="margin:10px 0 0;font-size:20px;font-weight:900;letter-spacing:-.02em">${escapeHtml(formattedTotal)}</p>
+          </div>
+        </div>
+        ${accessButton(message.dashboardUrl, "Ver en el panel")}
       `),
     });
   }

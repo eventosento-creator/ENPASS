@@ -30,7 +30,9 @@ type TicketingLogEvent =
   | "buyer.access.requested"
   | "buyer.access.granted"
   | "event.reminder.sent"
-  | "event.change.notified";
+  | "event.change.notified"
+  | "sale.notification.sent"
+  | "sale.notification.failed";
 
 export function ticketingLog(event: TicketingLogEvent, fields: Record<string, SafeLogValue> = {}) {
   console.info(JSON.stringify({
