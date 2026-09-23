@@ -9,6 +9,7 @@ import { EventStatusBadge } from "@/modules/events/ui/event-status-badge";
 import { AvailabilityIndicator } from "@/modules/events/ui/availability-indicator";
 import { EventCard } from "@/modules/events/ui/event-card";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { OnboardingChecklist, type OnboardingStep } from "@/modules/organizations/ui/onboarding-checklist";
 
 export default async function DashboardPage() {
   const organization = await getCurrentOrganization();
@@ -38,8 +39,25 @@ export default async function DashboardPage() {
   const nextTicketMetrics = ticketMetricResult.data?.[0] ?? { tickets_issued: 0 };
   const nextAccessMetrics = accessMetricResult.data?.[0] ?? { entries_today: 0 };
   const occupied = nextEvent ? nextTicketMetrics.tickets_issued + (reservationsByEvent[nextEvent.id] ?? 0) : 0;
+  const firstEvent = (events ?? [])[0];
+  const showOnboarding = (events ?? []).length <= 1;
+  const [{ data: firstEventTicketTypes }, { data: paymentAccountData }] = showOnboarding ? await Promise.all([
+    firstEvent ? supabase.from("ticket_types").select("price_amount").eq("event_id", firstEvent.id) : Promise.resolve({ data: [] }),
+    supabase.rpc("get_payment_account_status", { target_organization: organization.id }),
+  ]) : [{ data: null }, { data: null }];
+  const hasPricedTicketType = (firstEventTicketTypes ?? []).some(ticketType => ticketType.price_amount > 0);
+  const mpConnected = paymentAccountData?.[0]?.status === "connected";
+  const isPublished = ["published", "sold_out"].includes(firstEvent?.status ?? "");
+  const onboardingSteps: OnboardingStep[] = [
+    { title: "Creá tu evento", description: "Nombre, fecha, lugar y flyer.", href: "/app/events/new", cta: "Crear evento", done: Boolean(firstEvent) },
+    { title: "Cargá tus entradas", description: "Tipos de entrada, precios y cupos.", href: firstEvent ? `/app/events/${firstEvent.id}/tickets` as never : "/app/events/new", cta: "Cargar entradas", done: hasPricedTicketType },
+    { title: "Conectá Mercado Pago", description: "Para poder cobrar tus ventas.", href: "/app/settings", cta: "Conectar", done: mpConnected },
+    { title: "Publicá tu evento", description: "Lo hace visible y comprable.", href: firstEvent ? `/app/events/${firstEvent.id}` as never : "/app/events/new", cta: "Publicar", done: isPublished },
+  ];
+  const onboardingComplete = onboardingSteps.every(step => step.done);
   return <>
     <div className="flex items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[var(--accent)]">{organization.name}</p><h1 className="page-title mt-1">Tus eventos, en un solo lugar.</h1></div><Link aria-label="Crear evento" className="btn btn-primary" href="/app/events/new"><CalendarPlus size={18}/><span className="hidden sm:inline">Crear evento</span></Link></div>
+    {showOnboarding && !onboardingComplete && <OnboardingChecklist steps={onboardingSteps}/>}
     <section className="mt-10"><p className="eyebrow">Próximo evento</p>{nextEvent ? <NextEvent event={nextEvent} venue={venueById.get(nextEvent.venue_id)} occupied={occupied}/> : <div className="mt-4"><EmptyState icon={CalendarDays} title="Todavía no hay eventos" description="Creá tu primera fiesta o evento y empezá a compartirlo." action={<Link className="btn btn-primary" href="/app/events/new">Crear evento</Link>}/></div>}</section>
     <section aria-label="Métricas principales" className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric icon={<CircleDollarSign size={17}/>} label="Ventas" value={String(metrics.confirmed_orders)}/><Metric icon={<Ticket size={17}/>} label="Entradas emitidas" value={String(nextTicketMetrics.tickets_issued)}/><Metric icon={<DoorOpen size={17}/>} label="Ingresos validados" value={String(nextAccessMetrics.entries_today)}/><Metric icon={<Gauge size={17}/>} label="Capacidad ocupada" value={nextEvent ? `${occupied} / ${nextEvent.capacity}` : "—"}/></section>
     {otherEvents.length > 0 && <section className="mt-12"><div className="flex items-center justify-between"><h2 className="section-title">Después de esta noche</h2><Link className="text-sm text-neutral-500 hover:text-white" href="/app/events">Ver todas</Link></div><div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{otherEvents.map(event => <EventCard key={event.id} event={event} venue={venueById.get(event.venue_id)} reserved={reservationsByEvent[event.id] ?? 0}/>)}</div></section>}
