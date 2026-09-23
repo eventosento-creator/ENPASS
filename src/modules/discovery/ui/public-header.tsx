@@ -72,6 +72,7 @@ export function PublicFooter() {
         { href: "/mis-entradas" as never, label: "Mis entradas" },
         { href: "/crear-evento", label: "Crear eventos" },
         { href: "/login", label: "Ingresar" },
+        { href: "/ayuda" as never, label: "Centro de ayuda" },
       ]}/>
       <FooterColumn title="Legal" links={[
         { href: "/terminos" as never, label: "Términos y Condiciones" },
