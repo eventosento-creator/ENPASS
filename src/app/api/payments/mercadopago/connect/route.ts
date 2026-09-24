@@ -13,6 +13,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   const organization = await getCurrentOrganization();
   if (!user || !organization) return NextResponse.redirect(new URL("/login?next=/app/settings", requestBase()));
+  if (!["owner", "admin"].includes(organization.role)) return NextResponse.redirect(new URL("/app/settings?payment=unauthorized", requestBase()));
 
   try {
     const config = getMercadoPagoRuntimeConfig();

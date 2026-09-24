@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: membership } = user
-    ? await supabase.from("organization_members").select("organization_id").eq("user_id", user.id)
+    ? await supabase.from("organization_members").select("role").eq("user_id", user.id)
       .eq("organization_id", organizationId).maybeSingle()
     : { data: null };
-  if (!user || !membership) {
+  if (!user || !membership || !["owner", "admin"].includes(membership.role)) {
     return clearOAuthCookies(NextResponse.redirect(destination("unauthorized")));
   }
 
