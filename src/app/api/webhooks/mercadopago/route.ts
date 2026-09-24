@@ -5,6 +5,7 @@ import { getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/c
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 import { createAdminClient } from "@/shared/database/admin";
 import type { PaymentAccount, WebhookEvent } from "@/shared/database/types";
+import { processPendingInvoices } from "@/modules/billing/application/process-invoices";
 import { paymentLog } from "@/shared/lib/structured-log";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
 import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest) {
       } catch {
         throw new Error("TICKET_FULFILLMENT_FAILED");
       }
+    }
+
+    try {
+      await processPendingInvoices({ orderId: payment.order_id });
+    } catch {
+      // Invoicing is retried by the cron sweep and must never invalidate a confirmed payment.
     }
 
     await admin.from("webhook_events").update({

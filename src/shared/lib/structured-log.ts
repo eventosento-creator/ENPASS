@@ -32,7 +32,10 @@ type TicketingLogEvent =
   | "event.reminder.sent"
   | "event.change.notified"
   | "sale.notification.sent"
-  | "sale.notification.failed";
+  | "sale.notification.failed"
+  | "invoice.issued"
+  | "invoice.failed"
+  | "invoice.email.failed";
 
 export function ticketingLog(event: TicketingLogEvent, fields: Record<string, SafeLogValue> = {}) {
   console.info(JSON.stringify({

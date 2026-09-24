@@ -67,6 +67,16 @@ export type SaleNotificationEmail = {
   dashboardUrl: string;
 };
 
+export type InvoiceEmail = {
+  to: string;
+  kind: "invoice" | "credit_note";
+  description: string;
+  amountLabel: string;
+  documentNumber: string;
+  cae: string;
+  pdfUrl: string | null;
+};
+
 export type ArrepentimientoVerificationEmail = {
   to: string;
   confirmUrl: string;
@@ -87,6 +97,7 @@ export interface EmailProvider {
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
   sendSaleNotification(message: SaleNotificationEmail): Promise<void>;
+  sendInvoice(message: InvoiceEmail): Promise<void>;
   sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;
   sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail): Promise<void>;
 }

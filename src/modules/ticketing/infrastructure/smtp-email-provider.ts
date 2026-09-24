@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 
 export class SmtpEmailProvider implements EmailProvider {
@@ -143,6 +143,27 @@ export class SmtpEmailProvider implements EmailProvider {
           </div>
         </div>
         ${accessButton(message.dashboardUrl, "Ver en el panel")}
+      `),
+    });
+  }
+
+  async sendInvoice(message: InvoiceEmail) {
+    const title = message.kind === "invoice" ? "Tu factura de ENPASS" : "Tu nota de crédito de ENPASS";
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `${title} ${message.documentNumber}`,
+      text: `${title}\n\n${message.description}\nImporte: ${message.amountLabel}\nComprobante: ${message.documentNumber}\nCAE: ${message.cae}${message.pdfUrl ? `\n\nDescargar PDF: ${message.pdfUrl}` : ""}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">${title}</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${escapeHtml(message.description)}</p>
+        <div style="margin-top:24px;border-radius:18px;border:1px solid #e6e6e1;padding:20px 22px">
+          <p style="margin:0;font-size:13px;color:#6f6f75">Comprobante <strong style="color:#0a0a0b">${escapeHtml(message.documentNumber)}</strong></p>
+          <p style="margin:6px 0 0;font-size:13px;color:#6f6f75">CAE <strong style="color:#0a0a0b">${escapeHtml(message.cae)}</strong></p>
+          <p style="margin:12px 0 0;font-size:20px;font-weight:900;letter-spacing:-.02em;color:#0a0a0b">${escapeHtml(message.amountLabel)}</p>
+        </div>
+        ${message.pdfUrl ? accessButton(message.pdfUrl, "Descargar PDF") : ""}
       `),
     });
   }

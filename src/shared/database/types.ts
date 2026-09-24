@@ -245,6 +245,39 @@ export type PaymentAccount = {
   updated_at: string;
 };
 
+export type InvoiceKind = "invoice" | "credit_note";
+export type InvoiceStatus = "pending" | "processing" | "issued" | "error" | "cancelled";
+export type Invoice = {
+  id: string;
+  order_id: string;
+  kind: InvoiceKind;
+  reason_key: string;
+  related_invoice_id: string | null;
+  status: InvoiceStatus;
+  amount: number;
+  currency: string;
+  description: string;
+  customer_name: string;
+  customer_document: string | null;
+  customer_email: string;
+  issuer_cuit: string | null;
+  point_of_sale: number | null;
+  cbte_type: number | null;
+  invoice_number: number | null;
+  cae: string | null;
+  cae_expires_at: string | null;
+  issued_at: string | null;
+  pdf_url: string | null;
+  provider: string | null;
+  provider_reference: string | null;
+  attempts: number;
+  last_error: string | null;
+  next_attempt_at: string;
+  emailed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Payment = {
   id: string;
   public_id: string;
@@ -484,6 +517,7 @@ export interface Database {
       promoter_sessions: { Row: { id: string; organization_id: string; promoter_id: string; session_hash: string; expires_at: string; last_used_at: string; revoked_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       payment_accounts: { Row: PaymentAccount; Insert: Omit<PaymentAccount, "id" | "created_at" | "updated_at"> & { id?: string; created_at?: string; updated_at?: string }; Update: Partial<PaymentAccount>; Relationships: [] };
       payments: { Row: Payment; Insert: never; Update: never; Relationships: [] };
+      invoices: { Row: Invoice; Insert: never; Update: Partial<Invoice>; Relationships: [] };
       webhook_events: { Row: WebhookEvent; Insert: Omit<WebhookEvent, "id" | "received_at" | "updated_at"> & { id?: string; received_at?: string; updated_at?: string }; Update: Partial<WebhookEvent>; Relationships: [] };
       tickets: { Row: Ticket; Insert: never; Update: never; Relationships: [] };
       ticket_deliveries: { Row: TicketDelivery; Insert: never; Update: never; Relationships: [] };
