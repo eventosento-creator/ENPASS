@@ -20,7 +20,7 @@ const productSchema = z.object({
 const eventProductsSchema = z.object({ eventId: z.uuid(), productIds: z.array(z.uuid()).min(1) });
 const eventProductUpdateSchema = z.object({ eventId: z.uuid(), eventProductId: z.uuid(), pricePesos: z.coerce.number().int().nonnegative(), enabled: z.enum(["true", "false"]) });
 const locationSchema = z.object({ eventId: z.uuid(), name: z.string().trim().min(2).max(100), description: z.string().trim().max(400).default(""), eventProductIds: z.array(z.uuid()).min(1) });
-const deviceSchema = z.object({ eventId: z.uuid(), locationId: z.uuid(), name: z.string().trim().min(2).max(80) });
+const deviceSchema = z.object({ eventId: z.uuid(), locationId: z.uuid(), name: z.string().trim().min(2).max(80), cashierUserId: z.preprocess((value) => value || undefined, z.uuid().optional()) });
 
 export async function createProductCategory(_: PosActionState, formData: FormData): Promise<PosActionState> {
   const parsed = categorySchema.safeParse(Object.fromEntries(formData));
@@ -119,11 +119,16 @@ export async function createPosDevice(_: PosActionState, formData: FormData): Pr
   const codeExpiresAt = new Date(Math.min(Date.now() + 30 * 60_000, operationalEnd.getTime()));
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const pin = randomInt(0, 1_000_000).toString().padStart(6, "0");
-    const { error } = await supabase.rpc("create_pos_device_authorization", {
+    const { data: authorizationId, error } = await supabase.rpc("create_pos_device_authorization", {
       target_event: parsed.data.eventId, target_location: parsed.data.locationId, device_name: parsed.data.name,
       target_pin: pin, target_code_expires_at: codeExpiresAt.toISOString(), target_session_expires_at: operationalEnd.toISOString(),
     });
-    if (!error) { revalidatePath(`/app/events/${parsed.data.eventId}/pos`); return { success: "Dispositivo creado. Copiá el PIN ahora: no volverá a mostrarse.", pin }; }
+    if (!error) {
+      if (parsed.data.cashierUserId && authorizationId) {
+        const { error: cashierError } = await supabase.rpc("set_pos_device_cashier", { target_authorization: authorizationId, target_user: parsed.data.cashierUserId });
+        if (cashierError) return { error: "El dispositivo se creó pero no pudimos asignar al cajero. Asignalo de nuevo." };
+      }
+      revalidatePath(`/app/events/${parsed.data.eventId}/pos`); return { success: "Dispositivo creado. Copiá el PIN ahora: no volverá a mostrarse.", pin }; }
     if (!error.message.includes("PIN_COLLISION")) return { error: "No pudimos crear el dispositivo." };
   }
   return { error: "No pudimos generar un PIN único. Intentá nuevamente." };

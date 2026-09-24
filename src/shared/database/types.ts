@@ -118,7 +118,8 @@ export type Order = {
   organization_id: string;
   event_id: string;
   customer_id: string | null;
-  channel: "ticket_web" | "admin" | "pos";
+  channel: "ticket_web" | "admin" | "pos" | "box_office";
+  cashier_user_id: string | null;
   status: OrderStatus;
   subtotal_amount: number;
   service_fee_amount: number;
@@ -245,6 +246,14 @@ export type PaymentAccount = {
   updated_at: string;
 };
 
+export type BoxOfficePaymentMethod = "cash" | "qr" | "debit_card" | "credit_card" | "bank_transfer" | "other";
+export type BoxOfficeSettings = {
+  event_id: string; organization_id: string; enabled: boolean; cash_enabled: boolean; qr_enabled: boolean;
+  debit_enabled: boolean; credit_enabled: boolean; transfer_enabled: boolean; other_enabled: boolean;
+  allow_after_start: boolean; closes_at: string | null; updated_at: string;
+};
+export type BoxOfficeChannelPrice = { ticket_type_id: string; channel: "box_office"; organization_id: string; event_id: string; price_amount: number; enabled: boolean };
+export type BoxOfficeStaff = { event_id: string; user_id: string; organization_id: string; role: "cashier" | "supervisor"; created_at: string };
 export type InvoiceKind = "invoice" | "credit_note";
 export type InvoiceStatus = "pending" | "processing" | "issued" | "error" | "cancelled";
 export type Invoice = {
@@ -517,6 +526,9 @@ export interface Database {
       promoter_sessions: { Row: { id: string; organization_id: string; promoter_id: string; session_hash: string; expires_at: string; last_used_at: string; revoked_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       payment_accounts: { Row: PaymentAccount; Insert: Omit<PaymentAccount, "id" | "created_at" | "updated_at"> & { id?: string; created_at?: string; updated_at?: string }; Update: Partial<PaymentAccount>; Relationships: [] };
       payments: { Row: Payment; Insert: never; Update: never; Relationships: [] };
+      event_box_office_settings: { Row: BoxOfficeSettings; Insert: never; Update: never; Relationships: [] };
+      ticket_type_channel_prices: { Row: BoxOfficeChannelPrice; Insert: never; Update: never; Relationships: [] };
+      box_office_staff: { Row: BoxOfficeStaff; Insert: never; Update: never; Relationships: [] };
       invoices: { Row: Invoice; Insert: never; Update: Partial<Invoice>; Relationships: [] };
       webhook_events: { Row: WebhookEvent; Insert: Omit<WebhookEvent, "id" | "received_at" | "updated_at"> & { id?: string; received_at?: string; updated_at?: string }; Update: Partial<WebhookEvent>; Relationships: [] };
       tickets: { Row: Ticket; Insert: never; Update: never; Relationships: [] };
@@ -553,6 +565,21 @@ export interface Database {
       get_pos_device_session: { Args: { target_session_hash: string }; Returns: { device_session_id: string; device_id: string; event_id: string; event_name: string; sales_location_id: string; sales_location_name: string; device_name: string; event_timezone: string; expires_at: string; pos_enabled: boolean; event_status: Event["status"]; cash_session_id: string | null; cash_session_status: "open" | "closed" | null; operator_label: string | null; opening_cash_amount: number | null; opened_at: string | null }[] };
       get_pos_catalog: { Args: { target_session_hash: string }; Returns: { event_product_id: string; product_id: string; product_name: string; product_description: string; category_id: string | null; category_name: string | null; sku: string | null; barcode: string | null; price_amount: number; currency: string; sort_order: number }[] };
       open_pos_session: { Args: { target_session_hash: string; target_opening_cash_amount: number; target_operator_label: string }; Returns: string };
+      get_box_office_config: { Args: { target_session_hash: string }; Returns: { enabled: boolean; cash_enabled: boolean; qr_enabled: boolean; debit_enabled: boolean; credit_enabled: boolean; transfer_enabled: boolean; other_enabled: boolean; cashier_user_id: string | null }[] };
+      get_box_office_catalog: { Args: { target_session_hash: string }; Returns: { ticket_type_id: string; name: string; description: string; currency: string; unit_price_amount: number; online_price_amount: number; available_quantity: number; max_per_order: number; sale_open: boolean }[] };
+      quote_box_office_sale: { Args: { target_session_hash: string; target_ticket_type: string; target_quantity: number }; Returns: { unit_price_amount: number; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string }[] };
+      box_office_create_sale: { Args: { target_session_hash: string; target_idempotency_key: string; target_ticket_type: string; target_quantity: number; buyer_first_name: string; buyer_last_name: string; buyer_document: string; buyer_email: string; buyer_phone: string }; Returns: { order_id: string; order_public_id: string; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; reused: boolean }[] };
+      box_office_confirm_sale: { Args: { target_session_hash: string; target_order_public_id: string; target_payment_method: BoxOfficePaymentMethod; target_cash_received_amount?: number | null; target_external_reference?: string | null }; Returns: { order_id: string; order_public_id: string; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; payment_method: BoxOfficePaymentMethod; cash_received_amount: number | null; change_amount: number; already_confirmed: boolean }[] };
+      void_box_office_sale: { Args: { target_order_public_id: string; target_reason: string }; Returns: undefined };
+      upsert_box_office_settings: { Args: { target_event: string; target_enabled: boolean; target_cash: boolean; target_qr: boolean; target_debit: boolean; target_credit: boolean; target_transfer: boolean; target_other: boolean; target_allow_after_start: boolean; target_closes_at: string | null }; Returns: undefined };
+      set_box_office_ticket_price: { Args: { target_ticket_type: string; target_price_amount: number | null; target_enabled: boolean }; Returns: undefined };
+      add_box_office_staff: { Args: { target_event: string; target_email: string; target_role: "cashier" | "supervisor" }; Returns: string };
+      remove_box_office_staff: { Args: { target_event: string; target_user: string }; Returns: undefined };
+      set_pos_device_cashier: { Args: { target_authorization: string; target_user: string | null }; Returns: undefined };
+      set_fee_policy: { Args: { target_scope: "global" | "organization" | "event"; target_organization: string | null; target_event: string | null; target_fee_type: "percentage" | "fixed"; target_fee_value: number }; Returns: string };
+      get_box_office_summary: { Args: { target_event: string }; Returns: { cashier_user_id: string | null; cashier_email: string | null; sale_count: number; ticket_count: number; gmv_amount: number; service_fee_amount: number; cash_amount: number; digital_amount: number; voided_count: number; voided_amount: number }[] };
+      get_box_office_registers: { Args: { target_event: string }; Returns: { pos_session_id: string; location_name: string; cashier_email: string | null; operator_label: string | null; status: "open" | "closed"; opened_at: string; closed_at: string | null; opening_cash_amount: number; expected_cash_amount: number; counted_cash_amount: number | null; difference_amount: number | null; box_office_sales: number }[] };
+      get_box_office_sales: { Args: { target_event: string; target_limit?: number }; Returns: { order_public_id: string; created_at: string; cashier_email: string | null; payment_method: string | null; ticket_count: number; subtotal_amount: number; service_fee_amount: number; total_amount: number; status: OrderStatus; register_open: boolean }[] };
       finalize_pos_sale: { Args: { target_session_hash: string; target_idempotency_key: string; target_items: Json; target_payment_method: "cash" | "card" | "mercado_pago" | "bank_transfer"; target_cash_received_amount: number | null; target_external_reference: string | null }; Returns: { order_id: string; order_public_id: string; sale_code: string; total_amount: number; currency: string; payment_method: "cash" | "card" | "mercado_pago" | "bank_transfer"; cash_received_amount: number | null; change_amount: number; reused: boolean; created_at: string }[] };
       add_pos_cash_movement: { Args: { target_session_hash: string; target_type: "cash_in" | "cash_out"; target_amount: number; target_reason: string }; Returns: string };
       get_pos_cash_summary: { Args: { target_session_hash: string }; Returns: { pos_session_id: string; opening_cash_amount: number; cash_sales_amount: number; cash_in_amount: number; cash_out_amount: number; cash_refunds_amount: number; expected_cash_amount: number; sale_count: number; total_sales_amount: number }[] };

@@ -3,7 +3,11 @@ import "server-only";
 import { createAdminClient } from "@/shared/database/admin";
 import { hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { createPosSessionCredential, getPosSessionHash } from "../infrastructure/pos-session";
+import QRCode from "qrcode";
+import { issueTicketsForPaidOrder } from "@/modules/ticketing/application/issue-tickets";
+import { deliverTicketsForPaidOrder } from "@/modules/ticketing/application/deliver-tickets";
 import type { PosCatalogItem, PosDeviceSessionView, PosPaymentMethod } from "../domain/pos";
+import type { BoxOfficeConfig, BoxOfficePaymentMethod, BoxOfficeQuote, BoxOfficeTicketType } from "../domain/box-office";
 
 export function fingerprintPosRequest(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
@@ -111,4 +115,68 @@ export async function revokeCurrentPosDeviceSession() {
   const sessionHash = await getPosSessionHash();
   if (!sessionHash) return;
   await createAdminClient().rpc("revoke_current_pos_device_session", { target_session_hash: sessionHash });
+}
+
+export async function getCurrentBoxOfficeState(): Promise<{ config: BoxOfficeConfig; catalog: BoxOfficeTicketType[] } | null> {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) return null;
+  const admin = createAdminClient();
+  const { data: config } = await admin.rpc("get_box_office_config", { target_session_hash: sessionHash });
+  if (!config?.[0]?.enabled) return null;
+  const { data: catalog } = await admin.rpc("get_box_office_catalog", { target_session_hash: sessionHash });
+  return { config: config[0] as BoxOfficeConfig, catalog: (catalog ?? []) as BoxOfficeTicketType[] };
+}
+
+export async function quoteCurrentBoxOfficeSale(ticketTypeId: string, quantity: number): Promise<BoxOfficeQuote> {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const { data, error } = await createAdminClient().rpc("quote_box_office_sale", {
+    target_session_hash: sessionHash, target_ticket_type: ticketTypeId, target_quantity: quantity,
+  });
+  if (error || !data?.[0]) throw new Error(error?.message ?? "QUOTE_FAILED");
+  return data[0];
+}
+
+export async function createCurrentBoxOfficeSale(input: {
+  idempotencyKey: string; ticketTypeId: string; quantity: number;
+  buyerFirstName: string; buyerLastName: string; buyerDocument: string; buyerEmail: string; buyerPhone: string;
+}) {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const { data, error } = await createAdminClient().rpc("box_office_create_sale", {
+    target_session_hash: sessionHash, target_idempotency_key: input.idempotencyKey,
+    target_ticket_type: input.ticketTypeId, target_quantity: input.quantity,
+    buyer_first_name: input.buyerFirstName, buyer_last_name: input.buyerLastName,
+    buyer_document: input.buyerDocument, buyer_email: input.buyerEmail, buyer_phone: input.buyerPhone,
+  });
+  if (error || !data?.[0]) throw new Error(error?.message ?? "SALE_FAILED");
+  return data[0];
+}
+
+// Confirms the cash/terminal collection, then issues the tickets. Organizer sale notifications are
+// intentionally skipped: a busy door would flood the producer with one email per sale.
+export async function confirmCurrentBoxOfficeSale(input: {
+  orderPublicId: string; paymentMethod: BoxOfficePaymentMethod; cashReceivedAmount?: number | null; externalReference?: string | null;
+}) {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("box_office_confirm_sale", {
+    target_session_hash: sessionHash, target_order_public_id: input.orderPublicId,
+    target_payment_method: input.paymentMethod, target_cash_received_amount: input.cashReceivedAmount ?? null,
+    target_external_reference: input.externalReference ?? null,
+  });
+  if (error || !data?.[0]) throw new Error(error?.message ?? "CONFIRM_FAILED");
+  const sale = data[0];
+
+  let ticketsIssued = true;
+  try { await issueTicketsForPaidOrder(sale.order_id); } catch { ticketsIssued = false; }
+  const { data: customer } = await admin.from("orders").select("customers(email)").eq("id", sale.order_id).single();
+  const email = (customer as unknown as { customers: { email: string } | null } | null)?.customers?.email ?? "";
+  const emailed = ticketsIssued && email !== "" && !email.endsWith(".invalid");
+  if (emailed) { try { await deliverTicketsForPaidOrder(sale.order_id); } catch { /* The buyer can still open the ticket page. */ } }
+
+  const ticketUrl = new URL(`/order/${sale.order_public_id}`, process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").toString();
+  const ticketQrDataUrl = await QRCode.toDataURL(ticketUrl, { errorCorrectionLevel: "M", margin: 1, width: 320 });
+  return { sale, ticketsIssued, emailed, ticketUrl, ticketQrDataUrl };
 }
