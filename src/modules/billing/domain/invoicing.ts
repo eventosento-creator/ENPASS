@@ -29,6 +29,7 @@ export type IssuedDocument = {
   caeExpiresAt: string;
   pdfUrl: string | null;
   providerReference: string | null;
+  issuerCuit?: string;
 };
 
 export interface InvoiceProvider {

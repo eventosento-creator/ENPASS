@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { InvoiceProvider, IssuerConfig } from "../domain/invoicing";
+import { AfipSdkProvider } from "./afip-sdk-provider";
 import { SandboxInvoiceProvider } from "./sandbox-provider";
 
 export function getIssuerConfig(): IssuerConfig | null {
@@ -17,9 +18,21 @@ export function getIssuerConfig(): IssuerConfig | null {
   };
 }
 
-// The sandbox provider fabricates CAEs, so it must never run against real buyers. With no real
-// provider configured in production, invoices simply stay queued as "pending" until one is.
+// Never let a fake or test-mode provider touch real buyers: in production the real ARCA provider
+// needs the certificate and AFIP_PRODUCTION=true, otherwise invoices stay queued as "pending".
 export function getInvoiceProvider(): InvoiceProvider | null {
-  if (process.env.INVOICING_PROVIDER === "sandbox" && process.env.VERCEL_ENV !== "production") return new SandboxInvoiceProvider();
+  const isProduction = process.env.VERCEL_ENV === "production";
+  const provider = process.env.INVOICING_PROVIDER;
+  if (provider === "sandbox" && !isProduction) return new SandboxInvoiceProvider();
+  if (provider === "afipsdk") {
+    const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN;
+    const issuer = getIssuerConfig();
+    if (!accessToken || !issuer) return null;
+    const cert = process.env.AFIP_CERT?.replace(/\\n/g, "\n");
+    const key = process.env.AFIP_KEY?.replace(/\\n/g, "\n");
+    const production = process.env.AFIP_PRODUCTION === "true" && Boolean(cert) && Boolean(key);
+    if (isProduction && !production) return null;
+    return new AfipSdkProvider({ accessToken, production, cuit: issuer.cuit, cert, key });
+  }
   return null;
 }

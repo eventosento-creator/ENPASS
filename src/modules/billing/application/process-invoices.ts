@@ -56,7 +56,7 @@ export async function processPendingInvoices(options: { orderId?: string; limit?
         issuer,
       });
       await admin.from("invoices").update({
-        status: "issued", issuer_cuit: issuer.cuit, point_of_sale: issued.pointOfSale, cbte_type: issued.cbteType,
+        status: "issued", issuer_cuit: issued.issuerCuit ?? issuer.cuit, point_of_sale: issued.pointOfSale, cbte_type: issued.cbteType,
         invoice_number: issued.number, cae: issued.cae, cae_expires_at: issued.caeExpiresAt, issued_at: new Date().toISOString(),
         pdf_url: issued.pdfUrl, provider: provider.name, provider_reference: issued.providerReference, last_error: null,
       }).eq("id", candidate.id);
