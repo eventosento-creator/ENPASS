@@ -25,7 +25,8 @@ export function mapMercadoPagoStatus(status: string, refundedAmount: number, gro
     case "authorized":
       return "processing";
     case "approved":
-      return "approved";
+      // MP keeps a partially refunded payment as "approved" and only raises transaction_amount_refunded.
+      return refundedAmount > 0 && refundedAmount < grossAmount ? "partially_refunded" : "approved";
     case "rejected":
       return "rejected";
     case "cancelled":

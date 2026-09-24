@@ -127,6 +127,7 @@ export class MercadoPagoProvider implements PaymentProvider {
         ? null
         : majorToMinor(response.transaction_details.net_received_amount),
       approvedAt: response.date_approved ?? null,
+      refundedAmount,
     };
   }
 

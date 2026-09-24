@@ -17,4 +17,9 @@ describe("Mercado Pago status mapper", () => {
     expect(mapMercadoPagoStatus("refunded", 10_000, 10_000)).toBe("refunded");
     expect(mapMercadoPagoStatus("refunded", 2_000, 10_000)).toBe("partially_refunded");
   });
+
+  it("un pago aprobado con reembolso parcial es partially_refunded", () => {
+    expect(mapMercadoPagoStatus("approved", 2_000, 10_000)).toBe("partially_refunded");
+    expect(mapMercadoPagoStatus("approved", 0, 10_000)).toBe("approved");
+  });
 });

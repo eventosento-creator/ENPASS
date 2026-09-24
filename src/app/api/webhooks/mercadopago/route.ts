@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
       target_processor_fee_amount: providerPayment.processorFeeAmount,
       target_seller_net_amount: providerPayment.sellerNetAmount,
       target_approved_at: providerPayment.approvedAt,
+      target_refunded_amount: providerPayment.refundedAmount,
     });
     if (processError) throw new Error("PAYMENT_UPDATE_FAILED");
 

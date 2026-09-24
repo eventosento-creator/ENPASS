@@ -60,6 +60,7 @@ export type ProviderPayment = {
   processorFeeAmount: number;
   sellerNetAmount: number | null;
   approvedAt: string | null;
+  refundedAmount: number;
 };
 
 export interface PaymentProvider {
