@@ -26,6 +26,7 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
   const admin = createAdminClient();
   const { data: storedOrder } = await admin.from("orders").select("id, total_amount").eq("public_id", order.order_public_id).single();
   if (!storedOrder) return { error: "No pudimos recuperar la reserva creada." };
+  if (storedOrder.total_amount > 0 && !parsed.data.document) return { error: "Ingresá tu DNI: lo necesitamos para emitir la factura del cargo de servicio." };
   if (storedOrder.total_amount === 0) {
     const { error: confirmationError } = await admin.rpc("complete_free_order", { target_order_public_id: order.order_public_id });
     if (confirmationError) return { error: "La reserva gratuita venció o la disponibilidad cambió. Volvé a intentarlo." };
