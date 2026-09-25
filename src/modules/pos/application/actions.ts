@@ -19,7 +19,7 @@ const productSchema = z.object({
 });
 const eventProductsSchema = z.object({ eventId: z.uuid(), productIds: z.array(z.uuid()).min(1) });
 const eventProductUpdateSchema = z.object({ eventId: z.uuid(), eventProductId: z.uuid(), pricePesos: z.coerce.number().int().nonnegative(), enabled: z.enum(["true", "false"]) });
-const locationSchema = z.object({ eventId: z.uuid(), name: z.string().trim().min(2).max(100), description: z.string().trim().max(400).default(""), eventProductIds: z.array(z.uuid()).min(1) });
+const locationSchema = z.object({ eventId: z.uuid(), name: z.string().trim().min(2).max(100), description: z.string().trim().max(400).default(""), eventProductIds: z.array(z.uuid()).default([]) });
 const deviceSchema = z.object({ eventId: z.uuid(), locationId: z.uuid(), name: z.string().trim().min(2).max(80), cashierUserId: z.preprocess((value) => value || undefined, z.uuid().optional()) });
 
 export async function createProductCategory(_: PosActionState, formData: FormData): Promise<PosActionState> {
@@ -91,7 +91,7 @@ export async function updateEventProduct(_: PosActionState, formData: FormData):
 
 export async function createSalesLocation(_: PosActionState, formData: FormData): Promise<PosActionState> {
   const parsed = locationSchema.safeParse({ ...Object.fromEntries(formData), eventProductIds: formData.getAll("eventProductIds") });
-  if (!parsed.success) return { error: "Indicá un nombre y al menos un producto." };
+  if (!parsed.success) return { error: "Indicá un nombre para el punto de venta." };
   const supabase = await createClient();
   const [{ data: event }, { data: selectedProducts }] = await Promise.all([
     supabase.from("events").select("organization_id, pos_enabled").eq("id", parsed.data.eventId).single(),
@@ -102,9 +102,10 @@ export async function createSalesLocation(_: PosActionState, formData: FormData)
   const locationId = crypto.randomUUID();
   const { error } = await supabase.from("sales_locations").insert({ id: locationId, organization_id: event.organization_id, event_id: parsed.data.eventId, name: parsed.data.name, description: parsed.data.description });
   if (error) return { error: error.code === "23505" ? "Ya existe un punto con ese nombre." : "No pudimos crear el punto de venta." };
-  const { error: productsError } = await supabase.from("sales_location_products").insert(parsed.data.eventProductIds.map((eventProductId, index) => ({ sales_location_id: locationId, event_product_id: eventProductId, organization_id: event.organization_id, event_id: parsed.data.eventId, sort_order: index, enabled: true })));
+  const { error: productsError } = parsed.data.eventProductIds.length === 0 ? { error: null } : await supabase.from("sales_location_products").insert(parsed.data.eventProductIds.map((eventProductId, index) => ({ sales_location_id: locationId, event_product_id: eventProductId, organization_id: event.organization_id, event_id: parsed.data.eventId, sort_order: index, enabled: true })));
   if (productsError) return { error: "El punto se creó, pero no pudimos asignar sus productos. Volvé a intentarlo." };
   revalidatePath(`/app/events/${parsed.data.eventId}/pos`);
+  revalidatePath(`/app/events/${parsed.data.eventId}/box-office`);
   return { success: "Punto de venta creado." };
 }
 
@@ -128,7 +129,7 @@ export async function createPosDevice(_: PosActionState, formData: FormData): Pr
         const { error: cashierError } = await supabase.rpc("set_pos_device_cashier", { target_authorization: authorizationId, target_user: parsed.data.cashierUserId });
         if (cashierError) return { error: "El dispositivo se creó pero no pudimos asignar al cajero. Asignalo de nuevo." };
       }
-      revalidatePath(`/app/events/${parsed.data.eventId}/pos`); return { success: "Dispositivo creado. Copiá el PIN ahora: no volverá a mostrarse.", pin }; }
+      revalidatePath(`/app/events/${parsed.data.eventId}/pos`); revalidatePath(`/app/events/${parsed.data.eventId}/box-office`); return { success: "Dispositivo creado. Copiá el PIN ahora: no volverá a mostrarse.", pin }; }
     if (!error.message.includes("PIN_COLLISION")) return { error: "No pudimos crear el dispositivo." };
   }
   return { error: "No pudimos generar un PIN único. Intentá nuevamente." };

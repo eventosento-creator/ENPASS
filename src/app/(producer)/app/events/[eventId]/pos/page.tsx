@@ -6,7 +6,7 @@ import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 import { EventPosManagement } from "@/modules/pos/ui/event-pos-management";
-import { createAdminClient } from "@/shared/database/admin";
+import { getCashierOptions } from "@/modules/pos/application/cashier-options";
 
 export default async function EventPosPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params; const supabase = await createClient();
@@ -26,18 +26,7 @@ export default async function EventPosPage({ params }: { params: Promise<{ event
     supabase.rpc("get_event_pos_location_metrics", { target_event: eventId }),
     supabase.rpc("get_event_pos_product_metrics", { target_event: eventId }),
   ]);
-  const admin = createAdminClient();
-  const [{ data: staffRows }, { data: memberRows }] = await Promise.all([
-    supabase.from("box_office_staff").select("user_id, role").eq("event_id", eventId),
-    supabase.from("organization_members").select("user_id, role").eq("organization_id", event.organization_id),
-  ]);
-  const candidates = new Map<string, string>();
-  for (const row of memberRows ?? []) candidates.set(row.user_id, row.role === "owner" ? "Dueño" : "Admin");
-  for (const row of staffRows ?? []) if (!candidates.has(row.user_id)) candidates.set(row.user_id, row.role === "supervisor" ? "Supervisor" : "Cajero");
-  const cashierOptions = await Promise.all([...candidates].map(async ([id, role]) => {
-    const { data } = await admin.auth.admin.getUserById(id);
-    return { id, label: `${data?.user?.email ?? "Usuario"} (${role})` };
-  }));
+  const cashierOptions = await getCashierOptions(supabase, eventId, event.organization_id);
   const byLocation: Record<string, string[]> = {}; for (const item of locationProducts ?? []) (byLocation[item.sales_location_id] ??= []).push(item.event_product_id);
   const overview = overviewData?.[0] ?? { total_revenue: 0, sale_count: 0, cash_revenue: 0, card_revenue: 0, mercado_pago_revenue: 0, bank_transfer_revenue: 0, open_sessions: 0, currency: event.currency };
   return <><div><p className="eyebrow">{event.name}</p><h1 className="page-title mt-2">{getPosModuleLabel(event.profile)}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Configurá productos, puntos de venta, dispositivos y cierres sin mezclar la operación con el checkout online.</p></div><EventSectionNav eventId={eventId} active="pos" capabilities={capabilities} profile={event.profile}/><EventPosManagement cashierOptions={cashierOptions} eventId={eventId} products={products ?? []} eventProducts={eventProducts ?? []} locations={locations ?? []} locationProductIds={byLocation} devices={devices ?? []} sessions={sessions ?? []} overview={overview} locationMetrics={locationMetrics ?? []} productMetrics={productMetrics ?? []}/></>;

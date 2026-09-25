@@ -8,6 +8,8 @@ import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { addBoxOfficeStaff, enableBoxOfficeModule, removeBoxOfficeStaff, saveBoxOfficePrice, saveBoxOfficeSettings, voidBoxOfficeSale } from "@/modules/pos/application/box-office-actions";
 import { boxOfficeMethodLabels, type BoxOfficePaymentMethod } from "@/modules/pos/domain/box-office";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { BoxOfficeDevices } from "@/modules/pos/ui/box-office-devices";
+import { getCashierOptions } from "@/modules/pos/application/cashier-options";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -25,7 +27,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
   if ((await getEventViewerRole(event.organization_id)) !== "manager") notFound();
   const capabilities = getEventCapabilities(event);
 
-  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }] = await Promise.all([
+  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }, { data: locations }, { data: deviceRows }, cashierOptions] = await Promise.all([
     supabase.from("event_box_office_settings").select("*").eq("event_id", eventId).maybeSingle(),
     supabase.from("ticket_types").select("id, name, price_amount, currency, active").eq("event_id", eventId).order("sort_order"),
     supabase.from("ticket_type_channel_prices").select("*").eq("event_id", eventId).eq("channel", "box_office"),
@@ -33,7 +35,12 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     supabase.rpc("get_box_office_summary", { target_event: eventId }),
     supabase.rpc("get_box_office_registers", { target_event: eventId }),
     supabase.rpc("get_box_office_sales", { target_event: eventId, target_limit: 30 }),
+    supabase.from("sales_locations").select("id, name").eq("event_id", eventId).order("sort_order"),
+    supabase.from("pos_device_authorizations").select("id, sales_location_id, name, status, cashier_user_id").eq("event_id", eventId).order("created_at", { ascending: false }),
+    getCashierOptions(supabase, eventId, event.organization_id),
   ]);
+  const cashierLabelById = new Map(cashierOptions.map((option) => [option.id, option.label]));
+  const devices = (deviceRows ?? []).map((device) => ({ id: device.id, sales_location_id: device.sales_location_id, name: device.name, status: device.status, cashier_label: device.cashier_user_id ? cashierLabelById.get(device.cashier_user_id) ?? null : null }));
 
   const admin = createAdminClient();
   const staffRows = await Promise.all((staff ?? []).map(async (member) => {
@@ -69,6 +76,12 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
         <label className="label max-w-xs">Cierre de taquilla <span className="font-normal text-neutral-600">(opcional, hora de Argentina)</span><input className="field" type="datetime-local" name="closesAt" defaultValue={toLocalInput(cfg.closes_at)}/></label>
         <SubmitButton className="btn btn-primary w-fit" pendingLabel="Guardando…">Guardar configuración</SubmitButton>
       </form>
+    </section>
+
+    <section className="card mt-7 p-5 sm:p-7">
+      <p className="eyebrow">Cajas</p><h2 className="section-title mt-2">Cajas y códigos de activación</h2>
+      <p className="mt-2 text-sm text-neutral-500">Creá una caja, generá su código y cargalo en el celular o tablet del cajero (en enpass.com.ar/pos).</p>
+      <BoxOfficeDevices eventId={eventId} locations={locations ?? []} devices={devices} cashierOptions={cashierOptions} published={event.status === "published" || event.status === "sold_out"}/>
     </section>
 
     <section className="card mt-7 p-5 sm:p-7">
