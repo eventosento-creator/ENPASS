@@ -5,7 +5,7 @@ import { formatMoney } from "@/shared/lib/format";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { getEventViewerRole } from "@/modules/events/application/viewer";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
-import { addBoxOfficeStaff, removeBoxOfficeStaff, saveBoxOfficePrice, saveBoxOfficeSettings, voidBoxOfficeSale } from "@/modules/pos/application/box-office-actions";
+import { addBoxOfficeStaff, enableBoxOfficeModule, removeBoxOfficeStaff, saveBoxOfficePrice, saveBoxOfficeSettings, voidBoxOfficeSale } from "@/modules/pos/application/box-office-actions";
 import { boxOfficeMethodLabels, type BoxOfficePaymentMethod } from "@/modules/pos/domain/box-office";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
@@ -53,7 +53,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     <EventSectionNav eventId={eventId} active="boxoffice" capabilities={capabilities} profile={event.profile}/>
     {query.notice && <p className="card mt-6 p-4 text-sm font-bold">{query.notice}</p>}
     {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm font-bold">{query.error}</p>}
-    {!event.pos_enabled && <p className="status-danger mt-6 rounded-xl p-4 text-sm font-bold">Este evento no tiene el módulo de caja (POS) activo. Activalo en los ajustes del evento para poder operar la taquilla.</p>}
+    {!event.pos_enabled && <section className="card mt-7 p-5 sm:p-7"><h2 className="section-title">Activá la caja para vender en puerta</h2><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">La taquilla usa el módulo de caja (POS) del evento, que hoy está apagado. Activarlo no cambia nada de lo que ya tenés cargado.</p><form action={enableBoxOfficeModule} className="mt-5"><input type="hidden" name="eventId" value={eventId}/><SubmitButton className="btn btn-primary" pendingLabel="Activando…">Activar caja</SubmitButton></form></section>}
 
     <section className="card mt-7 p-5 sm:p-7">
       <p className="eyebrow">Configuración</p><h2 className="section-title mt-2">Taquilla del evento</h2>

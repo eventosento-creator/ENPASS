@@ -12,6 +12,23 @@ function back(id: string, kind: "notice" | "error", message: string): never {
   redirect(`/app/events/${id}/box-office?${kind}=${encodeURIComponent(message)}` as never);
 }
 
+export async function enableBoxOfficeModule(formData: FormData) {
+  const parsed = z.object({ eventId }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const supabase = await createClient();
+  const { data: event } = await supabase.from("events").select("profile, tickets_enabled, promoters_enabled, tables_enabled, access_enabled, inventory_enabled, seatmap_enabled").eq("id", parsed.data.eventId).single();
+  if (!event) back(parsed.data.eventId, "error", "No encontramos el evento.");
+  const { error } = await supabase.rpc("update_event_configuration", {
+    target_event: parsed.data.eventId, target_profile: event.profile, target_tickets_enabled: true,
+    target_promoters_enabled: event.promoters_enabled, target_tables_enabled: event.tables_enabled,
+    target_access_enabled: event.access_enabled, target_pos_enabled: true,
+    target_inventory_enabled: event.inventory_enabled, target_seatmap_enabled: event.seatmap_enabled,
+  });
+  if (error) back(parsed.data.eventId, "error", "No pudimos activar la caja. Probá desde Editar evento > Funciones del evento.");
+  revalidatePath(`/app/events/${parsed.data.eventId}`);
+  back(parsed.data.eventId, "notice", "Caja activada. Ahora configurá la taquilla.");
+}
+
 const settingsSchema = z.object({
   eventId,
   closesAt: z.string().trim().default(""),
