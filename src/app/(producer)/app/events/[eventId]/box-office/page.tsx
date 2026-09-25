@@ -6,7 +6,7 @@ import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { getEventViewerRole } from "@/modules/events/application/viewer";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { addBoxOfficeStaff, enableBoxOfficeModule, removeBoxOfficeStaff, saveBoxOfficePrice, saveBoxOfficeSettings, voidBoxOfficeSale } from "@/modules/pos/application/box-office-actions";
-import { boxOfficeMethodLabels, type BoxOfficePaymentMethod } from "@/modules/pos/domain/box-office";
+import { boxOfficeDisplayLabels, boxOfficeMethodLabels } from "@/modules/pos/domain/box-office";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { BoxOfficeDevices } from "@/modules/pos/ui/box-office-devices";
 import { getCashierOptions } from "@/modules/pos/application/cashier-options";
@@ -21,7 +21,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
   if ((await getEventViewerRole(event.organization_id)) !== "manager") notFound();
   const capabilities = getEventCapabilities(event);
 
-  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }, { data: locations }, { data: deviceRows }, cashierOptions] = await Promise.all([
+  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }, { data: locations }, { data: deviceRows }, cashierOptions, { data: paymentAccountData }] = await Promise.all([
     supabase.from("event_box_office_settings").select("*").eq("event_id", eventId).maybeSingle(),
     supabase.from("ticket_types").select("id, name, price_amount, currency, active").eq("event_id", eventId).order("sort_order"),
     supabase.from("ticket_type_channel_prices").select("*").eq("event_id", eventId).eq("channel", "box_office"),
@@ -32,7 +32,9 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     supabase.from("sales_locations").select("id, name").eq("event_id", eventId).order("sort_order"),
     supabase.from("pos_device_authorizations").select("id, sales_location_id, name, status, cashier_user_id").eq("event_id", eventId).order("created_at", { ascending: false }),
     getCashierOptions(supabase, eventId, event.organization_id),
+    supabase.rpc("get_payment_account_status", { target_organization: event.organization_id }),
   ]);
+  const mpConnected = paymentAccountData?.[0]?.status === "connected";
   const cashierLabelById = new Map(cashierOptions.map((option) => [option.id, option.label]));
   const devices = (deviceRows ?? []).map((device) => ({ id: device.id, sales_location_id: device.sales_location_id, name: device.name, status: device.status, cashier_label: device.cashier_user_id ? cashierLabelById.get(device.cashier_user_id) ?? null : null }));
 
@@ -42,12 +44,12 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     return { ...member, email: data?.user?.email ?? "Usuario" };
   }));
   const priceByType = new Map((channelPrices ?? []).map((row) => [row.ticket_type_id, row]));
-  const cfg = settings ?? { enabled: false, cash_enabled: true, qr_enabled: false, debit_enabled: false, credit_enabled: false, transfer_enabled: false, other_enabled: false, allow_after_start: true, closes_at: null };
+  const cfg = settings ?? { enabled: false, cash_enabled: true, qr_enabled: false, debit_enabled: false, credit_enabled: false, transfer_enabled: false, other_enabled: false, allow_after_start: true, closes_at: null, mp_qr_enabled: false, qr_expiry_minutes: 10 };
   const currency = event.currency;
   const totals = (summary ?? []).reduce((sum, row) => ({
     tickets: sum.tickets + row.ticket_count, gmv: sum.gmv + row.gmv_amount, fee: sum.fee + row.service_fee_amount,
-    cash: sum.cash + row.cash_amount, digital: sum.digital + row.digital_amount,
-  }), { tickets: 0, gmv: 0, fee: 0, cash: 0, digital: 0 });
+    cash: sum.cash + row.cash_amount, mp: sum.mp + row.mp_amount, card: sum.card + row.card_amount, transfer: sum.transfer + row.transfer_amount,
+  }), { tickets: 0, gmv: 0, fee: 0, cash: 0, mp: 0, card: 0, transfer: 0 });
 
   return <>
     <div><p className="eyebrow">{event.name}</p><h1 className="page-title mt-2">Taquilla</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Venta presencial en puerta con caja, cajeros y arqueo. Usa el mismo stock y las mismas entradas con QR que la venta online.</p></div>
@@ -66,6 +68,9 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
             <label key={name} className="flex items-center gap-2"><input type="checkbox" name={name} defaultChecked={cfg[key]} className="size-4"/>{boxOfficeMethodLabels[method]}</label>
           ))}
         </div></div>
+        <div className="rounded-xl border border-[var(--border)] p-4"><label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" name="mpQr" defaultChecked={cfg.mp_qr_enabled} className="size-4"/>Cobrar con QR de Mercado Pago</label>
+          <p className="mt-2 text-xs leading-5 text-neutral-500">El cajero muestra un QR de pago generado por ENPASS; el comprador paga desde su celular y la entrada se emite sola al confirmarse el pago. {mpConnected ? "Tu Mercado Pago está conectado." : <>Primero <a className="underline" href="/app/settings">conectá tu Mercado Pago</a>.</>}</p>
+          <label className="label mt-3 max-w-[220px]">Vencimiento del QR (minutos)<input className="field" type="number" name="qrExpiry" min="3" max="30" defaultValue={cfg.qr_expiry_minutes}/></label></div>
         <p className="text-xs leading-5 text-neutral-500">La taquilla vende desde que abrís la caja hasta que el cajero la cierra o vos la deshabilitás acá. No tiene horario de cierre.</p>
         <SubmitButton className="btn btn-primary w-fit" pendingLabel="Guardando…">Guardar configuración</SubmitButton>
       </form>
@@ -101,20 +106,21 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
 
     <section className="card mt-7 p-5 sm:p-7">
       <p className="eyebrow">Taquilla hoy</p><h2 className="section-title mt-2">Resumen</h2>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{[["Entradas", String(totals.tickets)], ["GMV productor", formatMoney(totals.gmv, currency)], ["Cargo ENPASS", formatMoney(totals.fee, currency)], ["Efectivo", formatMoney(totals.cash, currency)], ["Digital", formatMoney(totals.digital, currency)]].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--border)] p-3"><p className="text-[10px] font-bold uppercase text-neutral-600">{label}</p><p className="mt-2 font-black">{value}</p></div>)}</div>
-      {(summary ?? []).length > 0 && <div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-600"><tr><th className="py-2">Cajero</th><th>Ventas</th><th>Entradas</th><th>Efectivo</th><th>Digital</th><th>Anuladas</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{(summary ?? []).map((row) => <tr key={row.cashier_user_id ?? "none"}><td className="py-2 font-bold">{row.cashier_email ?? "Sin cajero"}</td><td>{row.sale_count}</td><td>{row.ticket_count}</td><td>{formatMoney(row.cash_amount, currency)}</td><td>{formatMoney(row.digital_amount, currency)}</td><td>{row.voided_count}</td></tr>)}</tbody></table></div>}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Entradas", String(totals.tickets)], ["GMV productor", formatMoney(totals.gmv, currency)], ["Cargo ENPASS", formatMoney(totals.fee, currency)], ["Efectivo", formatMoney(totals.cash, currency)], ["QR Mercado Pago", formatMoney(totals.mp, currency)], ["Tarjeta", formatMoney(totals.card, currency)], ["Transferencia", formatMoney(totals.transfer, currency)]].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--border)] p-3"><p className="text-[10px] font-bold uppercase text-neutral-600">{label}</p><p className="mt-2 font-black">{value}</p></div>)}</div>
+      {(summary ?? []).length > 0 && <div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-600"><tr><th className="py-2">Cajero</th><th>Ventas</th><th>Entradas</th><th>Efectivo</th><th>QR MP</th><th>Tarjeta</th><th>Transf.</th><th>Anuladas</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{(summary ?? []).map((row) => <tr key={row.cashier_user_id ?? "none"}><td className="py-2 font-bold">{row.cashier_email ?? "Sin cajero"}</td><td>{row.sale_count}</td><td>{row.ticket_count}</td><td>{formatMoney(row.cash_amount, currency)}</td><td>{formatMoney(row.mp_amount, currency)}</td><td>{formatMoney(row.card_amount, currency)}</td><td>{formatMoney(row.transfer_amount, currency)}</td><td>{row.voided_count}</td></tr>)}</tbody></table></div>}
     </section>
 
     <section className="card mt-7 p-5 sm:p-7">
       <p className="eyebrow">Arqueo</p><h2 className="section-title mt-2">Cajas</h2>
-      {(registers ?? []).length === 0 ? <p className="mt-3 text-sm text-neutral-500">Todavía no se abrió ninguna caja.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-600"><tr><th className="py-2">Caja</th><th>Cajero</th><th>Apertura</th><th>Fondo</th><th>Esperado</th><th>Declarado</th><th>Diferencia</th><th>Ventas</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{(registers ?? []).map((row) => <tr key={row.pos_session_id}><td className="py-2 font-bold">{row.location_name}<span className="ml-2 text-xs font-normal text-neutral-500">{row.status === "open" ? "abierta" : "cerrada"}</span></td><td>{row.cashier_email ?? row.operator_label ?? "—"}</td><td>{dateTime.format(new Date(row.opened_at))}</td><td>{formatMoney(row.opening_cash_amount, currency)}</td><td>{formatMoney(row.expected_cash_amount, currency)}</td><td>{row.counted_cash_amount === null ? "—" : formatMoney(row.counted_cash_amount, currency)}</td><td className={row.difference_amount ? "font-black text-red-400" : ""}>{row.difference_amount === null ? "—" : formatMoney(row.difference_amount, currency)}</td><td>{row.box_office_sales}</td></tr>)}</tbody></table></div>}
+      {(registers ?? []).length === 0 ? <p className="mt-3 text-sm text-neutral-500">Todavía no se abrió ninguna caja.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-600"><tr><th className="py-2">Caja</th><th>Cajero</th><th>Apertura</th><th>Fondo</th><th>Efectivo esperado</th><th>Declarado</th><th>Diferencia</th><th>Ventas</th><th>Ventas efectivo</th><th>QR MP</th><th>Tarjeta</th><th>Transf.</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{(registers ?? []).map((row) => <tr key={row.pos_session_id}><td className="py-2 font-bold">{row.location_name}<span className="ml-2 text-xs font-normal text-neutral-500">{row.status === "open" ? "abierta" : "cerrada"}</span></td><td>{row.cashier_email ?? row.operator_label ?? "—"}</td><td>{dateTime.format(new Date(row.opened_at))}</td><td>{formatMoney(row.opening_cash_amount, currency)}</td><td>{formatMoney(row.expected_cash_amount, currency)}</td><td>{row.counted_cash_amount === null ? "—" : formatMoney(row.counted_cash_amount, currency)}</td><td className={row.difference_amount ? "font-black text-red-400" : ""}>{row.difference_amount === null ? "—" : formatMoney(row.difference_amount, currency)}</td><td>{row.box_office_sales}</td><td>{formatMoney(row.cash_sales_amount, currency)}</td><td>{formatMoney(row.mp_amount, currency)}</td><td>{formatMoney(row.card_amount, currency)}</td><td>{formatMoney(row.transfer_amount, currency)}</td></tr>)}</tbody></table></div>}
+      <p className="mt-3 text-xs text-neutral-500">El efectivo esperado solo cuenta dinero físico: los pagos con QR, tarjeta y transferencia se muestran aparte y no entran al conteo de la caja.</p>
     </section>
 
     <section className="card mt-7 p-5 sm:p-7">
       <p className="eyebrow">Auditoría</p><h2 className="section-title mt-2">Ventas recientes</h2>
       {(sales ?? []).length === 0 ? <p className="mt-3 text-sm text-neutral-500">Todavía no hay ventas de taquilla.</p> : <div className="mt-4 divide-y divide-[var(--border)]">{(sales ?? []).map((sale) => <div key={sale.order_public_id} className="grid gap-3 py-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
-        <div><p className="font-bold">{formatMoney(sale.total_amount, currency)} · {sale.ticket_count} {sale.ticket_count === 1 ? "entrada" : "entradas"} · {boxOfficeMethodLabels[(sale.payment_method ?? "other") as BoxOfficePaymentMethod] ?? sale.payment_method}{sale.status === "refunded" && <span className="ml-2 text-red-400">ANULADA</span>}</p><p className="text-xs text-neutral-500">{dateTime.format(new Date(sale.created_at))} · {sale.cashier_email ?? "Sin cajero"} · cargo {formatMoney(sale.service_fee_amount, currency)} · #{sale.order_public_id.slice(0, 6).toUpperCase()}</p></div>
-        {sale.status === "paid" && sale.register_open && <form action={voidBoxOfficeSale} className="flex gap-2"><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="orderPublicId" value={sale.order_public_id}/><input className="field h-10" name="reason" placeholder="Motivo" required minLength={3}/><SubmitButton className="btn btn-ghost h-10 text-red-300" pendingLabel="…">Anular</SubmitButton></form>}
+        <div><p className="font-bold">{formatMoney(sale.total_amount, currency)} · {sale.ticket_count} {sale.ticket_count === 1 ? "entrada" : "entradas"} · {boxOfficeDisplayLabels[sale.payment_method ?? "other"] ?? sale.payment_method}{sale.status === "refunded" && <span className="ml-2 text-red-400">ANULADA</span>}</p><p className="text-xs text-neutral-500">{dateTime.format(new Date(sale.created_at))} · {sale.cashier_email ?? "Sin cajero"} · cargo {formatMoney(sale.service_fee_amount, currency)} · #{sale.order_public_id.slice(0, 6).toUpperCase()}</p></div>
+        {sale.status === "paid" && (sale.register_open || sale.payment_provider === "mercado_pago") && <form action={voidBoxOfficeSale} className="flex gap-2"><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="orderPublicId" value={sale.order_public_id}/><input className="field h-10" name="reason" placeholder="Motivo" required minLength={3}/><SubmitButton className="btn btn-ghost h-10 text-red-300" pendingLabel="…">Anular</SubmitButton></form>}
       </div>)}</div>}
     </section>
   </>;

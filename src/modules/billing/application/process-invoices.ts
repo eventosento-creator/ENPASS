@@ -81,7 +81,7 @@ export async function processPendingInvoices(options: { orderId?: string; limit?
 async function emailInvoice(invoiceId: string) {
   const admin = createAdminClient();
   const { data: invoice } = await admin.from("invoices").select("*").eq("id", invoiceId).single();
-  if (!invoice || invoice.status !== "issued" || invoice.emailed_at || !invoice.customer_email) return;
+  if (!invoice || invoice.status !== "issued" || invoice.emailed_at || !invoice.customer_email || invoice.customer_email.endsWith(".invalid")) return;
   try {
     const documentNumber = `${String(invoice.point_of_sale).padStart(5, "0")}-${String(invoice.invoice_number).padStart(8, "0")}`;
     await new SmtpEmailProvider().sendInvoice({

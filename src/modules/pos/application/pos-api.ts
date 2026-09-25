@@ -6,6 +6,10 @@ import { createPosSessionCredential, getPosSessionHash } from "../infrastructure
 import QRCode from "qrcode";
 import { issueTicketsForPaidOrder } from "@/modules/ticketing/application/issue-tickets";
 import { deliverTicketsForPaidOrder } from "@/modules/ticketing/application/deliver-tickets";
+import { createPaymentCheckout } from "@/modules/payments/application/create-payment-checkout";
+import { applyProviderPayment } from "@/modules/payments/application/apply-provider-payment";
+import { getPaymentAccountAccessToken } from "@/modules/payments/application/account-credentials";
+import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 import type { PosCatalogItem, PosDeviceSessionView, PosPaymentMethod } from "../domain/pos";
 import type { BoxOfficeConfig, BoxOfficePaymentMethod, BoxOfficeQuote, BoxOfficeTicketType } from "../domain/box-office";
 
@@ -226,4 +230,60 @@ export async function getBoxOfficeOnlineLink(ticketTypeId: string, quantity: num
   url.searchParams.set("selection", selection);
   const qrDataUrl = await QRCode.toDataURL(url.toString(), { errorCorrectionLevel: "M", margin: 1, width: 360 });
   return { url: url.toString(), qrDataUrl, ticketName: item.name, unitPrice: item.unitPrice, currency: item.currency, quantity: finalQuantity };
+}
+
+function ticketUrlFor(orderPublicId: string) {
+  return new URL(`/order/${orderPublicId}`, process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").toString();
+}
+
+// The payment QR is only a picture of the Checkout Pro URL of THIS order. It is never a ticket.
+export async function startBoxOfficeQr(orderPublicId: string) {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const admin = createAdminClient();
+  const { data: prepared, error } = await admin.rpc("box_office_prepare_qr", { target_session_hash: sessionHash, target_order_public_id: orderPublicId });
+  if (error || !prepared?.[0]) throw new Error(error?.message ?? "QR_PREPARE_FAILED");
+  const { checkoutUrl } = await createPaymentCheckout(orderPublicId);
+  const qrDataUrl = await QRCode.toDataURL(checkoutUrl, { errorCorrectionLevel: "M", margin: 1, width: 360 });
+  return { qrDataUrl, totalAmount: prepared[0].total_amount, currency: prepared[0].currency, expiresAt: prepared[0].expires_at };
+}
+
+export async function getBoxOfficeOrderStatus(orderPublicId: string) {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("box_office_order_status", { target_session_hash: sessionHash, target_order_public_id: orderPublicId });
+  if (error || !data?.[0]) throw new Error(error?.message ?? "STATUS_FAILED");
+  const status = data[0];
+  if (status.order_status !== "paid") return { status, ticketUrl: null, ticketQrDataUrl: null, ticketsIssued: false };
+  let ticketsIssued = true;
+  try { await issueTicketsForPaidOrder(status.order_id); } catch { ticketsIssued = false; }
+  const ticketUrl = ticketUrlFor(orderPublicId);
+  return { status, ticketUrl, ticketQrDataUrl: await QRCode.toDataURL(ticketUrl, { errorCorrectionLevel: "M", margin: 1, width: 320 }), ticketsIssued };
+}
+
+// "Ya pagó / Verificar": asks Mercado Pago for the real state and applies it through the same path as the webhook.
+// It never marks anything as paid by itself.
+export async function verifyBoxOfficePayment(orderPublicId: string) {
+  const first = await getBoxOfficeOrderStatus(orderPublicId);
+  if (first.status.order_status !== "pending") return first;
+  const admin = createAdminClient();
+  const { data: payments } = await admin.from("payments").select("public_id, payment_account_id")
+    .eq("order_id", first.status.order_id).eq("provider", "mercado_pago").order("attempt_number", { ascending: false });
+  const provider = new MercadoPagoProvider();
+  for (const payment of payments ?? []) {
+    if (!payment.payment_account_id) continue;
+    const accessToken = await getPaymentAccountAccessToken(payment.payment_account_id);
+    const found = await provider.findPaymentsByExternalReference(payment.public_id, { accessToken });
+    const best = found.find((item) => item.status === "approved") ?? found[0];
+    if (best) await applyProviderPayment({ accountId: payment.payment_account_id, providerPayment: best });
+  }
+  return getBoxOfficeOrderStatus(orderPublicId);
+}
+
+export async function cancelBoxOfficeSale(orderPublicId: string) {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const { error } = await createAdminClient().rpc("box_office_cancel_sale", { target_session_hash: sessionHash, target_order_public_id: orderPublicId });
+  if (error) throw new Error(error.message);
 }

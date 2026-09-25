@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Check, CreditCard, ExternalLink, Landmark, Minus, MoreHorizontal, Plus, QrCode, Smartphone, Ticket } from "lucide-react";
+import { Banknote, Check, CreditCard, ExternalLink, Landmark, LoaderCircle, Minus, MoreHorizontal, Plus, QrCode, Smartphone, Ticket, X } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { boxOfficeChipLabels, boxOfficeMethodLabels, enabledBoxOfficeMethods, type BoxOfficeConfig, type BoxOfficePaymentMethod, type BoxOfficeQuote, type BoxOfficeTicketType } from "../domain/box-office";
+import { boxOfficeChipLabels, boxOfficeDisplayLabels, boxOfficeMethodLabels, enabledBoxOfficeMethods, type BoxOfficeConfig, type BoxOfficePaymentMethod, type BoxOfficeQuote, type BoxOfficeTicketType } from "../domain/box-office";
 
-type PayMethod = BoxOfficePaymentMethod | "online";
+type PayMethod = BoxOfficePaymentMethod | "mp_qr" | "online";
+type OrderStatusBody = { status: { order_status: string; payment_status: string | null; payment_detail: string | null; payment_method: string | null; total_amount: number; expires_at: string; seconds_left: number }; ticketUrl: string | null; ticketQrDataUrl: string | null; ticketsIssued: boolean; error?: string };
+type QrData = { orderPublicId: string; qrDataUrl: string; totalAmount: number; currency: string; expiresAt: string };
 type ConfirmedSale = {
-  sale: { order_public_id: string; total_amount: number; service_fee_amount: number; currency: string; payment_method: BoxOfficePaymentMethod; cash_received_amount: number | null; change_amount: number };
+  sale: { order_public_id: string; total_amount: number; service_fee_amount: number; currency: string; payment_method: string; cash_received_amount: number | null; change_amount: number };
   ticketsIssued: boolean; emailed: boolean; ticketUrl: string; ticketQrDataUrl: string;
 };
 
@@ -21,9 +23,10 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
   const [selected, setSelected] = useState<BoxOfficeTicketType | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [quoteState, setQuoteState] = useState<{ key: string; quote: BoxOfficeQuote } | null>(null);
-  const payMethods: PayMethod[] = [...methods, "online"];
-  const [method, setMethod] = useState<PayMethod>(methods[0] ?? "online");
+  const payMethods: PayMethod[] = [...methods, ...(config.mp_qr_ready ? ["mp_qr" as const] : []), "online"];
+  const [method, setMethod] = useState<PayMethod>(methods[0] ?? (config.mp_qr_ready ? "mp_qr" : "online"));
   const [onlineLink, setOnlineLink] = useState<{ url: string; qrDataUrl: string; ticketName: string; unitPrice: number; currency: string; quantity: number } | null>(null);
+  const [qr, setQr] = useState<QrData | null>(null);
   const [receivedPesos, setReceivedPesos] = useState("");
   const [reference, setReference] = useState("");
   const [buyer, setBuyer] = useState({ firstName: "", lastName: "", document: "", email: "", phone: "" });
@@ -45,14 +48,18 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
     return () => { cancelled = true; };
   }, [selected, quantity, quoteKey]);
 
-  function resetAttempt() { attempt.current = { key: crypto.randomUUID(), orderPublicId: null }; }
+  function resetAttempt() {
+    const abandoned = attempt.current.orderPublicId;
+    if (abandoned) void fetch("/api/pos/box-office/cancel", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderPublicId: abandoned }) }).catch(() => undefined);
+    attempt.current = { key: crypto.randomUUID(), orderPublicId: null };
+  }
   function pick(ticket: BoxOfficeTicketType) { setSelected(ticket); setQuantity(1); setError(null); setReceivedPesos(""); resetAttempt(); }
   function changeQuantity(next: number) {
     if (!selected) return;
     const max = Math.max(1, Math.min(selected.max_per_order, selected.available_quantity));
     setQuantity(Math.min(max, Math.max(1, next))); resetAttempt();
   }
-  function newSale() { setOnlineLink(null); setDone(null); setSelected(null); setQuantity(1); setReceivedPesos(""); setReference(""); setBuyer({ firstName: "", lastName: "", document: "", email: "", phone: "" }); setError(null); resetAttempt(); onSold(); }
+  function newSale() { setOnlineLink(null); setQr(null); setDone(null); setSelected(null); setQuantity(1); setReceivedPesos(""); setReference(""); setBuyer({ firstName: "", lastName: "", document: "", email: "", phone: "" }); setError(null); resetAttempt(); onSold(); }
 
   const received = Math.round(Number(receivedPesos) * 100);
   const change = quote && method === "cash" ? Math.max(0, received - quote.total_amount) : 0;
@@ -87,6 +94,13 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
         if (!created.ok || !createdBody.order) { setError(createdBody.error ?? "No pudimos reservar la venta."); return; }
         attempt.current.orderPublicId = createdBody.order.order_public_id;
       }
+      if (method === "mp_qr") {
+        const started = await fetch("/api/pos/box-office/qr", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderPublicId: attempt.current.orderPublicId }) });
+        const startedBody = await started.json() as { qrDataUrl?: string; totalAmount?: number; currency?: string; expiresAt?: string; error?: string; expired?: boolean };
+        if (!started.ok || !startedBody.qrDataUrl) { if (startedBody.expired) resetAttempt(); setError(startedBody.error ?? "No pudimos generar el QR de pago."); return; }
+        setQr({ orderPublicId: attempt.current.orderPublicId, qrDataUrl: startedBody.qrDataUrl, totalAmount: startedBody.totalAmount ?? quote.total_amount, currency: startedBody.currency ?? quote.currency, expiresAt: startedBody.expiresAt ?? "" });
+        return;
+      }
       const confirmed = await fetch("/api/pos/box-office/confirm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
         orderPublicId: attempt.current.orderPublicId, paymentMethod: method as BoxOfficePaymentMethod,
         cashReceivedAmount: method === "cash" ? received : null, externalReference: reference || null,
@@ -111,10 +125,14 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
     </section></main>;
   }
 
+  if (qr && !done) {
+    return <QrPayment qr={qr} onPaid={(paid) => setDone(paid)} onChangeMethod={() => { setQr(null); setMethod(methods[0] ?? "cash"); }} onRetry={(next) => setQr(next)} onCancelled={newSale} onExpired={newSale}/>;
+  }
+
   if (done) {
     return <main className="grid min-h-[70dvh] place-items-center p-5"><section className="w-full max-w-md text-center">
       <span className="mx-auto grid size-16 place-items-center rounded-full bg-[var(--foreground)] text-[var(--background)]"><Check size={32}/></span>
-      <p className="eyebrow mt-6">{boxOfficeMethodLabels[done.sale.payment_method]}</p>
+      <p className="eyebrow mt-6">{boxOfficeDisplayLabels[done.sale.payment_method] ?? done.sale.payment_method}</p>
       <h1 className="mt-2 text-4xl font-black">{formatMoney(done.sale.total_amount, done.sale.currency)}</h1>
       {done.sale.payment_method === "cash" && <p className="mt-4 rounded-xl border border-[var(--border)] p-4 font-bold">Vuelto {formatMoney(done.sale.change_amount, done.sale.currency)}</p>}
       {done.ticketsIssued
@@ -151,8 +169,8 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
           <div className="flex justify-between"><span className="text-neutral-500">Cargo ENPASS</span><span>{formatMoney(quote.service_fee_amount, quote.currency)}</span></div>
           <div className="mt-1 flex items-end justify-between border-t border-[var(--border)] pt-2"><span className="text-xs font-bold uppercase text-neutral-500">Total</span><strong className="text-3xl">{formatMoney(quote.total_amount, quote.currency)}</strong></div></div>
           : <p className="text-sm text-neutral-500">Calculando…</p>}
-        <div className="grid grid-cols-3 gap-2">{payMethods.map((item) => { const Icon = item === "online" ? Smartphone : methodIcons[item]; return <button key={item} onClick={() => setMethod(item)} className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border text-xs font-black ${method === item ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]" : "border-[var(--border)]"}`}><Icon size={17}/>{item === "online" ? "Pagar online (QR)" : boxOfficeChipLabels[item]}</button>; })}</div>
-        {method === "online" ? <p className="rounded-xl border border-[var(--border)] p-3 text-xs leading-5 text-neutral-500">Le mostrás un QR: el comprador entra a la compra online con la entrada ya elegida, completa sus datos y paga con Mercado Pago. Si el precio de puerta es distinto del online, se usa la &ldquo;Entrada por link&rdquo; de ese precio.</p> : method === "cash" ? <div className="grid gap-2"><label className="label">Recibido<input className="field h-14 text-xl font-black" type="number" min="0" step="1" inputMode="numeric" value={receivedPesos} onChange={(event) => setReceivedPesos(event.target.value)} placeholder={quote ? String(Math.ceil(quote.total_amount / 100)) : "0"}/></label>
+        <div className="grid grid-cols-3 gap-2">{payMethods.map((item) => { const Icon = item === "online" ? Smartphone : item === "mp_qr" ? QrCode : methodIcons[item]; return <button key={item} onClick={() => setMethod(item)} className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border text-xs font-black ${method === item ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]" : "border-[var(--border)]"}`}><Icon size={17}/>{item === "online" ? "Pagar online (QR)" : item === "mp_qr" ? "Cobrar con QR" : boxOfficeChipLabels[item]}</button>; })}</div>
+        {method === "mp_qr" ? <p className="rounded-xl border border-[var(--border)] p-3 text-xs leading-5 text-neutral-500">Vas a mostrar un QR de pago. La entrada se emite recién cuando Mercado Pago confirma el pago (vence en {config.qr_expiry_minutes} min).</p> : method === "online" ? <p className="rounded-xl border border-[var(--border)] p-3 text-xs leading-5 text-neutral-500">Le mostrás un QR: el comprador entra a la compra online con la entrada ya elegida, completa sus datos y paga con Mercado Pago. Si el precio de puerta es distinto del online, se usa la &ldquo;Entrada por link&rdquo; de ese precio.</p> : method === "cash" ? <div className="grid gap-2"><label className="label">Recibido<input className="field h-14 text-xl font-black" type="number" min="0" step="1" inputMode="numeric" value={receivedPesos} onChange={(event) => setReceivedPesos(event.target.value)} placeholder={quote ? String(Math.ceil(quote.total_amount / 100)) : "0"}/></label>
           <div className="flex items-center justify-between rounded-xl border border-[var(--border)] p-3"><span className="text-sm font-bold text-neutral-500">Vuelto</span><strong className="text-xl">{formatMoney(change, quote?.currency ?? "ARS")}</strong></div></div>
           : <label className="label">Referencia <span className="font-normal text-neutral-600">(opcional)</span><input className="field" value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Nº de operación"/><span className="text-xs font-normal text-neutral-600">Esto emite la entrada YA como cobrada. Usalo solo si el dinero ya llegó. Para que el cliente pague, usá &ldquo;Pagar online (QR)&rdquo;.</span></label>}
         {method !== "online" && <div className="grid gap-2 rounded-xl border border-[var(--border)] p-3 text-sm"><p className="font-bold">Datos del comprador <span className="font-normal text-neutral-500">(obligatorios)</span></p>
@@ -160,9 +178,92 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
           <input className="field" placeholder="DNI" inputMode="numeric" autoComplete="off" value={buyer.document} onChange={(event) => setBuyer({ ...buyer, document: event.target.value })}/><input className="field" type="email" placeholder="Email (recibe las entradas)" autoComplete="off" value={buyer.email} onChange={(event) => setBuyer({ ...buyer, email: event.target.value })}/>
           {!buyerValid && <p className="text-xs text-neutral-500">Completá nombre, apellido, DNI (7 u 8 números) y un email válido para poder cobrar.</p>}</div>}
         {error && <p className="status-danger rounded-xl p-3 text-sm font-bold">{error}</p>}
-        <button className="btn btn-primary min-h-14" onClick={() => void charge()} disabled={!canCharge}>{pending ? "Registrando…" : !online ? "Sin conexión" : method === "online" ? "Mostrar QR de compra" : "Confirmar cobro"}</button>
-        <p className="text-center text-xs text-neutral-600">{method === "online" ? "Cuando el comprador paga online, la entrada se emite sola." : "Las entradas se emiten recién al confirmar el cobro."}</p>
+        <button className="btn btn-primary min-h-14" onClick={() => void charge()} disabled={!canCharge}>{pending ? (method === "mp_qr" ? "Generando QR…" : "Registrando…") : !online ? "Sin conexión" : method === "online" ? "Mostrar QR de compra" : method === "mp_qr" ? "Cobrar con QR" : "Confirmar cobro"}</button>
+        <p className="text-center text-xs text-neutral-600">{method === "online" ? "Cuando el comprador paga online, la entrada se emite sola." : method === "mp_qr" ? "El QR de pago no es la entrada: la entrada se genera después de pagar." : "Las entradas se emiten recién al confirmar el cobro."}</p>
       </div>}
     </aside>
   </div>;
+}
+
+
+function QrPayment({ qr, onPaid, onChangeMethod, onRetry, onCancelled, onExpired }: {
+  qr: QrData; onPaid: (sale: ConfirmedSale) => void; onChangeMethod: () => void; onRetry: (qr: QrData) => void; onCancelled: () => void; onExpired: () => void;
+}) {
+  const [state, setState] = useState<OrderStatusBody | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [busy, setBusy] = useState<null | "verify" | "retry" | "cancel">(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function apply(body: OrderStatusBody) {
+    setState(body);
+    setSecondsLeft(body.status.seconds_left);
+    if (body.status.order_status === "paid" && body.ticketUrl && body.ticketQrDataUrl) {
+      onPaid({ sale: { order_public_id: qr.orderPublicId, total_amount: body.status.total_amount, service_fee_amount: 0, currency: qr.currency, payment_method: "mercado_pago", cash_received_amount: null, change_amount: 0 }, ticketsIssued: body.ticketsIssued, emailed: false, ticketUrl: body.ticketUrl, ticketQrDataUrl: body.ticketQrDataUrl });
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const response = await fetch(`/api/pos/box-office/status?order=${qr.orderPublicId}`, { cache: "no-store" });
+        if (!response.ok || cancelled) return;
+        apply(await response.json() as OrderStatusBody);
+      } catch { /* Keep polling: the cashier can still verify manually. */ }
+    }
+    void poll();
+    const timer = setInterval(() => void poll(), 2500);
+    const clock = setInterval(() => setSecondsLeft((current) => (current === null ? current : Math.max(0, current - 1))), 1000);
+    return () => { cancelled = true; clearInterval(timer); clearInterval(clock); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qr.orderPublicId]);
+
+  async function call(kind: "verify" | "cancel") {
+    setBusy(kind); setMessage(null);
+    try {
+      const response = await fetch(`/api/pos/box-office/${kind}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderPublicId: qr.orderPublicId }) });
+      const body = await response.json() as OrderStatusBody & { cancelled?: boolean; error?: string };
+      if (!response.ok) { setMessage(body.error ?? "No pudimos completar la acción."); return; }
+      if (kind === "cancel") { onCancelled(); return; }
+      apply(body);
+      if (body.status.order_status === "pending") setMessage("Todavía no hay un pago aprobado en Mercado Pago.");
+    } catch { setMessage("Sin conexión. Reintentá."); }
+    finally { setBusy(null); }
+  }
+
+  async function retry() {
+    setBusy("retry"); setMessage(null);
+    try {
+      const response = await fetch("/api/pos/box-office/qr", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderPublicId: qr.orderPublicId }) });
+      const body = await response.json() as { qrDataUrl?: string; totalAmount?: number; currency?: string; expiresAt?: string; error?: string };
+      if (!response.ok || !body.qrDataUrl) { setMessage(body.error ?? "No pudimos generar un QR nuevo."); return; }
+      onRetry({ orderPublicId: qr.orderPublicId, qrDataUrl: body.qrDataUrl, totalAmount: body.totalAmount ?? qr.totalAmount, currency: body.currency ?? qr.currency, expiresAt: body.expiresAt ?? qr.expiresAt });
+    } catch { setMessage("Sin conexión. Reintentá."); }
+    finally { setBusy(null); }
+  }
+
+  const orderStatus = state?.status.order_status;
+  const rejected = orderStatus === "pending" && state?.status.payment_status === "rejected";
+  const inReview = orderStatus === "pending" && state?.status.payment_status === "processing";
+  const minutes = secondsLeft === null ? null : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`;
+
+  if (orderStatus === "expired" || orderStatus === "cancelled") {
+    return <main className="grid min-h-[70dvh] place-items-center p-5"><section className="w-full max-w-md text-center"><p className="eyebrow">QR vencido</p><h1 className="mt-3 text-3xl font-black">{orderStatus === "expired" ? "La operación venció" : "Operación cancelada"}</h1><p className="mt-3 text-sm text-neutral-500">Se liberó el stock reservado. Ese QR ya no sirve.</p><button className="btn btn-primary mt-6 min-h-14 w-full" onClick={onExpired}>Nueva venta</button></section></main>;
+  }
+
+  return <main className="grid min-h-[70dvh] place-items-center p-5"><section className="w-full max-w-md text-center">
+    {rejected ? <><span className="mx-auto grid size-16 place-items-center rounded-full bg-red-500/15 text-red-400"><X size={32}/></span><h1 className="mt-5 text-3xl font-black">Pago rechazado</h1><p className="mt-2 text-sm text-neutral-500">No se generó ninguna entrada. Podés reintentar con un QR nuevo o cambiar el medio de pago.</p></>
+      : <><p className="eyebrow">Total</p><h1 className="mt-2 text-5xl font-black">{formatMoney(qr.totalAmount, qr.currency)}</h1><p className="mt-2 text-sm font-bold">Escaneá para pagar</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={qr.qrDataUrl} alt="QR de pago" className="mx-auto mt-4 size-64 rounded-2xl bg-white p-2"/>
+        <p className="mt-4 flex items-center justify-center gap-2 text-sm text-neutral-500"><LoaderCircle size={16} className="animate-spin"/>{inReview ? "Pago en revisión…" : "Esperando pago…"}{minutes ? ` · vence en ${minutes}` : ""}</p></>}
+    {message && <p className="status-danger mt-4 rounded-xl p-3 text-sm font-bold">{message}</p>}
+    <div className="mt-6 grid gap-2">
+      {rejected && <button className="btn btn-primary min-h-14" onClick={() => void retry()} disabled={busy !== null}>{busy === "retry" ? "Generando…" : "Reintentar"}</button>}
+      <button className="btn btn-secondary min-h-12" onClick={() => void call("verify")} disabled={busy !== null}>{busy === "verify" ? "Verificando…" : "Ya pagó / Verificar pago"}</button>
+      <button className="btn btn-ghost min-h-12" onClick={onChangeMethod} disabled={busy !== null}>Cambiar medio de pago</button>
+      <button className="btn btn-ghost min-h-12 text-red-300" onClick={() => void call("cancel")} disabled={busy !== null}>Cancelar operación</button>
+    </div>
+    <p className="mt-4 text-xs text-neutral-600">Este QR es solo para pagar. La entrada aparece cuando Mercado Pago confirma.</p>
+  </section></main>;
 }

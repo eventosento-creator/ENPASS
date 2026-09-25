@@ -66,6 +66,7 @@ export type ProviderPayment = {
 export interface PaymentProvider {
   createCheckout(input: CreateProviderCheckoutInput, credentials: ProviderCredentials): Promise<ProviderCheckout>;
   getPayment(providerPaymentId: string, credentials: ProviderCredentials): Promise<ProviderPayment>;
+  findPaymentsByExternalReference(externalReference: string, credentials: ProviderCredentials): Promise<ProviderPayment[]>;
   refundPayment(providerPaymentId: string, idempotencyKey: string, credentials: ProviderCredentials): Promise<void>;
   getAuthorizationUrl(input: {
     clientId: string;

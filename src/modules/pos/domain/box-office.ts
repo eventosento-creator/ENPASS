@@ -5,7 +5,7 @@ export type BoxOfficePaymentMethod = (typeof BOX_OFFICE_PAYMENT_METHODS)[number]
 
 export const boxOfficeMethodLabels: Record<BoxOfficePaymentMethod, string> = {
   cash: "Efectivo",
-  qr: "QR",
+  qr: "QR externo",
   debit_card: "Débito",
   credit_card: "Crédito",
   bank_transfer: "Transferencia",
@@ -23,6 +23,8 @@ export const boxOfficeChipLabels: Record<BoxOfficePaymentMethod, string> = {
   other: "Otro (ya cobrado)",
 };
 
+export const boxOfficeDisplayLabels: Record<string, string> = { ...boxOfficeMethodLabels, mercado_pago: "QR Mercado Pago", card: "Tarjeta" };
+
 export type BoxOfficeConfig = {
   enabled: boolean;
   cash_enabled: boolean;
@@ -32,6 +34,8 @@ export type BoxOfficeConfig = {
   transfer_enabled: boolean;
   other_enabled: boolean;
   cashier_user_id: string | null;
+  mp_qr_ready: boolean;
+  qr_expiry_minutes: number;
 };
 
 export type BoxOfficeTicketType = {
@@ -80,3 +84,5 @@ export const boxOfficeConfirmSchema = z.object({
   cashReceivedAmount: z.number().int().nonnegative().nullable().optional(),
   externalReference: z.string().trim().max(160).nullable().optional(),
 });
+
+export const boxOfficeOrderSchema = z.object({ orderPublicId: z.string().regex(/^[0-9a-f]{32}$/) });

@@ -59,7 +59,7 @@ export class MercadoPagoProvider implements PaymentProvider {
         payer: {
           name: input.payer.firstName,
           surname: input.payer.lastName,
-          email: input.payer.email,
+          ...(input.payer.email.endsWith(".invalid") ? {} : { email: input.payer.email }),
           ...(input.payer.document ? { identification: { type: "DNI", number: input.payer.document } } : {}),
         },
         external_reference: input.paymentPublicId,
@@ -104,31 +104,17 @@ export class MercadoPagoProvider implements PaymentProvider {
   async getPayment(providerPaymentId: string, credentials: ProviderCredentials): Promise<ProviderPayment> {
     const client = new MercadoPagoConfig({ accessToken: credentials.accessToken, options: { timeout: 10_000 } });
     const response = await new Payment(client).get({ id: providerPaymentId });
-    if (!response.id || !response.status || !response.external_reference || response.transaction_amount === undefined || !response.currency_id) {
-      throw new Error("La respuesta de Mercado Pago no contiene los datos financieros esperados.");
+    return mapProviderPayment(response);
+  }
+
+  async findPaymentsByExternalReference(externalReference: string, credentials: ProviderCredentials): Promise<ProviderPayment[]> {
+    const client = new MercadoPagoConfig({ accessToken: credentials.accessToken, options: { timeout: 10_000 } });
+    const response = await new Payment(client).search({ options: { external_reference: externalReference, sort: "date_created", criteria: "desc" } });
+    const mapped: ProviderPayment[] = [];
+    for (const item of response.results ?? []) {
+      try { mapped.push(mapProviderPayment(item)); } catch { /* Ignore partial records. */ }
     }
-
-    const grossAmount = majorToMinor(response.transaction_amount);
-    const refundedAmount = majorToMinor(response.transaction_amount_refunded ?? 0);
-    const processorFeeAmount = (response.fee_details ?? [])
-      .filter((fee) => fee.type === "mercadopago_fee")
-      .reduce((total, fee) => total + majorToMinor(fee.amount ?? 0), 0);
-
-    return {
-      providerPaymentId: String(response.id),
-      externalReference: response.external_reference,
-      status: mapMercadoPagoStatus(response.status, refundedAmount, grossAmount),
-      providerStatus: response.status,
-      providerStatusDetail: response.status_detail ?? null,
-      grossAmount,
-      currency: response.currency_id,
-      processorFeeAmount,
-      sellerNetAmount: response.transaction_details?.net_received_amount === undefined
-        ? null
-        : majorToMinor(response.transaction_details.net_received_amount),
-      approvedAt: response.date_approved ?? null,
-      refundedAmount,
-    };
+    return mapped;
   }
 
   async refundPayment(providerPaymentId: string, idempotencyKey: string, credentials: ProviderCredentials) {
@@ -216,5 +202,44 @@ async function requestOAuthToken(body: Record<string, string>): Promise<OAuthCre
     expiresInSeconds: parsed.expires_in ?? null,
     scope: parsed.scope ?? null,
     liveMode: parsed.live_mode,
+  };
+}
+
+type MercadoPagoPaymentResponse = {
+  id?: number | string;
+  status?: string;
+  status_detail?: string;
+  external_reference?: string;
+  transaction_amount?: number;
+  transaction_amount_refunded?: number;
+  currency_id?: string;
+  date_approved?: string;
+  fee_details?: Array<{ type?: string; amount?: number }>;
+  transaction_details?: { net_received_amount?: number };
+};
+
+function mapProviderPayment(response: MercadoPagoPaymentResponse): ProviderPayment {
+  if (!response.id || !response.status || !response.external_reference || response.transaction_amount === undefined || !response.currency_id) {
+    throw new Error("La respuesta de Mercado Pago no contiene los datos financieros esperados.");
+  }
+  const grossAmount = majorToMinor(response.transaction_amount);
+  const refundedAmount = majorToMinor(response.transaction_amount_refunded ?? 0);
+  const processorFeeAmount = (response.fee_details ?? [])
+    .filter((fee) => fee.type === "mercadopago_fee")
+    .reduce((total, fee) => total + majorToMinor(fee.amount ?? 0), 0);
+  return {
+    providerPaymentId: String(response.id),
+    externalReference: response.external_reference,
+    status: mapMercadoPagoStatus(response.status, refundedAmount, grossAmount),
+    providerStatus: response.status,
+    providerStatusDetail: response.status_detail ?? null,
+    grossAmount,
+    currency: response.currency_id,
+    processorFeeAmount,
+    sellerNetAmount: response.transaction_details?.net_received_amount === undefined
+      ? null
+      : majorToMinor(response.transaction_details.net_received_amount),
+    approvedAt: response.date_approved ?? null,
+    refundedAmount,
   };
 }

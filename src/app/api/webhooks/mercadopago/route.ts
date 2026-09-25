@@ -5,10 +5,8 @@ import { getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/c
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 import { createAdminClient } from "@/shared/database/admin";
 import type { PaymentAccount, WebhookEvent } from "@/shared/database/types";
-import { processPendingInvoices } from "@/modules/billing/application/process-invoices";
+import { applyProviderPayment } from "@/modules/payments/application/apply-provider-payment";
 import { paymentLog } from "@/shared/lib/structured-log";
-import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
-import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 
 const webhookSchema = z.object({
   id: z.union([z.string(), z.number()]),
@@ -80,45 +78,7 @@ export async function POST(request: NextRequest) {
     const accessToken = await getPaymentAccountAccessToken(account.id);
     const providerPayment = await new MercadoPagoProvider().getPayment(dataId, { accessToken });
 
-    const { data: payment } = await admin.from("payments").select("id, public_id, payment_account_id, order_id")
-      .eq("public_id", providerPayment.externalReference).eq("payment_account_id", account.id).single();
-    if (!payment) throw new Error("PAYMENT_REFERENCE_NOT_FOUND");
-    if (providerPayment.providerPaymentId !== dataId) throw new Error("PAYMENT_RESOURCE_MISMATCH");
-
-    const { data: result, error: processError } = await admin.rpc("process_payment_update", {
-      target_payment_public_id: payment.public_id,
-      target_provider_payment_id: providerPayment.providerPaymentId,
-      target_status: providerPayment.status,
-      target_provider_status: providerPayment.providerStatus,
-      target_provider_status_detail: providerPayment.providerStatusDetail ?? "",
-      target_gross_amount: providerPayment.grossAmount,
-      target_currency: providerPayment.currency,
-      target_processor_fee_amount: providerPayment.processorFeeAmount,
-      target_seller_net_amount: providerPayment.sellerNetAmount,
-      target_approved_at: providerPayment.approvedAt,
-      target_refunded_amount: providerPayment.refundedAmount,
-    });
-    if (processError) throw new Error("PAYMENT_UPDATE_FAILED");
-
-    const { data: paidOrder } = await admin.from("orders").select("status").eq("id", payment.order_id).single();
-    if (paidOrder?.status === "paid") {
-      try {
-        await reconcilePromoterCommissionsForOrder(payment.order_id);
-      } catch {
-        // Commission recovery is retry-safe and must never invalidate a confirmed payment.
-      }
-      try {
-        await fulfillPaidOrder(payment.order_id);
-      } catch {
-        throw new Error("TICKET_FULFILLMENT_FAILED");
-      }
-    }
-
-    try {
-      await processPendingInvoices({ orderId: payment.order_id });
-    } catch {
-      // Invoicing is retried by the cron sweep and must never invalidate a confirmed payment.
-    }
+    const { payment, result } = await applyProviderPayment({ accountId: account.id, providerPayment, expectedResourceId: dataId });
 
     await admin.from("webhook_events").update({
       organization_id: account.organization_id,
