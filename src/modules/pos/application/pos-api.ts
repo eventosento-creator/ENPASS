@@ -229,7 +229,7 @@ export async function getBoxOfficeOnlineLink(ticketTypeId: string, quantity: num
   const url = new URL(`/e/${event.slug}/checkout`, base);
   url.searchParams.set("selection", selection);
   const qrDataUrl = await QRCode.toDataURL(url.toString(), { errorCorrectionLevel: "M", margin: 1, width: 360 });
-  return { url: url.toString(), qrDataUrl, ticketName: item.name, unitPrice: item.unitPrice, currency: item.currency, quantity: finalQuantity };
+  return { url: url.toString(), qrDataUrl, ticketName: item.name, unitPrice: item.unitPrice, currency: item.currency, quantity: finalQuantity, ticketTypeId: item.id };
 }
 
 function ticketUrlFor(orderPublicId: string) {
@@ -286,4 +286,35 @@ export async function cancelBoxOfficeSale(orderPublicId: string) {
   if (!sessionHash) throw new Error("DEVICE_NOT_AUTHORIZED");
   const { error } = await createAdminClient().rpc("box_office_cancel_sale", { target_session_hash: sessionHash, target_order_public_id: orderPublicId });
   if (error) throw new Error(error.message);
+}
+
+// Live closure for the "Pagar online (QR)" screen: the buyer pays on the regular online checkout, so there is no
+// order tied to this screen. We report the purchases of that ticket created since the QR was shown: reservations
+// still being paid, and confirmed payments.
+export async function getBoxOfficeOnlineActivity(ticketTypeId: string, since: string) {
+  const session = await getCurrentPosSession();
+  if (!session) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const admin = createAdminClient();
+  const { data: type } = await admin.from("ticket_types").select("id").eq("id", ticketTypeId).eq("event_id", session.event_id).maybeSingle();
+  if (!type) throw new Error("TICKET_NOT_FOUND");
+  const from = new Date(new Date(since).getTime() - 15_000).toISOString();
+  const { data: items, error } = await admin.from("order_items").select("order_id, quantity").eq("ticket_type_id", ticketTypeId).gte("created_at", from);
+  if (error) throw new Error("ACTIVITY_UNAVAILABLE");
+  const quantityByOrder = new Map<string, number>();
+  for (const item of items ?? []) quantityByOrder.set(item.order_id, (quantityByOrder.get(item.order_id) ?? 0) + item.quantity);
+  if (quantityByOrder.size === 0) return { pending: 0, paid: [] as Array<{ orderPublicId: string; quantity: number; buyerName: string; at: string }> };
+
+  const { data: orders } = await admin.from("orders").select("id, public_id, status, expires_at, customer_id, updated_at")
+    .in("id", [...quantityByOrder.keys()]).eq("event_id", session.event_id).eq("channel", "ticket_web");
+  const now = Date.now();
+  const pending = (orders ?? []).filter((order) => order.status === "pending" && order.expires_at && new Date(order.expires_at).getTime() > now).length;
+  const paidOrders = (orders ?? []).filter((order) => order.status === "paid");
+  const customerIds = [...new Set(paidOrders.flatMap((order) => (order.customer_id ? [order.customer_id] : [])))];
+  const { data: customers } = customerIds.length ? await admin.from("customers").select("id, first_name, last_name").in("id", customerIds) : { data: [] };
+  const nameById = new Map((customers ?? []).map((customer) => [customer.id, `${customer.first_name} ${customer.last_name}`.trim()]));
+  const paid = paidOrders.map((order) => ({
+    orderPublicId: order.public_id, quantity: quantityByOrder.get(order.id) ?? 0,
+    buyerName: order.customer_id ? nameById.get(order.customer_id) ?? "Comprador" : "Comprador", at: order.updated_at,
+  })).sort((a, b) => b.at.localeCompare(a.at));
+  return { pending, paid };
 }

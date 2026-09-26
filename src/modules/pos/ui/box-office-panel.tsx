@@ -25,7 +25,7 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
   const [quoteState, setQuoteState] = useState<{ key: string; quote: BoxOfficeQuote } | null>(null);
   const payMethods: PayMethod[] = [...methods, ...(config.mp_qr_ready ? ["mp_qr" as const] : []), "online"];
   const [method, setMethod] = useState<PayMethod>(methods[0] ?? (config.mp_qr_ready ? "mp_qr" : "online"));
-  const [onlineLink, setOnlineLink] = useState<{ url: string; qrDataUrl: string; ticketName: string; unitPrice: number; currency: string; quantity: number } | null>(null);
+  const [onlineLink, setOnlineLink] = useState<{ url: string; qrDataUrl: string; ticketName: string; unitPrice: number; currency: string; quantity: number; ticketTypeId: string; shownAt: string } | null>(null);
   const [qr, setQr] = useState<QrData | null>(null);
   const [receivedPesos, setReceivedPesos] = useState("");
   const [reference, setReference] = useState("");
@@ -72,9 +72,9 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
     setPending(true); setError(null);
     try {
       const response = await fetch("/api/pos/box-office/online-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ticketTypeId: selected.ticket_type_id, quantity }) });
-      const body = await response.json() as { url?: string; qrDataUrl?: string; ticketName?: string; unitPrice?: number; currency?: string; quantity?: number; error?: string };
+      const body = await response.json() as { url?: string; qrDataUrl?: string; ticketName?: string; unitPrice?: number; currency?: string; quantity?: number; ticketTypeId?: string; error?: string };
       if (!response.ok || !body.qrDataUrl || !body.url) { setError(body.error ?? "No pudimos generar el QR."); return; }
-      setOnlineLink({ url: body.url, qrDataUrl: body.qrDataUrl, ticketName: body.ticketName ?? selected.name, unitPrice: body.unitPrice ?? selected.unit_price_amount, currency: body.currency ?? selected.currency, quantity: body.quantity ?? quantity });
+      setOnlineLink({ url: body.url, qrDataUrl: body.qrDataUrl, ticketName: body.ticketName ?? selected.name, unitPrice: body.unitPrice ?? selected.unit_price_amount, currency: body.currency ?? selected.currency, quantity: body.quantity ?? quantity, ticketTypeId: body.ticketTypeId ?? selected.ticket_type_id, shownAt: new Date().toISOString() });
     } catch { setError("Sin conexión."); }
     finally { setPending(false); }
   }
@@ -121,6 +121,7 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
       <p className="mt-4 text-sm leading-6 text-neutral-500">El comprador abre el QR con su celular, completa sus datos y paga con Mercado Pago. La entrada le llega al instante a su celular y por email.</p>
       <p className="mt-3 rounded-xl border border-[var(--border)] p-3 text-sm font-bold">{onlineLink.quantity} × {onlineLink.ticketName} · {formatMoney(onlineLink.unitPrice, onlineLink.currency)} c/u + cargo de servicio</p>
       <p className="mt-2 text-xs text-neutral-600">Esta venta no pasa por la caja: cuando pague, aparece en las ventas del evento.</p>
+      <OnlineQrStatus ticketTypeId={onlineLink.ticketTypeId} since={onlineLink.shownAt}/>
       <button className="btn btn-primary mt-6 min-h-14 w-full" onClick={newSale}>Nueva venta</button>
     </section></main>;
   }
@@ -266,4 +267,43 @@ function QrPayment({ qr, onPaid, onChangeMethod, onRetry, onCancelled, onExpired
     </div>
     <p className="mt-4 text-xs text-neutral-600">Este QR es solo para pagar. La entrada aparece cuando Mercado Pago confirma.</p>
   </section></main>;
+}
+
+
+type OnlineActivity = { pending: number; paid: Array<{ orderPublicId: string; quantity: number; buyerName: string; at: string }> };
+const clock = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" });
+
+// Closure for the online QR: shows in real time whether someone is paying and whether the payment was confirmed.
+function OnlineQrStatus({ ticketTypeId, since }: { ticketTypeId: string; since: string }) {
+  const [activity, setActivity] = useState<OnlineActivity | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const response = await fetch(`/api/pos/box-office/online-activity?ticket=${ticketTypeId}&since=${encodeURIComponent(since)}`, { cache: "no-store" });
+        if (cancelled) return;
+        if (!response.ok) { setFailed(true); return; }
+        setActivity(await response.json() as OnlineActivity); setFailed(false);
+      } catch { if (!cancelled) setFailed(true); }
+    }
+    void poll();
+    const timer = setInterval(() => void poll(), 3000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [ticketTypeId, since]);
+
+  if (activity && activity.paid.length > 0) {
+    return <div className="mt-5 rounded-2xl border border-emerald-400/40 bg-emerald-400/[.12] p-4 text-left">
+      <p className="text-lg font-black text-emerald-700">✅ PAGO CONFIRMADO</p>
+      {activity.paid.map((sale) => <p key={sale.orderPublicId} className="mt-1 text-sm font-bold">{sale.quantity} × entrada · {sale.buyerName} · {clock.format(new Date(sale.at))}</p>)}
+      <p className="mt-2 text-xs text-neutral-600">La entrada le llegó al celular del comprador y por email. Ya podés hacer una nueva venta.</p>
+    </div>;
+  }
+  return <div className="mt-5 rounded-2xl border border-[var(--border)] p-4 text-left text-sm">
+    {activity && activity.pending > 0
+      ? <p className="font-black text-amber-600">🟡 {activity.pending === 1 ? "Un comprador está pagando ahora…" : `${activity.pending} compradores están pagando ahora…`}</p>
+      : <p className="font-bold text-neutral-500">⏳ Esperando que el comprador escanee y pague…</p>}
+    {failed && <p className="mt-1 text-xs text-red-500">No pudimos actualizar el estado. Reintentando…</p>}
+    <p className="mt-2 text-xs text-neutral-500">Se actualiza solo. Si el pago se confirma, aparece acá en verde. Si no aparece nada y el cliente ya pagó, revisá en Taquilla o en Entradas → Ventas.</p>
+  </div>;
 }
