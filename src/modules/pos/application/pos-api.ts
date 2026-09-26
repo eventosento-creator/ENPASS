@@ -181,18 +181,46 @@ export async function confirmCurrentBoxOfficeSale(input: {
   return { sale, ticketsIssued, emailed, ticketUrl, ticketQrDataUrl };
 }
 
-// The buyer pays on the regular online checkout (their own data, Mercado Pago, online price and invoice flow).
-// The cashier only shows a QR of that URL with the ticket type and quantity already selected.
+// The buyer pays on the regular online checkout (their own data, Mercado Pago, invoice flow); the cashier only shows
+// a QR of that URL with the ticket and quantity already selected. The online checkout charges the ticket's own price,
+// so when the box-office (door) price differs from the online price, the QR must point to a link-only ticket that
+// has exactly the door price. Otherwise the buyer would be charged the online price.
 export async function getBoxOfficeOnlineLink(ticketTypeId: string, quantity: number) {
   const session = await getCurrentPosSession();
   if (!session) throw new Error("DEVICE_NOT_AUTHORIZED");
   const admin = createAdminClient();
-  const { data: event } = await admin.from("events").select("slug").eq("id", session.event_id).single();
-  if (!event) throw new Error("EVENT_NOT_FOUND");
-  const selection = JSON.stringify([{ item_type: "ticket", item_id: ticketTypeId, quantity }]);
+  const [{ data: event }, { data: type }, { data: channelPrice, error: channelPriceError }] = await Promise.all([
+    admin.from("events").select("slug").eq("id", session.event_id).single(),
+    admin.from("ticket_types").select("id, name, price_amount, currency").eq("id", ticketTypeId).eq("event_id", session.event_id).single(),
+    admin.from("ticket_type_channel_prices").select("price_amount, enabled").eq("ticket_type_id", ticketTypeId).eq("channel", "box_office").maybeSingle(),
+  ]);
+  if (!event || !type) throw new Error("EVENT_NOT_FOUND");
+  // Never fall back to the online price if the door price could not be read.
+  if (channelPriceError) throw new Error("DOOR_PRICE_UNAVAILABLE");
+  const doorPrice = channelPrice?.enabled ? channelPrice.price_amount : type.price_amount;
+
+  let item = { id: type.id, name: type.name, unitPrice: type.price_amount, currency: type.currency, token: undefined as string | undefined, maxQuantity: 20 };
+  if (doorPrice !== type.price_amount) {
+    const { data: candidates, error: candidatesError } = await admin.from("ticket_types").select("id, link_token, price_amount")
+      .eq("event_id", session.event_id).eq("link_only", true).eq("active", true).eq("price_amount", doorPrice);
+    if (candidatesError) throw new Error("DOOR_PRICE_UNAVAILABLE");
+    let chosen: { id: string; link_token: string; name: string; price: number; currency: string; maxQuantity: number } | null = null;
+    for (const candidate of candidates ?? []) {
+      if (!candidate.link_token) continue;
+      const { data: rows, error: linkError } = await admin.rpc("get_link_ticket_type", { target_event: session.event_id, target_token: candidate.link_token });
+      if (linkError) throw new Error("DOOR_PRICE_UNAVAILABLE");
+      const row = rows?.[0];
+      if (row?.sale_open) { chosen = { id: row.id, link_token: candidate.link_token, name: row.name, price: row.price_amount, currency: row.currency, maxQuantity: Math.min(row.max_per_order, row.available_quantity) }; break; }
+    }
+    if (!chosen) throw new Error(`NO_DOOR_LINK_TICKET:${doorPrice}`);
+    item = { id: chosen.id, name: chosen.name, unitPrice: chosen.price, currency: chosen.currency, token: chosen.link_token, maxQuantity: chosen.maxQuantity };
+  }
+
+  const finalQuantity = Math.max(1, Math.min(quantity, item.maxQuantity));
+  const selection = JSON.stringify([{ item_type: "ticket", item_id: item.id, quantity: finalQuantity, ...(item.token ? { link_token: item.token } : {}) }]);
   const base = process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const url = new URL(`/e/${event.slug}/checkout`, base);
   url.searchParams.set("selection", selection);
   const qrDataUrl = await QRCode.toDataURL(url.toString(), { errorCorrectionLevel: "M", margin: 1, width: 360 });
-  return { url: url.toString(), qrDataUrl };
+  return { url: url.toString(), qrDataUrl, ticketName: item.name, unitPrice: item.unitPrice, currency: item.currency, quantity: finalQuantity };
 }
