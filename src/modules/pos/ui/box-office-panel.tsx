@@ -101,6 +101,7 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
     return <main className="grid min-h-[70dvh] place-items-center p-5"><section className="w-full max-w-md text-center">
       <p className="eyebrow">Comprar entrada online</p>
       <h1 className="mt-2 text-3xl font-black">Escaneá para comprar</h1>
+      <p className="mt-2 rounded-xl bg-[var(--foreground)] px-3 py-2 text-sm font-bold text-[var(--background)]">Usá la cámara del celular. No lo escanees desde la app de Mercado Pago.</p>
       <Image src={onlineLink.qrDataUrl} alt="QR para comprar la entrada" width={288} height={288} unoptimized className="mx-auto mt-5 size-72 rounded-2xl bg-white p-2"/>
       <p className="mt-4 text-sm leading-6 text-neutral-500">El comprador abre el QR con su celular, completa sus datos y paga con Mercado Pago. La entrada le llega al instante a su celular y por email.</p>
       <p className="mt-2 text-xs text-neutral-600">Se cobra al precio online. Esta venta no pasa por la caja: cuando pague, aparece en las ventas del evento.</p>

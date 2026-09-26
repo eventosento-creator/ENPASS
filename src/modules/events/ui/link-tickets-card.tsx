@@ -34,6 +34,7 @@ export async function LinkTicketsCard({ eventId, slug, siteUrl, ticketTypes, sol
         <div className="mt-3 flex flex-wrap gap-2"><CopyLinkButton value={url}/><DownloadQrButton href={qrLarge} filename={`qr-${type.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "entrada"}.png`}/>
           <form action={setLinkTicketActive}><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="ticketTypeId" value={type.id}/><input type="hidden" name="active" value={String(!type.active)}/><SubmitButton className="btn btn-ghost" pendingLabel="…">{type.active ? "Desactivar" : "Reactivar"}</SubmitButton></form>
           <form action={deleteLinkTicketType}><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="ticketTypeId" value={type.id}/><SubmitButton className="btn btn-ghost text-red-300" pendingLabel="…">Eliminar</SubmitButton></form></div>
+        <p className="mt-3 rounded-lg bg-amber-300/[.08] p-2 text-xs font-bold leading-5 text-amber-200">Este QR se escanea con la cámara normal del celular (no desde la app de Mercado Pago): abre la compra y ahí se paga.</p>
         <p className="mt-3 text-xs leading-5 text-neutral-500">Para que el escáner la acepte, tildá esta entrada en la puerta correspondiente (pestaña Accesos).</p>
       </article>)}
       {items.length === 0 && <p className="text-sm text-neutral-500">Todavía no creaste ninguna.</p>}
