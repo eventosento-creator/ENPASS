@@ -42,9 +42,16 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   const ticketById = new Map((publicTypes ?? []).map((type) => [type.id, type]));
   const tableById = new Map(tables.map((table) => [table.id, table]));
   const seatById = new Map(seats.map((seat) => [seat.id, seat]));
+  // Link-only tickets are not in the public list: they are resolved with their private token.
+  const linkTypeById = new Map<string, NonNullable<typeof publicTypes>[number]>();
+  await Promise.all(selections.filter((selection) => selection.item_type === "ticket" && selection.link_token && !ticketById.has(selection.item_id)).map(async (selection) => {
+    const { data } = await supabase.rpc("get_link_ticket_type", { target_event: event.id, target_token: selection.link_token as string });
+    const row = data?.[0];
+    if (row && row.id === selection.item_id) linkTypeById.set(row.id, { ...row, organization_id: event.organization_id, event_id: event.id, sale_phase_id: null, sort_order: 0, active: true, quantity: row.available_quantity } as never);
+  }));
   const items = selections.flatMap((selection): CheckoutItem[] => {
     if (selection.item_type === "ticket") {
-      const type = ticketById.get(selection.item_id);
+      const type = ticketById.get(selection.item_id) ?? linkTypeById.get(selection.item_id);
       if (!type?.sale_open || type.available_quantity < selection.quantity || selection.quantity > type.max_per_order) return [];
       return [{ id: type.id, itemType: "ticket", name: type.name, quantity: selection.quantity, unitPrice: type.price_amount, serviceFeeBps: organization.service_fee_bps }];
     }

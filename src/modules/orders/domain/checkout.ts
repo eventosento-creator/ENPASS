@@ -4,6 +4,7 @@ export const checkoutSelectionSchema = z.object({
   item_type: z.enum(["ticket", "table", "seat"]),
   item_id: z.uuid(),
   quantity: z.number().int().positive().max(20),
+  link_token: z.string().min(16).max(64).optional(),
 }).refine((selection) => selection.item_type === "ticket" || selection.quantity === 1, { message: "Cada mesa o asiento se reserva una sola vez" });
 
 export const checkoutSchema = z.object({

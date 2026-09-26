@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import type { TicketType } from "@/shared/database/types";
 import { formatMoney } from "@/shared/lib/format";
 
-type PublicTicketType = Omit<TicketType, "publicly_available"> & { available_quantity: number; sale_open: boolean };
+type PublicTicketType = Omit<TicketType, "publicly_available" | "link_only" | "link_token"> & { available_quantity: number; sale_open: boolean };
 export function TicketSelector({ eventSlug, ticketTypes }: { eventSlug: string; ticketTypes: PublicTicketType[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const selected = useMemo<Array<{ item_type: "ticket"; item_id: string; quantity: number }>>(() => ticketTypes.flatMap(t => quantities[t.id] ? [{ item_type: "ticket" as const, item_id: t.id, quantity: quantities[t.id]! }] : []), [quantities, ticketTypes]);
