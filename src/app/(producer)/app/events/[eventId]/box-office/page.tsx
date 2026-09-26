@@ -10,6 +10,7 @@ import { boxOfficeDisplayLabels, boxOfficeMethodLabels } from "@/modules/pos/dom
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { BoxOfficeDevices } from "@/modules/pos/ui/box-office-devices";
 import { getCashierOptions } from "@/modules/pos/application/cashier-options";
+import { getLinkSalesSummary } from "@/modules/pos/application/link-sales";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -21,7 +22,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
   if ((await getEventViewerRole(event.organization_id)) !== "manager") notFound();
   const capabilities = getEventCapabilities(event);
 
-  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }, { data: locations }, { data: deviceRows }, cashierOptions, { data: paymentAccountData }] = await Promise.all([
+  const [{ data: settings }, { data: ticketTypes }, { data: channelPrices }, { data: staff }, { data: summary }, { data: registers }, { data: sales }, { data: locations }, { data: deviceRows }, cashierOptions, { data: paymentAccountData }, linkSales] = await Promise.all([
     supabase.from("event_box_office_settings").select("*").eq("event_id", eventId).maybeSingle(),
     supabase.from("ticket_types").select("id, name, price_amount, currency, active").eq("event_id", eventId).order("sort_order"),
     supabase.from("ticket_type_channel_prices").select("*").eq("event_id", eventId).eq("channel", "box_office"),
@@ -33,6 +34,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     supabase.from("pos_device_authorizations").select("id, sales_location_id, name, status, cashier_user_id").eq("event_id", eventId).order("created_at", { ascending: false }),
     getCashierOptions(supabase, eventId, event.organization_id),
     supabase.rpc("get_payment_account_status", { target_organization: event.organization_id }),
+    getLinkSalesSummary(eventId),
   ]);
   const mpConnected = paymentAccountData?.[0]?.status === "connected";
   const cashierLabelById = new Map(cashierOptions.map((option) => [option.id, option.label]));
@@ -48,8 +50,8 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
   const currency = event.currency;
   const totals = (summary ?? []).reduce((sum, row) => ({
     tickets: sum.tickets + row.ticket_count, gmv: sum.gmv + row.gmv_amount, fee: sum.fee + row.service_fee_amount,
-    cash: sum.cash + row.cash_amount, mp: sum.mp + row.mp_amount, card: sum.card + row.card_amount, transfer: sum.transfer + row.transfer_amount,
-  }), { tickets: 0, gmv: 0, fee: 0, cash: 0, mp: 0, card: 0, transfer: 0 });
+    cash: sum.cash + row.cash_amount, digital: sum.digital + row.digital_amount, mp: sum.mp + row.mp_amount, card: sum.card + row.card_amount, transfer: sum.transfer + row.transfer_amount,
+  }), { tickets: 0, gmv: 0, fee: 0, cash: 0, digital: 0, mp: 0, card: 0, transfer: 0 });
 
   return <>
     <div><p className="eyebrow">{event.name}</p><h1 className="page-title mt-2">Taquilla</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Venta presencial en puerta con caja, cajeros y arqueo. Usa el mismo stock y las mismas entradas con QR que la venta online.</p></div>
@@ -108,6 +110,21 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
       <p className="eyebrow">Taquilla hoy</p><h2 className="section-title mt-2">Resumen</h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Entradas", String(totals.tickets)], ["GMV productor", formatMoney(totals.gmv, currency)], ["Cargo ENPASS", formatMoney(totals.fee, currency)], ["Efectivo", formatMoney(totals.cash, currency)], ["QR Mercado Pago", formatMoney(totals.mp, currency)], ["Tarjeta", formatMoney(totals.card, currency)], ["Transferencia", formatMoney(totals.transfer, currency)]].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--border)] p-3"><p className="text-[10px] font-bold uppercase text-neutral-600">{label}</p><p className="mt-2 font-black">{value}</p></div>)}</div>
       {(summary ?? []).length > 0 && <div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-600"><tr><th className="py-2">Cajero</th><th>Ventas</th><th>Entradas</th><th>Efectivo</th><th>QR MP</th><th>Tarjeta</th><th>Transf.</th><th>Anuladas</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{(summary ?? []).map((row) => <tr key={row.cashier_user_id ?? "none"}><td className="py-2 font-bold">{row.cashier_email ?? "Sin cajero"}</td><td>{row.sale_count}</td><td>{row.ticket_count}</td><td>{formatMoney(row.cash_amount, currency)}</td><td>{formatMoney(row.mp_amount, currency)}</td><td>{formatMoney(row.card_amount, currency)}</td><td>{formatMoney(row.transfer_amount, currency)}</td><td>{row.voided_count}</td></tr>)}</tbody></table></div>}
+    </section>
+
+    <section className="card mt-7 p-5 sm:p-7">
+      <p className="eyebrow">Total de la noche</p><h2 className="section-title mt-2">Caja + ventas online por link/QR</h2>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[
+        ["Entradas vendidas", String(totals.tickets + linkSales.tickets)],
+        ["Cobrado en caja", formatMoney(totals.cash + totals.digital, currency)],
+        ["Cobrado online (link/QR)", formatMoney(linkSales.total, currency)],
+        ["Total cobrado", formatMoney(totals.cash + totals.digital + linkSales.total, currency)],
+      ].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--border)] p-3"><p className="text-[10px] font-bold uppercase text-neutral-600">{label}</p><p className="mt-2 font-black">{value}</p></div>)}</div>
+      <p className="mt-2 text-xs text-neutral-500">&ldquo;Caja&rdquo; = lo que registró el cajero (efectivo y demás medios). &ldquo;Online&rdquo; = compras que el cliente hizo por el QR o el link de una entrada por link.</p>
+      <h3 className="mt-6 text-sm font-black">Ventas online por link/QR{linkSales.pending > 0 ? ` · ${linkSales.pending} en curso` : ""}</h3>
+      {linkSales.sales.length === 0 ? <p className="mt-3 text-sm text-neutral-500">Todavía no hay ventas por link/QR.</p> : <div className="mt-3 divide-y divide-[var(--border)]">{linkSales.sales.map((sale) => <div key={sale.orderPublicId} className="py-3 text-sm">
+        <p className="font-bold">{formatMoney(sale.totalAmount, currency)} · {sale.quantity} × {sale.ticketName}{sale.status === "refunded" && <span className="ml-2 text-red-400">REEMBOLSADA</span>}</p>
+        <p className="text-xs text-neutral-500">{dateTime.format(new Date(sale.at))} · {sale.buyerName} · cargo {formatMoney(sale.serviceFeeAmount, currency)} · #{sale.orderPublicId.slice(0, 6).toUpperCase()}</p></div>)}</div>}
     </section>
 
     <section className="card mt-7 p-5 sm:p-7">
