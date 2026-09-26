@@ -12,6 +12,17 @@ export const boxOfficeMethodLabels: Record<BoxOfficePaymentMethod, string> = {
   other: "Otro",
 };
 
+// Manual methods issue the ticket immediately as "already collected": the label says so to avoid confusing them
+// with "Pagar online (QR)", which is the one that sends the buyer to pay.
+export const boxOfficeChipLabels: Record<BoxOfficePaymentMethod, string> = {
+  cash: "Efectivo",
+  qr: "QR externo (ya cobrado)",
+  debit_card: "Débito (ya cobrado)",
+  credit_card: "Crédito (ya cobrado)",
+  bank_transfer: "Transferencia (ya recibida)",
+  other: "Otro (ya cobrado)",
+};
+
 export type BoxOfficeConfig = {
   enabled: boolean;
   cash_enabled: boolean;

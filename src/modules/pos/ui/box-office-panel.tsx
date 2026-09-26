@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Banknote, Check, CreditCard, ExternalLink, Landmark, Minus, MoreHorizontal, Plus, QrCode, Smartphone, Ticket } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { boxOfficeMethodLabels, enabledBoxOfficeMethods, type BoxOfficeConfig, type BoxOfficePaymentMethod, type BoxOfficeQuote, type BoxOfficeTicketType } from "../domain/box-office";
+import { boxOfficeChipLabels, boxOfficeMethodLabels, enabledBoxOfficeMethods, type BoxOfficeConfig, type BoxOfficePaymentMethod, type BoxOfficeQuote, type BoxOfficeTicketType } from "../domain/box-office";
 
 type PayMethod = BoxOfficePaymentMethod | "online";
 type ConfirmedSale = {
@@ -75,6 +75,7 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
   async function charge() {
     if (method === "online") { await showOnlineQr(); return; }
     if (!selected || !quote || pending) return;
+    if (method !== "cash" && !window.confirm(`Esto emite la entrada YA como cobrada por ${boxOfficeMethodLabels[method as BoxOfficePaymentMethod]}.\n\n¿Confirmás que el dinero ya llegó a tu cuenta o terminal?\n\nSi querés que el cliente pague ahora, cancelá y usá "Pagar online (QR)".`)) return;
     setPending(true); setError(null);
     try {
       if (!attempt.current.orderPublicId) {
@@ -150,10 +151,10 @@ export function BoxOfficePanel({ config, catalog, online, onSold }: { config: Bo
           <div className="flex justify-between"><span className="text-neutral-500">Cargo ENPASS</span><span>{formatMoney(quote.service_fee_amount, quote.currency)}</span></div>
           <div className="mt-1 flex items-end justify-between border-t border-[var(--border)] pt-2"><span className="text-xs font-bold uppercase text-neutral-500">Total</span><strong className="text-3xl">{formatMoney(quote.total_amount, quote.currency)}</strong></div></div>
           : <p className="text-sm text-neutral-500">Calculando…</p>}
-        <div className="grid grid-cols-3 gap-2">{payMethods.map((item) => { const Icon = item === "online" ? Smartphone : methodIcons[item]; return <button key={item} onClick={() => setMethod(item)} className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border text-xs font-black ${method === item ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]" : "border-[var(--border)]"}`}><Icon size={17}/>{item === "online" ? "Pagar online (QR)" : boxOfficeMethodLabels[item]}</button>; })}</div>
+        <div className="grid grid-cols-3 gap-2">{payMethods.map((item) => { const Icon = item === "online" ? Smartphone : methodIcons[item]; return <button key={item} onClick={() => setMethod(item)} className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border text-xs font-black ${method === item ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]" : "border-[var(--border)]"}`}><Icon size={17}/>{item === "online" ? "Pagar online (QR)" : boxOfficeChipLabels[item]}</button>; })}</div>
         {method === "online" ? <p className="rounded-xl border border-[var(--border)] p-3 text-xs leading-5 text-neutral-500">Le mostrás un QR: el comprador entra a la compra online con la entrada ya elegida, completa sus datos y paga con Mercado Pago. Si el precio de puerta es distinto del online, se usa la &ldquo;Entrada por link&rdquo; de ese precio.</p> : method === "cash" ? <div className="grid gap-2"><label className="label">Recibido<input className="field h-14 text-xl font-black" type="number" min="0" step="1" inputMode="numeric" value={receivedPesos} onChange={(event) => setReceivedPesos(event.target.value)} placeholder={quote ? String(Math.ceil(quote.total_amount / 100)) : "0"}/></label>
           <div className="flex items-center justify-between rounded-xl border border-[var(--border)] p-3"><span className="text-sm font-bold text-neutral-500">Vuelto</span><strong className="text-xl">{formatMoney(change, quote?.currency ?? "ARS")}</strong></div></div>
-          : <label className="label">Referencia <span className="font-normal text-neutral-600">(opcional)</span><input className="field" value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Nº de operación"/><span className="text-xs font-normal text-neutral-600">Confirmá recién cuando verifiques el cobro en la terminal o app.</span></label>}
+          : <label className="label">Referencia <span className="font-normal text-neutral-600">(opcional)</span><input className="field" value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Nº de operación"/><span className="text-xs font-normal text-neutral-600">Esto emite la entrada YA como cobrada. Usalo solo si el dinero ya llegó. Para que el cliente pague, usá &ldquo;Pagar online (QR)&rdquo;.</span></label>}
         {method !== "online" && <div className="grid gap-2 rounded-xl border border-[var(--border)] p-3 text-sm"><p className="font-bold">Datos del comprador <span className="font-normal text-neutral-500">(obligatorios)</span></p>
           <div className="grid grid-cols-2 gap-2"><input className="field" placeholder="Nombre" autoComplete="off" value={buyer.firstName} onChange={(event) => setBuyer({ ...buyer, firstName: event.target.value })}/><input className="field" placeholder="Apellido" autoComplete="off" value={buyer.lastName} onChange={(event) => setBuyer({ ...buyer, lastName: event.target.value })}/></div>
           <input className="field" placeholder="DNI" inputMode="numeric" autoComplete="off" value={buyer.document} onChange={(event) => setBuyer({ ...buyer, document: event.target.value })}/><input className="field" type="email" placeholder="Email (recibe las entradas)" autoComplete="off" value={buyer.email} onChange={(event) => setBuyer({ ...buyer, email: event.target.value })}/>
