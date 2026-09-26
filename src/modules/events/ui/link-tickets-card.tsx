@@ -4,10 +4,12 @@ import { Link2 } from "lucide-react";
 import type { TicketType } from "@/shared/database/types";
 import { formatMoney } from "@/shared/lib/format";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { createLinkTicketType, deleteLinkTicketType, setLinkTicketActive } from "../application/link-ticket-actions";
+import { createLinkTicketType, deleteLinkTicketType, setLinkTicketActive, updateLinkTicketWindow } from "../application/link-ticket-actions";
 import { CopyLinkButton, DownloadQrButton } from "./copy-link-button";
 
 const when = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" });
+const inputFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" });
+const toInput = (value: string | null) => (value ? inputFormat.format(new Date(value)).replace(" ", "T") : "");
 
 export async function LinkTicketsCard({ eventId, slug, siteUrl, ticketTypes, sold, notice, error }: {
   eventId: string; slug: string; siteUrl: string; ticketTypes: TicketType[]; sold: Record<string, number>; notice?: string; error?: string;
@@ -31,6 +33,11 @@ export async function LinkTicketsCard({ eventId, slug, siteUrl, ticketTypes, sol
           <p className="mt-1 text-xs text-neutral-500">Desde: {type.sales_start ? when.format(new Date(type.sales_start)) : "ya habilitada"} · Hasta: {type.sales_end ? when.format(new Date(type.sales_end)) : "sin límite"}</p></div>
           <Image src={qr} alt={`QR de ${type.name}`} width={96} height={96} unoptimized className="size-24 rounded-lg bg-white p-1"/></div>
         <p className="mt-3 break-all rounded-lg bg-black/25 p-2 font-mono text-[11px] text-neutral-400">{url}</p>
+        <form action={updateLinkTicketWindow} className="mt-3 grid gap-2 rounded-lg border border-white/[.06] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="ticketTypeId" value={type.id}/>
+          <label className="label">Se habilita desde<input className="field" type="datetime-local" name="salesStart" defaultValue={toInput(type.sales_start)}/></label>
+          <label className="label">Hasta<input className="field" type="datetime-local" name="salesEnd" defaultValue={toInput(type.sales_end)}/></label>
+          <SubmitButton className="btn btn-secondary" pendingLabel="…">Cambiar horario</SubmitButton>
+          <p className="text-[11px] text-neutral-500 sm:col-span-3">Dejá &ldquo;desde&rdquo; vacío para que esté habilitada ya. Horas de Argentina. El link y el QR no cambian.</p></form>
         <div className="mt-3 flex flex-wrap gap-2"><CopyLinkButton value={url}/><DownloadQrButton href={qrLarge} filename={`qr-${type.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "entrada"}.png`}/>
           <form action={setLinkTicketActive}><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="ticketTypeId" value={type.id}/><input type="hidden" name="active" value={String(!type.active)}/><SubmitButton className="btn btn-ghost" pendingLabel="…">{type.active ? "Desactivar" : "Reactivar"}</SubmitButton></form>
           <form action={deleteLinkTicketType}><input type="hidden" name="eventId" value={eventId}/><input type="hidden" name="ticketTypeId" value={type.id}/><SubmitButton className="btn btn-ghost text-red-300" pendingLabel="…">Eliminar</SubmitButton></form></div>

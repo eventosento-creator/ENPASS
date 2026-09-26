@@ -52,6 +52,20 @@ export async function createLinkTicketType(formData: FormData) {
   back(parsed.data.eventId, "notice", "Entrada por link creada. Copiá el link o el QR de abajo.");
 }
 
+export async function updateLinkTicketWindow(formData: FormData) {
+  const parsed = z.object({ eventId: z.uuid(), ticketTypeId: z.uuid(), salesStart: dateInput, salesEnd: dateInput }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const start = argentinaDate(parsed.data.salesStart);
+  const end = argentinaDate(parsed.data.salesEnd);
+  if (start === undefined || end === undefined) back(parsed.data.eventId, "error", "Revisá las fechas de habilitación.");
+  if (start && end && end <= start) back(parsed.data.eventId, "error", "La hora de cierre tiene que ser posterior a la de apertura.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("ticket_types").update({ sales_start: start ? start.toISOString() : null, sales_end: end ? end.toISOString() : null })
+    .eq("id", parsed.data.ticketTypeId).eq("event_id", parsed.data.eventId).eq("link_only", true);
+  if (error) back(parsed.data.eventId, "error", "No pudimos guardar el horario.");
+  back(parsed.data.eventId, "notice", "Horario actualizado. El link y el QR son los mismos.");
+}
+
 export async function setLinkTicketActive(formData: FormData) {
   const parsed = z.object({ eventId: z.uuid(), ticketTypeId: z.uuid(), active: z.enum(["true", "false"]) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;

@@ -205,13 +205,16 @@ export async function getBoxOfficeOnlineLink(ticketTypeId: string, quantity: num
       .eq("event_id", session.event_id).eq("link_only", true).eq("active", true).eq("price_amount", doorPrice);
     if (candidatesError) throw new Error("DOOR_PRICE_UNAVAILABLE");
     let chosen: { id: string; link_token: string; name: string; price: number; currency: string; maxQuantity: number } | null = null;
+    let notOpenReason: string | null = null;
     for (const candidate of candidates ?? []) {
       if (!candidate.link_token) continue;
       const { data: rows, error: linkError } = await admin.rpc("get_link_ticket_type", { target_event: session.event_id, target_token: candidate.link_token });
       if (linkError) throw new Error("DOOR_PRICE_UNAVAILABLE");
       const row = rows?.[0];
+      if (row && !row.sale_open) notOpenReason = `${row.sale_state}|${row.sales_start ?? ""}`;
       if (row?.sale_open) { chosen = { id: row.id, link_token: candidate.link_token, name: row.name, price: row.price_amount, currency: row.currency, maxQuantity: Math.min(row.max_per_order, row.available_quantity) }; break; }
     }
+    if (!chosen && notOpenReason) throw new Error(`DOOR_LINK_NOT_OPEN:${doorPrice}|${notOpenReason}`);
     if (!chosen) throw new Error(`NO_DOOR_LINK_TICKET:${doorPrice}`);
     item = { id: chosen.id, name: chosen.name, unitPrice: chosen.price, currency: chosen.currency, token: chosen.link_token, maxQuantity: chosen.maxQuantity };
   }
