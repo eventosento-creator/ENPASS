@@ -50,16 +50,16 @@ export const boxOfficeQuoteSchema = z.object({
   quantity: z.number().int().min(1).max(99),
 });
 
-const optionalDocument = z.string().trim().max(30).default("")
+const requiredDocument = z.string().trim().max(30)
   .transform((value) => value.replace(/[.\s-]/g, ""))
-  .refine((value) => value === "" || /^\d{7,8}$/.test(value), { message: "DNI inválido" });
+  .refine((value) => /^\d{7,8}$/.test(value), { message: "DNI inválido" });
 
 export const boxOfficeSaleSchema = boxOfficeQuoteSchema.extend({
   idempotencyKey: z.uuid(),
-  buyerFirstName: z.string().trim().max(80).default(""),
-  buyerLastName: z.string().trim().max(80).default(""),
-  buyerDocument: optionalDocument,
-  buyerEmail: z.union([z.literal(""), z.email()]).default(""),
+  buyerFirstName: z.string().trim().min(1).max(80),
+  buyerLastName: z.string().trim().min(1).max(80),
+  buyerDocument: requiredDocument,
+  buyerEmail: z.email(),
   buyerPhone: z.string().trim().max(40).default(""),
 });
 

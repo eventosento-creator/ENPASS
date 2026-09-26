@@ -13,12 +13,6 @@ import { getCashierOptions } from "@/modules/pos/application/cashier-options";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
-function toLocalInput(value: string | null) {
-  if (!value) return "";
-  const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" }).format(new Date(value));
-  return parts.replace(" ", "T");
-}
-
 export default async function BoxOfficePage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ notice?: string; error?: string }> }) {
   const [{ eventId }, query] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
@@ -72,8 +66,7 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
             <label key={name} className="flex items-center gap-2"><input type="checkbox" name={name} defaultChecked={cfg[key]} className="size-4"/>{boxOfficeMethodLabels[method]}</label>
           ))}
         </div></div>
-        <label className="flex items-center gap-3 text-sm"><input type="checkbox" name="allowAfterStart" defaultChecked={cfg.allow_after_start} className="size-4"/>Permitir vender después de la hora de inicio</label>
-        <label className="label max-w-xs">Cierre de taquilla <span className="font-normal text-neutral-600">(opcional, hora de Argentina)</span><input className="field" type="datetime-local" name="closesAt" defaultValue={toLocalInput(cfg.closes_at)}/></label>
+        <p className="text-xs leading-5 text-neutral-500">La taquilla vende desde que abrís la caja hasta que el cajero la cierra o vos la deshabilitás acá. No tiene horario de cierre.</p>
         <SubmitButton className="btn btn-primary w-fit" pendingLabel="Guardando…">Guardar configuración</SubmitButton>
       </form>
     </section>

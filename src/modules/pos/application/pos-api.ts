@@ -180,3 +180,19 @@ export async function confirmCurrentBoxOfficeSale(input: {
   const ticketQrDataUrl = await QRCode.toDataURL(ticketUrl, { errorCorrectionLevel: "M", margin: 1, width: 320 });
   return { sale, ticketsIssued, emailed, ticketUrl, ticketQrDataUrl };
 }
+
+// The buyer pays on the regular online checkout (their own data, Mercado Pago, online price and invoice flow).
+// The cashier only shows a QR of that URL with the ticket type and quantity already selected.
+export async function getBoxOfficeOnlineLink(ticketTypeId: string, quantity: number) {
+  const session = await getCurrentPosSession();
+  if (!session) throw new Error("DEVICE_NOT_AUTHORIZED");
+  const admin = createAdminClient();
+  const { data: event } = await admin.from("events").select("slug").eq("id", session.event_id).single();
+  if (!event) throw new Error("EVENT_NOT_FOUND");
+  const selection = JSON.stringify([{ item_type: "ticket", item_id: ticketTypeId, quantity }]);
+  const base = process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const url = new URL(`/e/${event.slug}/checkout`, base);
+  url.searchParams.set("selection", selection);
+  const qrDataUrl = await QRCode.toDataURL(url.toString(), { errorCorrectionLevel: "M", margin: 1, width: 360 });
+  return { url: url.toString(), qrDataUrl };
+}

@@ -18,7 +18,7 @@ const ERRORS: Array<[string, string, number]> = [
 
 export async function POST(request: Request) {
   const parsed = boxOfficeSaleSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Revisá los datos del comprador (el DNI debe tener 7 u 8 números)." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Completá nombre, apellido, DNI (7 u 8 números) y un email válido del comprador." }, { status: 400 });
   try { return NextResponse.json({ order: await createCurrentBoxOfficeSale(parsed.data) }); }
   catch (error) {
     const message = error instanceof Error ? error.message : "";

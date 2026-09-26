@@ -29,22 +29,17 @@ export async function enableBoxOfficeModule(formData: FormData) {
   back(parsed.data.eventId, "notice", "Caja activada. Ahora configurá la taquilla.");
 }
 
-const settingsSchema = z.object({
-  eventId,
-  closesAt: z.string().trim().default(""),
-});
+const settingsSchema = z.object({ eventId });
 
 export async function saveBoxOfficeSettings(formData: FormData) {
   const parsed = settingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
   const on = (name: string) => formData.get(name) === "on";
-  const closesAt = parsed.data.closesAt ? new Date(parsed.data.closesAt) : null;
-  if (closesAt && Number.isNaN(closesAt.getTime())) back(parsed.data.eventId, "error", "La hora de cierre no es válida.");
   const supabase = await createClient();
   const { error } = await supabase.rpc("upsert_box_office_settings", {
     target_event: parsed.data.eventId, target_enabled: on("enabled"), target_cash: on("cash"), target_qr: on("qr"),
     target_debit: on("debit"), target_credit: on("credit"), target_transfer: on("transfer"), target_other: on("other"),
-    target_allow_after_start: on("allowAfterStart"), target_closes_at: closesAt ? closesAt.toISOString() : null,
+    target_allow_after_start: true, target_closes_at: null,
   });
   if (error) back(parsed.data.eventId, "error", "No pudimos guardar la configuración.");
   back(parsed.data.eventId, "notice", "Configuración de taquilla guardada.");
