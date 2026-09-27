@@ -2,7 +2,7 @@ import type { Route } from "next";
 
 export function safeProducerPath(value: FormDataEntryValue | string | null | undefined, fallback: Route = "/app"): Route {
   if (typeof value !== "string") return fallback;
-  const isAppRoute = value === "/app" || value.startsWith("/app/") || value.startsWith("/app?");
+  const isAppRoute = value === "/app" || value.startsWith("/app/") || value.startsWith("/app?") || value.startsWith("/invite/aceptar?token=");
   if (!isAppRoute || value.includes("\\")) return fallback;
   return value as Route;
 }
