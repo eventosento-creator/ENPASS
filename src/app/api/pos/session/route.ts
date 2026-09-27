@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentBoxOfficeState, getCurrentPosCatalog, getCurrentPosCashSummary, getCurrentPosSession } from "@/modules/pos/application/pos-api";
+import { getCurrentBoxOfficeState, getCurrentPosCatalog, getCurrentPosCashSummary, getPosSessionState } from "@/modules/pos/application/pos-api";
 
 export async function GET() {
-  const session = await getCurrentPosSession();
-  if (!session) return NextResponse.json({ error: "Dispositivo no autorizado." }, { status: 401 });
+  const state = await getPosSessionState();
+  if (state.status === "unavailable") return NextResponse.json({ error: "Sin conexión con el servidor." }, { status: 503 });
+  if (state.status === "none") return NextResponse.json({ error: "Dispositivo no autorizado." }, { status: 401 });
   const [catalog, cashSummary, boxOffice] = await Promise.all([getCurrentPosCatalog(), getCurrentPosCashSummary(), getCurrentBoxOfficeState()]);
-  return NextResponse.json({ session, catalog, cashSummary, boxOffice });
+  return NextResponse.json({ session: state.session, catalog, cashSummary, boxOffice });
 }

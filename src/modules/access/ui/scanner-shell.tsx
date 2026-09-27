@@ -16,8 +16,9 @@ type ManualPreview = {
   max_entries?: number;
 };
 
-export function ScannerShell({ initialSession, developmentMode }: { initialSession: ScannerSessionView | null; developmentMode: boolean }) {
+export function ScannerShell({ initialSession, initialUnavailable = false, developmentMode }: { initialSession: ScannerSessionView | null; initialUnavailable?: boolean; developmentMode: boolean }) {
   const [session, setSession] = useState(initialSession);
+  if (!session && initialUnavailable) return <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-6 text-center"><WifiOff size={40}/><h1 className="text-2xl font-black">No pudimos conectar</h1><p className="text-sm leading-6 text-neutral-500">Hubo un problema de conexión con el servidor. <strong>Este dispositivo sigue activado</strong>: no necesitás un código nuevo.</p><button className="btn btn-primary min-h-14 w-full" onClick={() => window.location.reload()}>Reintentar</button></main>;
   if (!session) return <ActivationScreen onActivated={setSession}/>;
   return <ActiveScanner session={session} developmentMode={developmentMode} onSessionEnded={() => setSession(null)}/>;
 }

@@ -20,7 +20,7 @@ export async function setScannerSessionCookie(raw: string, expiresAt: string) {
   (await cookies()).set(SCANNER_SESSION_COOKIE, raw, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     expires,
   });
@@ -30,7 +30,7 @@ export async function clearScannerSessionCookie() {
   (await cookies()).set(SCANNER_SESSION_COOKIE, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: 0,
   });

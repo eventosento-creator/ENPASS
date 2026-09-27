@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   response.cookies.set(PROMOTER_SESSION_COOKIE, session.rawSession, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     expires: session.expiresAt,
     maxAge: PROMOTER_SESSION_MAX_AGE_SECONDS,

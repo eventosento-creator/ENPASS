@@ -40,6 +40,20 @@ export async function activatePos(pin: string, fingerprintHash: string) {
   return { activation, rawSession: credential.raw, session };
 }
 
+export type PosSessionState = { status: "active"; session: PosDeviceSessionView } | { status: "none" } | { status: "unavailable" };
+
+// "unavailable" = we could not ask the database (never treat it as "not activated": the PIN is single-use).
+export async function getPosSessionState(): Promise<PosSessionState> {
+  const sessionHash = await getPosSessionHash();
+  if (!sessionHash) return { status: "none" };
+  const admin = createAdminClient();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { data, error } = await admin.rpc("get_pos_device_session", { target_session_hash: sessionHash });
+    if (!error) return data?.[0] ? { status: "active", session: data[0] as PosDeviceSessionView } : { status: "none" };
+  }
+  return { status: "unavailable" };
+}
+
 export async function getCurrentPosSession(): Promise<PosDeviceSessionView | null> {
   const sessionHash = await getPosSessionHash();
   if (!sessionHash) return null;
