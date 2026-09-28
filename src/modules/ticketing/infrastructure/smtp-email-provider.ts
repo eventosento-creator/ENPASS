@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 
 export class SmtpEmailProvider implements EmailProvider {
@@ -222,6 +222,63 @@ export class SmtpEmailProvider implements EmailProvider {
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">Código de gestión</p>
           <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:#0a0a0b">${escapeHtml(message.managementCode)}</p>
+        </div>
+      `),
+    });
+  }
+
+  async sendMembershipWelcome(message: MembershipWelcomeEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Ya sos socio de ${message.organizationName}`,
+      text: `¡Bienvenido/a a ${message.organizationName}!\n\nN° de socio: ${message.memberNumber}\nCategoría: ${message.categoryName}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Bienvenido/a!</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya sos socio de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
+          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">N° de socio</p>
+          <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:#0a0a0b">${escapeHtml(message.memberNumber)}</p>
+          <p style="margin:10px 0 0;font-size:12px;color:#9a9a9f">${escapeHtml(message.categoryName)}</p>
+        </div>
+      `),
+    });
+  }
+
+  async sendMembershipDue(message: MembershipDueEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Cuota de ${message.periodLabel} · ${message.organizationName}`,
+      text: `Hola ${message.memberFirstName},\n\nTu cuota de ${message.periodLabel} es de ${message.amountLabel}, vence el ${message.dueDateLabel}.${message.payUrl ? `\n\nPagar online: ${message.payUrl}` : ""}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Cuota de ${escapeHtml(message.periodLabel)}</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, esta es tu cuota de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
+          <p style="margin:0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:#0a0a0b">${escapeHtml(message.amountLabel)}</p>
+          <p style="margin:8px 0 0;font-size:12px;color:#9a9a9f">Vence el ${escapeHtml(message.dueDateLabel)}</p>
+        </div>
+        ${message.payUrl ? accessButton(message.payUrl, "Pagar online") : ""}
+      `),
+    });
+  }
+
+  async sendMembershipDuePaid(message: MembershipDuePaidEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Pago confirmado · ${message.organizationName}`,
+      text: `Hola ${message.memberFirstName},\n\nRecibimos tu pago de la cuota de ${message.periodLabel}: ${message.amountLabel} (${message.paymentMethodLabel}). ¡Gracias!`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Pago recibido!</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya registramos tu pago en <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
+          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">${escapeHtml(message.periodLabel)}</p>
+          <p style="margin:6px 0 0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:#0a0a0b">${escapeHtml(message.amountLabel)}</p>
+          <p style="margin:8px 0 0;font-size:12px;color:#9a9a9f">${escapeHtml(message.paymentMethodLabel)}</p>
         </div>
       `),
     });

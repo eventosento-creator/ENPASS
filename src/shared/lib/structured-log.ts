@@ -91,7 +91,8 @@ export function collaboratorLog(event: CollaboratorLogEvent, fields: Record<stri
 type MembershipDueLogEvent =
   | "membership_due.webhook.received"
   | "membership_due.webhook.processed"
-  | "membership_due.webhook.failed";
+  | "membership_due.webhook.failed"
+  | "membership_due.email.failed";
 
 export function membershipDueLog(event: MembershipDueLogEvent, fields: Record<string, SafeLogValue> = {}) {
   console.info(JSON.stringify({

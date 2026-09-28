@@ -89,6 +89,33 @@ export type ArrepentimientoReceivedEmail = {
   reason?: string | null;
 };
 
+export type MembershipWelcomeEmail = {
+  to: string;
+  memberFirstName: string;
+  organizationName: string;
+  memberNumber: string;
+  categoryName: string;
+};
+
+export type MembershipDueEmail = {
+  to: string;
+  memberFirstName: string;
+  organizationName: string;
+  periodLabel: string;
+  amountLabel: string;
+  dueDateLabel: string;
+  payUrl: string | null;
+};
+
+export type MembershipDuePaidEmail = {
+  to: string;
+  memberFirstName: string;
+  organizationName: string;
+  periodLabel: string;
+  amountLabel: string;
+  paymentMethodLabel: string;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
@@ -100,4 +127,7 @@ export interface EmailProvider {
   sendInvoice(message: InvoiceEmail): Promise<void>;
   sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;
   sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail): Promise<void>;
+  sendMembershipWelcome(message: MembershipWelcomeEmail): Promise<void>;
+  sendMembershipDue(message: MembershipDueEmail): Promise<void>;
+  sendMembershipDuePaid(message: MembershipDuePaidEmail): Promise<void>;
 }

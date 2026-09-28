@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/shared/database/admin";
 import type { ProviderPayment } from "@/modules/payments/domain/provider";
+import { sendDuePaidEmail } from "./membership-emails";
 
 /** Mirrors applyProviderPayment but for membership dues, which don't have an order/event behind
  * them — see the note in 20260928140000_club_memberships.sql for why this stays separate. */
@@ -31,6 +32,20 @@ export async function applyDuePayment(providerPayment: ProviderPayment) {
       payment_method: "mercado_pago",
       payment_reference: providerPayment.providerPaymentId,
     }).eq("id", dueId);
+
+    const { data: membership } = await admin.from("memberships").select("customer_id, organization_id").eq("id", due.membership_id).maybeSingle();
+    if (membership) {
+      const [{ data: customer }, { data: org }] = await Promise.all([
+        admin.from("customers").select("email, first_name").eq("id", membership.customer_id).maybeSingle(),
+        admin.from("organizations").select("name").eq("id", membership.organization_id).maybeSingle(),
+      ]);
+      if (customer?.email) {
+        await sendDuePaidEmail({
+          to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
+          period: due.period, amount: providerPayment.grossAmount, paymentMethod: "mercado_pago",
+        });
+      }
+    }
   }
 
   return { dueId, status: mappedStatus };

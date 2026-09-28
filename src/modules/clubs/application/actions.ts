@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createDueCheckout } from "./create-due-checkout";
+import { sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
 import type { CustomerCandidate } from "../domain/club";
 
 export type CustomerSearchState = { results: CustomerCandidate[]; error?: string };
@@ -87,7 +88,20 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
     if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
     return { error: "No pudimos crear el socio." };
   }
-  redirect(`/app/socios/${data}` as never);
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendMembershipWelcomeEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      memberNumber: parsed.data.memberNumber, categoryName: result.category_name,
+    });
+    if (result.due_id) {
+      await sendDueGeneratedEmail({
+        dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name,
+        organizationName: result.organization_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+      });
+    }
+  }
+  redirect(`/app/socios/${result?.membership_id}` as never);
 }
 
 const categorySchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0) });
@@ -123,7 +137,11 @@ export async function generateDuesForPeriod(formData: FormData) {
   const period = String(formData.get("period") ?? "");
   if (!organizationId || !period) return;
   const supabase = await createClient();
-  await supabase.rpc("generate_dues_for_period", { target_org: organizationId, target_category: categoryId, target_period: period });
+  const { data } = await supabase.rpc("generate_dues_for_period", { target_org: organizationId, target_category: categoryId, target_period: period });
+  await Promise.allSettled((data ?? []).filter((row) => row.customer_email).map((row) => sendDueGeneratedEmail({
+    dueId: row.due_id, to: row.customer_email, firstName: row.customer_first_name, organizationName: row.organization_name,
+    period: row.due_period, amount: row.due_amount, dueDate: row.due_date,
+  })));
   revalidatePath("/app/socios");
 }
 
@@ -134,7 +152,14 @@ export async function createMembershipDue(formData: FormData) {
   const dueDate = String(formData.get("dueDate") ?? "");
   if (!membershipId || !period || !dueDate || Number.isNaN(amount)) return;
   const supabase = await createClient();
-  await supabase.rpc("create_membership_due", { target_membership: membershipId, target_period: period, target_amount: Math.round(amount * 100), target_due_date: dueDate });
+  const { data } = await supabase.rpc("create_membership_due", { target_membership: membershipId, target_period: period, target_amount: Math.round(amount * 100), target_due_date: dueDate });
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendDueGeneratedEmail({
+      dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+    });
+  }
   revalidatePath(`/app/socios/${membershipId}`);
 }
 
@@ -147,11 +172,18 @@ export async function recordManualDuePayment(_: ClubActionState, formData: FormD
   const parsed = manualPaymentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá el importe y el medio de pago." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("record_manual_due_payment", {
+  const { data, error } = await supabase.rpc("record_manual_due_payment", {
     target_due: parsed.data.dueId, target_paid_amount: Math.round(parsed.data.paidAmount * 100),
     target_payment_method: parsed.data.paymentMethod, target_payment_reference: parsed.data.paymentReference ?? null,
   });
   if (error) return { error: error.message?.includes("DUE_ALREADY_PAID") ? "Esa cuota ya estaba pagada." : "No pudimos registrar el pago." };
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendDuePaidEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method,
+    });
+  }
   revalidatePath(`/app/socios/${parsed.data.membershipId}`);
   revalidatePath("/app/socios");
   return { success: "Pago registrado." };
