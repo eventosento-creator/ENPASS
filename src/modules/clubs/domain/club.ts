@@ -48,6 +48,16 @@ export type MembershipDue = {
   status: DueStatus;
 };
 
+export type CustomerCandidate = {
+  customerId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  document: string | null;
+  alreadyMember: boolean;
+};
+
 export const membershipStatusLabels: Record<MembershipStatus, string> = {
   active: "Activo",
   suspended: "Suspendido",

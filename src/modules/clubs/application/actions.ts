@@ -5,6 +5,24 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createDueCheckout } from "./create-due-checkout";
+import type { CustomerCandidate } from "../domain/club";
+
+export type CustomerSearchState = { results: CustomerCandidate[]; error?: string };
+
+export async function searchCustomersForClub(_: CustomerSearchState, formData: FormData): Promise<CustomerSearchState> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const query = String(formData.get("query") ?? "");
+  if (!organizationId) return { results: [] };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_customers_for_club", { target_org: organizationId, target_query: query });
+  if (error || !data) return { results: [], error: "No pudimos buscar." };
+  return {
+    results: data.map((row) => ({
+      customerId: row.customer_id, firstName: row.first_name, lastName: row.last_name,
+      email: row.email, phone: row.phone, document: row.document, alreadyMember: row.already_member,
+    })),
+  };
+}
 
 export type ClubActionState = { error?: string; success?: string };
 export type DueCheckoutState = { error?: string; checkoutUrl?: string };
@@ -37,29 +55,36 @@ const createMembershipSchema = z.object({
   organizationId: z.string().uuid(),
   categoryId: z.string().uuid(),
   memberNumber: z.string().min(1).max(20),
-  firstName: z.string().min(1).max(80),
-  lastName: z.string().min(1).max(80),
-  email: z.email(),
+  customerId: z.string().uuid().optional(),
+  firstName: z.string().max(80).optional(),
+  lastName: z.string().max(80).optional(),
+  email: z.string().max(160).optional(),
   phone: z.string().max(30).optional(),
   document: z.string().max(20).optional(),
 });
 
 export async function createMembership(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
   const parsed = createMembershipSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Revisá los datos: falta algo o el email no es válido." };
+  if (!parsed.success) return { error: "Revisá los datos: falta algo." };
+  const linkingExisting = !!parsed.data.customerId;
+  if (!linkingExisting && (!parsed.data.firstName || !parsed.data.lastName || !z.email().safeParse(parsed.data.email).success)) {
+    return { error: "Revisá los datos: falta algo o el email no es válido." };
+  }
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_membership", {
     target_org: parsed.data.organizationId,
     target_category: parsed.data.categoryId,
     target_member_number: parsed.data.memberNumber,
-    target_first_name: parsed.data.firstName,
-    target_last_name: parsed.data.lastName,
-    target_email: parsed.data.email,
+    target_first_name: parsed.data.firstName ?? "",
+    target_last_name: parsed.data.lastName ?? "",
+    target_email: parsed.data.email ?? "",
     target_phone: parsed.data.phone ?? null,
     target_document: parsed.data.document ?? null,
+    target_customer_id: parsed.data.customerId ?? null,
   });
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
+    if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
     return { error: "No pudimos crear el socio." };
   }
   redirect(`/app/socios/${data}` as never);
