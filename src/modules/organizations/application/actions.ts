@@ -34,3 +34,32 @@ export async function createVenue(_: ActionState, formData: FormData): Promise<A
   revalidatePath("/app");
   redirect(safeProducerPath(formData.get("next")));
 }
+
+const updateVenueSchema = venueSchema.extend({ venueId: z.uuid() });
+
+export async function updateVenue(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = updateVenueSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá los datos del lugar." };
+  const supabase = await createClient();
+  const { organizationId, venueId, ...venue } = parsed.data;
+  const { error } = await supabase.from("venues").update(venue).eq("id", venueId).eq("organization_id", organizationId);
+  if (error) return { error: "No pudimos guardar los cambios." };
+  revalidatePath("/app/venues");
+  redirect(safeProducerPath(formData.get("next")));
+}
+
+export type DeleteVenueState = { error?: string };
+
+export async function deleteVenue(_: DeleteVenueState, formData: FormData): Promise<DeleteVenueState> {
+  const venueId = String(formData.get("venueId") ?? "");
+  const organizationId = String(formData.get("organizationId") ?? "");
+  if (!venueId || !organizationId) return { error: "Faltan datos." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("venues").delete().eq("id", venueId).eq("organization_id", organizationId);
+  if (error) {
+    if (error.code === "23503") return { error: "No podés borrar este lugar: tiene eventos creados. Borrá o movés esos eventos primero." };
+    return { error: "No pudimos borrar el lugar." };
+  }
+  revalidatePath("/app/venues");
+  return {};
+}
