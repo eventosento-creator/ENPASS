@@ -96,10 +96,9 @@ export async function generateDuesForPeriod(formData: FormData) {
   const organizationId = String(formData.get("organizationId") ?? "");
   const categoryId = String(formData.get("categoryId") ?? "") || null;
   const period = String(formData.get("period") ?? "");
-  const dueDate = String(formData.get("dueDate") ?? "");
-  if (!organizationId || !period || !dueDate) return;
+  if (!organizationId || !period) return;
   const supabase = await createClient();
-  await supabase.rpc("generate_dues_for_period", { target_org: organizationId, target_category: categoryId, target_period: period, target_due_date: dueDate });
+  await supabase.rpc("generate_dues_for_period", { target_org: organizationId, target_category: categoryId, target_period: period });
   revalidatePath("/app/socios");
 }
 

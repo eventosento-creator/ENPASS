@@ -701,7 +701,8 @@ export interface Database {
       get_membership_detail: { Args: { target_membership: string }; Returns: { membership_id: string; organization_id: string; customer_id: string; member_number: string; first_name: string; last_name: string; email: string; phone: string | null; document: string | null; category_id: string; category_name: string; membership_status: "active" | "suspended" | "cancelled"; status_reason: string | null; status_changed_at: string | null; starts_at: string; notes: string }[] };
       get_membership_dues: { Args: { target_membership: string }; Returns: { due_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: string | null; payment_reference: string | null; status: DueStatus }[] };
       create_membership_due: { Args: { target_membership: string; target_period: string; target_amount: number; target_due_date: string }; Returns: string | null };
-      generate_dues_for_period: { Args: { target_org: string; target_category: string | null; target_period: string; target_due_date: string }; Returns: number };
+      generate_dues_for_period: { Args: { target_org: string; target_category: string | null; target_period: string }; Returns: number };
+      membership_due_date_for_period: { Args: { target_starts_at: string; target_period: string }; Returns: string };
       record_manual_due_payment: { Args: { target_due: string; target_paid_amount: number; target_payment_method: "cash" | "transfer" | "other"; target_payment_reference: string | null }; Returns: undefined };
       get_membership_due_public_status: { Args: { target_due: string }; Returns: { organization_name: string; member_first_name: string; period: string; amount: number; currency: string; status: "paid" | "pending" }[] };
     };

@@ -35,7 +35,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
     </section>
 
     <section className="card mt-6 p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">Cuotas</h2><NewDueForm membershipId={membership.membershipId} defaultAmount={category?.monthly_fee_amount ?? 0}/></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">Cuotas</h2><NewDueForm membershipId={membership.membershipId} defaultAmount={category?.monthly_fee_amount ?? 0} startsAt={membership.startsAt}/></div>
       <div className="mt-5"><DuesList membershipId={membership.membershipId} dues={dues} currency={org.default_currency}/></div>
     </section>
   </>;

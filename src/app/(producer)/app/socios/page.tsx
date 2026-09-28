@@ -19,7 +19,7 @@ export default async function MembersPage() {
   const activeCount = members.filter((m) => m.membershipStatus === "active").length;
   const overdueCount = members.filter((m) => m.dueStatus === "overdue").length;
   const monthlyExpected = categories.reduce((sum, category) => sum + category.monthly_fee_amount * members.filter((m) => m.categoryName === category.name && m.membershipStatus === "active").length, 0);
-  const { currentPeriod, currentDueDate } = defaultDuePeriod();
+  const currentPeriod = defaultCurrentPeriod();
 
   return <>
     <div className="flex flex-wrap items-end justify-between gap-4">
@@ -36,8 +36,7 @@ export default async function MembersPage() {
     {categories.length > 0 && <form action={generateDuesForPeriod} className="card mt-6 flex flex-wrap items-end gap-3 p-4">
       <input type="hidden" name="organizationId" value={org.id}/>
       <input type="hidden" name="period" value={currentPeriod}/>
-      <input type="hidden" name="dueDate" value={currentDueDate}/>
-      <p className="text-sm text-neutral-500">Generar la cuota de este mes para todos los socios activos.</p>
+      <p className="text-sm text-neutral-500">Generar la cuota de este mes para todos los socios activos. A cada uno le vence el mismo día del mes en que se dio de alta.</p>
       <button className="btn btn-secondary ml-auto" type="submit">Generar cuotas del mes</button>
     </form>}
 
@@ -45,9 +44,7 @@ export default async function MembersPage() {
   </>;
 }
 
-function defaultDuePeriod() {
+function defaultCurrentPeriod() {
   const now = new Date();
-  const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const currentDueDate = new Date(now.getTime() + 10 * 86_400_000).toISOString().slice(0, 10);
-  return { currentPeriod, currentDueDate };
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
