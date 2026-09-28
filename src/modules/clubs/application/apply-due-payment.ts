@@ -35,14 +35,16 @@ export async function applyDuePayment(providerPayment: ProviderPayment) {
 
     const { data: membership } = await admin.from("memberships").select("customer_id, organization_id").eq("id", due.membership_id).maybeSingle();
     if (membership) {
-      const [{ data: customer }, { data: org }] = await Promise.all([
+      const [{ data: customer }, { data: org }, { data: settings }] = await Promise.all([
         admin.from("customers").select("email, first_name").eq("id", membership.customer_id).maybeSingle(),
         admin.from("organizations").select("name").eq("id", membership.organization_id).maybeSingle(),
+        admin.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color").eq("organization_id", membership.organization_id).maybeSingle(),
       ]);
       if (customer?.email) {
         await sendDuePaidEmail({
           to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
           period: due.period, amount: providerPayment.grossAmount, paymentMethod: "mercado_pago",
+          brand: { logoUrl: settings?.brand_logo_url, name: settings?.brand_name, accentColor: settings?.brand_accent_color },
         });
       }
     }

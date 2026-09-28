@@ -10,6 +10,12 @@ export const isClubEnabled = cache(async (organizationId: string) => {
   return data?.enabled ?? false;
 });
 
+export const getClubBranding = cache(async (organizationId: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color").eq("organization_id", organizationId).maybeSingle();
+  return { logoUrl: data?.brand_logo_url ?? null, name: data?.brand_name ?? null, accentColor: data?.brand_accent_color ?? null };
+});
+
 export async function searchMembers(organizationId: string, query = ""): Promise<MemberRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("search_memberships", { target_org: organizationId, target_query: query });

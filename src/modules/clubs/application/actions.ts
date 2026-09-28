@@ -8,6 +8,10 @@ import { createDueCheckout } from "./create-due-checkout";
 import { sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
 import type { CustomerCandidate } from "../domain/club";
 
+const brandFrom = (row: { brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }) => ({
+  logoUrl: row.brand_logo_url, name: row.brand_name, accentColor: row.brand_accent_color,
+});
+
 export type CustomerSearchState = { results: CustomerCandidate[]; error?: string };
 
 export async function searchCustomersForClub(_: CustomerSearchState, formData: FormData): Promise<CustomerSearchState> {
@@ -52,6 +56,48 @@ export async function toggleClubEnabled(formData: FormData) {
   revalidatePath("/app");
 }
 
+const brandingSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().max(60).optional(),
+  accentColor: z.string().optional(),
+});
+
+function validateLogo(file: File) {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return "Usá una imagen JPG, PNG o WebP.";
+  if (file.size > 2 * 1024 * 1024) return "El logo puede pesar hasta 2 MB.";
+  return null;
+}
+
+export async function updateClubBranding(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = brandingSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá los datos." };
+  const accentColor = parsed.data.accentColor && /^#[0-9a-fA-F]{6}$/.test(parsed.data.accentColor) ? parsed.data.accentColor : null;
+  const supabase = await createClient();
+
+  let logoUrl: string | null | undefined;
+  const logo = formData.get("logo");
+  if (logo instanceof File && logo.size > 0) {
+    const validationError = validateLogo(logo);
+    if (validationError) return { error: validationError };
+    const extension = logo.type === "image/png" ? "png" : logo.type === "image/webp" ? "webp" : "jpg";
+    const path = `${parsed.data.organizationId}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("club-logos").upload(path, logo, { contentType: logo.type, cacheControl: "3600" });
+    if (uploadError) return { error: "No pudimos subir el logo." };
+    logoUrl = supabase.storage.from("club-logos").getPublicUrl(path).data.publicUrl;
+  }
+
+  const { data: current } = await supabase.from("club_settings").select("brand_logo_url").eq("organization_id", parsed.data.organizationId).maybeSingle();
+  const { error } = await supabase.rpc("set_club_branding", {
+    target_org: parsed.data.organizationId,
+    target_logo_url: logoUrl ?? current?.brand_logo_url ?? null,
+    target_name: parsed.data.name ?? null,
+    target_accent_color: accentColor,
+  });
+  if (error) return { error: "No pudimos guardar la identidad del club." };
+  revalidatePath("/app/settings");
+  return { success: "Identidad guardada." };
+}
+
 const createMembershipSchema = z.object({
   organizationId: z.string().uuid(),
   categoryId: z.string().uuid(),
@@ -92,12 +138,13 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
   if (result?.customer_email) {
     await sendMembershipWelcomeEmail({
       to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
-      memberNumber: parsed.data.memberNumber, categoryName: result.category_name,
+      memberNumber: parsed.data.memberNumber, categoryName: result.category_name, brand: brandFrom(result),
     });
     if (result.due_id) {
       await sendDueGeneratedEmail({
         dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name,
         organizationName: result.organization_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+        brand: brandFrom(result),
       });
     }
   }
@@ -140,7 +187,7 @@ export async function generateDuesForPeriod(formData: FormData) {
   const { data } = await supabase.rpc("generate_dues_for_period", { target_org: organizationId, target_category: categoryId, target_period: period });
   await Promise.allSettled((data ?? []).filter((row) => row.customer_email).map((row) => sendDueGeneratedEmail({
     dueId: row.due_id, to: row.customer_email, firstName: row.customer_first_name, organizationName: row.organization_name,
-    period: row.due_period, amount: row.due_amount, dueDate: row.due_date,
+    period: row.due_period, amount: row.due_amount, dueDate: row.due_date, brand: brandFrom(row),
   })));
   revalidatePath("/app/socios");
 }
@@ -157,7 +204,7 @@ export async function createMembershipDue(formData: FormData) {
   if (result?.customer_email) {
     await sendDueGeneratedEmail({
       dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
-      period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+      period: result.due_period, amount: result.due_amount, dueDate: result.due_date, brand: brandFrom(result),
     });
   }
   revalidatePath(`/app/socios/${membershipId}`);
@@ -181,7 +228,7 @@ export async function recordManualDuePayment(_: ClubActionState, formData: FormD
   if (result?.customer_email) {
     await sendDuePaidEmail({
       to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
-      period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method,
+      period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method, brand: brandFrom(result),
     });
   }
   revalidatePath(`/app/socios/${parsed.data.membershipId}`);

@@ -228,8 +228,9 @@ export class SmtpEmailProvider implements EmailProvider {
   }
 
   async sendMembershipWelcome(message: MembershipWelcomeEmail) {
+    const accent = message.brand?.accentColor;
     await this.transport.sendMail({
-      from: this.from,
+      from: this.brandedFrom(message.brand?.name),
       to: message.to,
       subject: `Ya sos socio de ${message.organizationName}`,
       text: `¡Bienvenido/a a ${message.organizationName}!\n\nN° de socio: ${message.memberNumber}\nCategoría: ${message.categoryName}`,
@@ -239,16 +240,17 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya sos socio de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">N° de socio</p>
-          <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:#0a0a0b">${escapeHtml(message.memberNumber)}</p>
+          <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:${accent || "#0a0a0b"}">${escapeHtml(message.memberNumber)}</p>
           <p style="margin:10px 0 0;font-size:12px;color:#9a9a9f">${escapeHtml(message.categoryName)}</p>
         </div>
-      `),
+      `, message.brand),
     });
   }
 
   async sendMembershipDue(message: MembershipDueEmail) {
+    const accent = message.brand?.accentColor;
     await this.transport.sendMail({
-      from: this.from,
+      from: this.brandedFrom(message.brand?.name),
       to: message.to,
       subject: `Cuota de ${message.periodLabel} · ${message.organizationName}`,
       text: `Hola ${message.memberFirstName},\n\nTu cuota de ${message.periodLabel} es de ${message.amountLabel}, vence el ${message.dueDateLabel}.${message.payUrl ? `\n\nPagar online: ${message.payUrl}` : ""}`,
@@ -257,17 +259,18 @@ export class SmtpEmailProvider implements EmailProvider {
         <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Cuota de ${escapeHtml(message.periodLabel)}</h1>
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, esta es tu cuota de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
-          <p style="margin:0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:#0a0a0b">${escapeHtml(message.amountLabel)}</p>
+          <p style="margin:0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:${accent || "#0a0a0b"}">${escapeHtml(message.amountLabel)}</p>
           <p style="margin:8px 0 0;font-size:12px;color:#9a9a9f">Vence el ${escapeHtml(message.dueDateLabel)}</p>
         </div>
-        ${message.payUrl ? accessButton(message.payUrl, "Pagar online") : ""}
-      `),
+        ${message.payUrl ? accessButton(message.payUrl, "Pagar online", accent) : ""}
+      `, message.brand),
     });
   }
 
   async sendMembershipDuePaid(message: MembershipDuePaidEmail) {
+    const accent = message.brand?.accentColor;
     await this.transport.sendMail({
-      from: this.from,
+      from: this.brandedFrom(message.brand?.name),
       to: message.to,
       subject: `Pago confirmado · ${message.organizationName}`,
       text: `Hola ${message.memberFirstName},\n\nRecibimos tu pago de la cuota de ${message.periodLabel}: ${message.amountLabel} (${message.paymentMethodLabel}). ¡Gracias!`,
@@ -277,11 +280,20 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya registramos tu pago en <strong>${escapeHtml(message.organizationName)}</strong>.</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">${escapeHtml(message.periodLabel)}</p>
-          <p style="margin:6px 0 0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:#0a0a0b">${escapeHtml(message.amountLabel)}</p>
+          <p style="margin:6px 0 0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:${accent || "#0a0a0b"}">${escapeHtml(message.amountLabel)}</p>
           <p style="margin:8px 0 0;font-size:12px;color:#9a9a9f">${escapeHtml(message.paymentMethodLabel)}</p>
         </div>
-      `),
+      `, message.brand),
     });
+  }
+
+  /** El dominio de envío sigue siendo el de ENPASS (deliverability/SPF-DKIM ya configurados);
+   * solo cambia el nombre para mostrar, ej. "Club Demo (vía ENPASS)" <no-reply@enpass...>. */
+  private brandedFrom(brandName?: string | null) {
+    if (!brandName) return this.from;
+    const match = this.from.match(/<(.+)>/);
+    const address = match ? match[1] : this.from;
+    return `"${brandName.replace(/"/g, "")} (vía ENPASS)" <${address}>`;
   }
 }
 
@@ -303,14 +315,19 @@ function siteUrl(path: string) {
   catch { return new URL(path, process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").toString(); }
 }
 
-function emailFrame(content: string) {
-  const logoUrl = siteUrl("/brand/enpass-wordmark-black.png");
+/** brand: identidad del club, usada solo en los mails de socios. Si no hay logo propio, el
+ * header muestra el wordmark de ENPASS como siempre. El footer "con tecnología de ENPASS"
+ * queda fijo siempre — el club no reemplaza a ENPASS, lo personaliza. */
+function emailFrame(content: string, brand?: { logoUrl?: string | null; name?: string | null }) {
+  const enpassLogoUrl = siteUrl("/brand/enpass-wordmark-black.png");
+  const headerLogoUrl = brand?.logoUrl || enpassLogoUrl;
+  const headerAlt = brand?.logoUrl ? (brand?.name || "Logo del club") : "ENPASS";
   return `<!doctype html><html lang="es"><body style="margin:0;background:#f0f0ec;color:#0a0a0b;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:600px;margin:0 auto;padding:24px 16px">
       <div style="border-radius:24px;background:#ffffff;overflow:hidden;box-shadow:0 1px 2px rgba(10,10,11,.04)">
         <div style="padding:30px 32px 8px">
           <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
-            <td valign="middle"><img src="${logoUrl}" alt="ENPASS" height="24" style="display:block;height:24px;width:auto"></td>
+            <td valign="middle"><img src="${escapeHtml(headerLogoUrl)}" alt="${escapeHtml(headerAlt)}" height="28" style="display:block;height:28px;width:auto;max-width:220px"></td>
             <td valign="middle" align="right" style="font-size:10px;font-weight:800;letter-spacing:.1em;line-height:1.7;color:#9a9a9f">EVENTOS<br>PERSONAS<br>MOMENTOS<br>—</td>
           </tr></table>
         </div>
@@ -318,8 +335,8 @@ function emailFrame(content: string) {
         <div style="padding:22px 32px;border-top:1px solid #ececE6">
           <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
             <td valign="middle">
-              <img src="${logoUrl}" alt="ENPASS" height="16" style="display:block;height:16px;width:auto">
-              <p style="margin:8px 0 0;font-size:11px;color:#9a9a9f">Claridad. Dirección. Momentos.</p>
+              <img src="${enpassLogoUrl}" alt="ENPASS" height="16" style="display:block;height:16px;width:auto">
+              <p style="margin:8px 0 0;font-size:11px;color:#9a9a9f">${brand?.logoUrl ? "Con tecnología de ENPASS." : "Claridad. Dirección. Momentos."}</p>
             </td>
             <td valign="middle" align="right">
               <a href="https://www.instagram.com/enpass.arg/" style="text-decoration:none;font-size:14px;margin-left:6px">📷</a>
@@ -375,8 +392,8 @@ function noticeBox(title: string, description: string) {
   </div>`;
 }
 
-function accessButton(accessUrl: string, label = "Ver mis accesos") {
-  return `<p style="margin:26px 0 0;text-align:center"><a href="${escapeHtml(accessUrl)}" style="display:inline-block;min-width:220px;border-radius:14px;background:#0a0a0b;color:#ffffff;padding:16px 26px;text-align:center;text-decoration:none;font-weight:900;font-size:14px">${escapeHtml(label)} →</a></p>`;
+function accessButton(accessUrl: string, label = "Ver mis accesos", accentColor?: string | null) {
+  return `<p style="margin:26px 0 0;text-align:center"><a href="${escapeHtml(accessUrl)}" style="display:inline-block;min-width:220px;border-radius:14px;background:${accentColor || "#0a0a0b"};color:#ffffff;padding:16px 26px;text-align:center;text-decoration:none;font-weight:900;font-size:14px">${escapeHtml(label)} →</a></p>`;
 }
 
 function escapeHtml(value: string) {

@@ -89,12 +89,19 @@ export type ArrepentimientoReceivedEmail = {
   reason?: string | null;
 };
 
+export type ClubBrand = {
+  logoUrl?: string | null;
+  name?: string | null;
+  accentColor?: string | null;
+};
+
 export type MembershipWelcomeEmail = {
   to: string;
   memberFirstName: string;
   organizationName: string;
   memberNumber: string;
   categoryName: string;
+  brand?: ClubBrand;
 };
 
 export type MembershipDueEmail = {
@@ -105,6 +112,7 @@ export type MembershipDueEmail = {
   amountLabel: string;
   dueDateLabel: string;
   payUrl: string | null;
+  brand?: ClubBrand;
 };
 
 export type MembershipDuePaidEmail = {
@@ -114,6 +122,7 @@ export type MembershipDuePaidEmail = {
   periodLabel: string;
   amountLabel: string;
   paymentMethodLabel: string;
+  brand?: ClubBrand;
 };
 
 export interface EmailProvider {
