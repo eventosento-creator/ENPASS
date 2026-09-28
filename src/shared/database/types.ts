@@ -569,6 +569,7 @@ export interface Database {
       is_platform_admin: { Args: Record<string, never>; Returns: boolean };
       publish_event: { Args: { target_event: string }; Returns: undefined };
       cancel_event: { Args: { target_event: string }; Returns: undefined };
+      delete_event: { Args: { target_event: string }; Returns: undefined };
       set_event_sold_out: { Args: { target_event: string; target_sold_out: boolean }; Returns: undefined };
       update_event_details: { Args: { target_event: string; target_venue: string; target_name: string; target_description: string; target_starts_at: string; target_doors_open_at: string | null; target_ends_at: string | null; target_capacity: number; target_require_document: boolean }; Returns: undefined };
       update_event_configuration: { Args: { target_event: string; target_profile: EventProfile; target_tickets_enabled: boolean; target_promoters_enabled: boolean; target_tables_enabled: boolean; target_access_enabled: boolean; target_pos_enabled: boolean; target_inventory_enabled: boolean; target_seatmap_enabled: boolean }; Returns: undefined };

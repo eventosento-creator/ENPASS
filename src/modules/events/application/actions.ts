@@ -281,6 +281,22 @@ export async function cancelEvent(formData: FormData) {
   redirect(`/app/events/${eventId}?cancelled=1`);
 }
 
+export async function deleteEvent(formData: FormData) {
+  const eventId = formData.get("eventId");
+  if (typeof eventId !== "string") return;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_event", { target_event: eventId });
+  if (error) {
+    const message = error.message?.includes("EVENT_HAS_SALES")
+      ? "Este evento ya tiene ventas — no se puede borrar. Podés cancelarlo en vez de borrarlo."
+      : "No se pudo borrar el evento.";
+    redirect(`/app/events/${eventId}?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/app/events");
+  revalidatePath("/app");
+  redirect("/app/events?deleted=1");
+}
+
 export async function setEventSoldOut(formData: FormData) {
   const eventId = formData.get("eventId");
   const soldOut = formData.get("soldOut") === "true";

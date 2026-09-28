@@ -13,6 +13,7 @@ import { DuplicateEventForm } from "@/modules/events/ui/duplicate-event-form";
 import { ShareEventButton } from "@/modules/events/ui/share-event-button";
 import { EventActionsMenu } from "@/modules/events/ui/event-actions-menu";
 import { CancelEventButton } from "@/modules/events/ui/cancel-event-button";
+import { DeleteEventButton } from "@/modules/events/ui/delete-event-button";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
 import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modules/events/application/viewer";
 import { getEventCollaborators } from "@/modules/collaborators/application/access";
@@ -49,6 +50,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
       {event.status === "published" && <form action={setEventSoldOut}><input type="hidden" name="eventId" value={event.id}/><input type="hidden" name="soldOut" value="true"/><button className="btn btn-ghost w-full justify-start"><PackageX size={16}/>Marcar agotado</button></form>}
       {event.status === "sold_out" && <form action={setEventSoldOut}><input type="hidden" name="eventId" value={event.id}/><input type="hidden" name="soldOut" value="false"/><button className="btn btn-ghost w-full justify-start"><RotateCcw size={16}/>Reabrir venta</button></form>}
       {!["finished", "cancelled"].includes(event.status) && <CancelEventButton eventId={event.id}/>}
+      {ticketMetrics.tickets_issued === 0 && ticketMetrics.paid_orders === 0 && <DeleteEventButton eventId={event.id}/>}
     </EventActionsMenu>}</div></div></section>
     <EventSectionNav eventId={event.id} active="summary" capabilities={capabilities}/>
     {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm">{query.error}</p>}
