@@ -35,7 +35,9 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const ticketAttribution = { promoterRevenue: Math.max(0, attribution.promoter_ticket_revenue - tableAttribution.promoter_table_revenue), directRevenue: Math.max(0, attribution.direct_ticket_revenue - tableAttribution.direct_table_revenue), promoterTickets: Math.max(0, attribution.promoter_tickets - tableAttribution.promoter_tables) };
   const duplicatedStartsAt = formatInTimeZone(new Date(new Date(event.starts_at).getTime() + 7 * 86_400_000), venue.timezone, "yyyy-MM-dd'T'HH:mm");
   const totalRevenue = ticketAttribution.promoterRevenue + ticketAttribution.directRevenue + tableAttribution.promoter_table_revenue + tableAttribution.direct_table_revenue + tableMetrics.table_revenue;
-  const capacityPct = event.capacity > 0 ? Math.min(100, Math.round(((ticketInventory + tableInventory) / event.capacity) * 100)) : 0;
+  const capacityRealPct = event.capacity > 0 ? Math.round(((ticketInventory + tableInventory) / event.capacity) * 100) : 0;
+  const capacityPct = Math.min(100, capacityRealPct);
+  const capacityOversold = ticketInventory + tableInventory > event.capacity;
   const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://enpass.com.ar"}/e/${event.slug}`;
   const primaryTicketType = (ticketTypes ?? [])[(ticketTypes ?? []).length - 1];
   const primaryTicketStock = primaryTicketType ? Math.max(0, primaryTicketType.quantity - ticketMetrics.tickets_issued) : 0;
@@ -57,7 +59,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard icon={Wallet} tone="emerald" label="Ventas pagadas" value={String(ticketMetrics.paid_orders)} sublabel="Ahora mismo"/>
       {capabilities.tickets && <StatCard icon={Ticket} tone="blue" label="Entradas emitidas" value={String(ticketMetrics.tickets_issued)} sublabel="Total de entradas"/>}
-      <div className="card p-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-neutral-500/10 text-neutral-500"><Users size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Capacidad</p></div><div className="mt-4 flex items-baseline justify-between"><p className="text-2xl font-black">{ticketInventory + tableInventory} / {event.capacity}</p><span className="text-xs font-bold text-neutral-500">{capacityPct}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-500/15"><div className="h-full rounded-full bg-neutral-700" style={{ width: `${capacityPct}%` }}/></div></div>
+      <div className="card p-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-neutral-500/10 text-neutral-500"><Users size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Cupos configurados</p></div><div className="mt-4 flex items-baseline justify-between"><p className="text-2xl font-black">{ticketInventory + tableInventory} / {event.capacity}</p><span className={`text-xs font-bold ${capacityOversold ? "text-red-500" : "text-neutral-500"}`}>{capacityRealPct}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-500/15"><div className={`h-full rounded-full ${capacityOversold ? "bg-red-500" : "bg-neutral-700"}`} style={{ width: `${capacityPct}%` }}/></div>{capacityOversold && <p className="mt-2 text-[11px] font-semibold text-red-500">Configuraste más cupos que la capacidad del lugar.</p>}</div>
       <StatCard icon={BarChart3} tone="violet" label="Facturación" value={formatMoney(totalRevenue, event.currency)} sublabel="Ventas confirmadas"/>
     </section>
     <section className="mt-4 card p-5 sm:p-6"><div className="grid gap-5 sm:grid-cols-3 sm:divide-x sm:divide-white/[.07]">
