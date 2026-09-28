@@ -41,6 +41,10 @@ export type CreateProviderCheckoutInput = {
     phone: string | null;
     document: string | null;
   };
+  /** Overrides the default `/payment/return?order=...` base (e.g. for non-order checkouts like membership dues). */
+  returnUrl?: string;
+  /** Overrides the default `/api/webhooks/mercadopago` notification URL. */
+  notificationUrl?: string;
 };
 
 export type ProviderCheckout = {

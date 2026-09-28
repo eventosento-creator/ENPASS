@@ -34,6 +34,7 @@ export type TicketType = {
 export type MembershipCategory = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
 export type MembershipRecord = { id: string; organization_id: string; customer_id: string; membership_category_id: string; member_number: string; status: "active" | "suspended" | "cancelled"; status_reason: string | null; status_changed_at: string | null; status_changed_by: string | null; starts_at: string; created_by: string; created_at: string; updated_at: string };
 export type MembershipDueRecord = { id: string; organization_id: string; membership_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | "mercado_pago" | null; payment_reference: string | null; registered_by: string | null; created_at: string };
+export type MembershipDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string };
 export type DueStatus = "paid" | "overdue" | "pending";
 
 export type ProductCategory = { id: string; organization_id: string; name: string; sort_order: number; active: boolean; created_at: string; updated_at: string };
@@ -558,8 +559,8 @@ export interface Database {
       club_settings: { Row: { organization_id: string; enabled: boolean; debt_blocks_entry: boolean; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       membership_categories: { Row: MembershipCategory; Insert: never; Update: never; Relationships: [] };
       memberships: { Row: MembershipRecord; Insert: never; Update: never; Relationships: [] };
-      membership_dues: { Row: MembershipDueRecord; Insert: never; Update: never; Relationships: [] };
-      membership_due_payments: { Row: { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
+      membership_dues: { Row: MembershipDueRecord; Insert: never; Update: Partial<Pick<MembershipDueRecord, "paid_at" | "paid_amount" | "payment_method" | "payment_reference" | "registered_by">>; Relationships: [] };
+      membership_due_payments: { Row: MembershipDuePayment; Insert: Omit<MembershipDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null }; Update: Partial<MembershipDuePayment>; Relationships: [] };
       club_staff: { Row: { organization_id: string; user_id: string; role: "member_staff"; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
     };
     Views: Record<string, never>;
@@ -702,6 +703,7 @@ export interface Database {
       create_membership_due: { Args: { target_membership: string; target_period: string; target_amount: number; target_due_date: string }; Returns: string | null };
       generate_dues_for_period: { Args: { target_org: string; target_category: string | null; target_period: string; target_due_date: string }; Returns: number };
       record_manual_due_payment: { Args: { target_due: string; target_paid_amount: number; target_payment_method: "cash" | "transfer" | "other"; target_payment_reference: string | null }; Returns: undefined };
+      get_membership_due_public_status: { Args: { target_due: string }; Returns: { organization_name: string; member_first_name: string; period: string; amount: number; currency: string; status: "paid" | "pending" }[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

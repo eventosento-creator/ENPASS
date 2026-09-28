@@ -37,7 +37,8 @@ export class MercadoPagoProvider implements PaymentProvider {
 
     const client = new MercadoPagoConfig({ accessToken: credentials.accessToken, options: { timeout: 10_000 } });
     const preference = new Preference(client);
-    const returnBase = `${input.appUrl}/payment/return?order=${encodeURIComponent(input.orderPublicId)}`;
+    const returnBase = input.returnUrl ?? `${input.appUrl}/payment/return?order=${encodeURIComponent(input.orderPublicId)}`;
+    const returnJoin = returnBase.includes("?") ? "&" : "?";
     const checkout = await preference.create({
       body: {
         items: [
@@ -68,12 +69,12 @@ export class MercadoPagoProvider implements PaymentProvider {
           order_public_id: input.orderPublicId,
         },
         back_urls: {
-          success: `${returnBase}&result=success`,
-          pending: `${returnBase}&result=pending`,
-          failure: `${returnBase}&result=failure`,
+          success: `${returnBase}${returnJoin}result=success`,
+          pending: `${returnBase}${returnJoin}result=pending`,
+          failure: `${returnBase}${returnJoin}result=failure`,
         },
         auto_return: "approved",
-        notification_url: `${input.appUrl}/api/webhooks/mercadopago`,
+        notification_url: input.notificationUrl ?? `${input.appUrl}/api/webhooks/mercadopago`,
         expires: true,
         expiration_date_from: new Date().toISOString(),
         expiration_date_to: input.expiresAt,

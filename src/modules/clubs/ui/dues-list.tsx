@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatMoney } from "@/shared/lib/format";
 import { dueStatusLabels, type MembershipDue } from "../domain/club";
 import { DuePaymentForm } from "./due-payment-form";
+import { DueOnlineCheckoutButton } from "./due-online-checkout-button";
 
 const statusTone: Record<string, string> = { paid: "status-success", pending: "text-neutral-500", overdue: "status-danger" };
 const methodLabels: Record<string, string> = { cash: "Efectivo", transfer: "Transferencia", other: "Otro", mercado_pago: "Mercado Pago" };
@@ -15,8 +16,9 @@ export function DuesList({ membershipId, dues, currency }: { membershipId: strin
     {dues.map((due) => <div key={due.dueId} className="rounded-xl border border-white/[.08] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-bold">{new Date(due.period + "T00:00:00").toLocaleDateString("es-AR", { month: "long", year: "numeric" })}</p><p className="mt-0.5 text-xs text-neutral-500">Vence {new Date(due.dueDate + "T00:00:00").toLocaleDateString("es-AR")}{due.paidAt ? ` · Pagada el ${new Date(due.paidAt).toLocaleDateString("es-AR")} (${methodLabels[due.paymentMethod ?? ""] ?? due.paymentMethod})` : ""}</p></div>
-        <div className="flex items-center gap-3"><span className="font-bold">{formatMoney(due.amount, currency)}</span><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone[due.status]}`}>{dueStatusLabels[due.status]}</span>
-          {due.status !== "paid" && <button className="btn btn-secondary" onClick={() => setOpenDueId(openDueId === due.dueId ? null : due.dueId)}>Registrar pago</button>}
+        <div className="flex flex-wrap items-center gap-2"><span className="font-bold">{formatMoney(due.amount, currency)}</span><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone[due.status]}`}>{dueStatusLabels[due.status]}</span>
+          {due.status !== "paid" && <DueOnlineCheckoutButton dueId={due.dueId}/>}
+          {due.status !== "paid" && <button className="btn btn-secondary" onClick={() => setOpenDueId(openDueId === due.dueId ? null : due.dueId)}>Registrar pago manual</button>}
         </div>
       </div>
       {due.status !== "paid" && openDueId === due.dueId && <DuePaymentForm membershipId={membershipId} dueId={due.dueId} defaultAmount={due.amount} onClose={() => setOpenDueId(null)}/>}

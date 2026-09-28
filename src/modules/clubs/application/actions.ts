@@ -4,8 +4,24 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
+import { createDueCheckout } from "./create-due-checkout";
 
 export type ClubActionState = { error?: string; success?: string };
+export type DueCheckoutState = { error?: string; checkoutUrl?: string };
+
+export async function createDueCheckoutLink(_: DueCheckoutState, formData: FormData): Promise<DueCheckoutState> {
+  const dueId = String(formData.get("dueId") ?? "");
+  if (!dueId) return { error: "Falta la cuota." };
+  try {
+    const { checkoutUrl } = await createDueCheckout(dueId);
+    return { checkoutUrl };
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "Conectá Mercado Pago en Ajustes antes de cobrar cuotas online." };
+    if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
+    return { error: "No pudimos generar el link de pago." };
+  }
+}
 
 export async function toggleClubEnabled(formData: FormData) {
   const organizationId = String(formData.get("organizationId") ?? "");
