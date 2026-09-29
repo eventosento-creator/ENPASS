@@ -8,7 +8,7 @@ const baseItems = [
   { href: "/app", label: "Inicio", icon: Home },
   { href: "/app/events", label: "Mis eventos", icon: CalendarDays },
 ] as const;
-const clubItem = { href: "/app/socios", label: "Socios", icon: UserRoundCheck } as const;
+const clubItem = { href: "/app/socios", label: "Club", icon: UserRoundCheck } as const;
 const trailingItems = [
   { href: "/app/clientes", label: "Clientes", icon: Users },
   { href: "/app/settings", label: "Ajustes", icon: Settings },

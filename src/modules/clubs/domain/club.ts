@@ -58,6 +58,30 @@ export type CustomerCandidate = {
   alreadyMember: boolean;
 };
 
+export type DivisionRow = { divisionId: string; name: string; monthlyFeeAmount: number; active: boolean; enrolledCount: number };
+
+export type MembershipDivisionRow = {
+  enrollmentId: string;
+  divisionId: string;
+  divisionName: string;
+  monthlyFeeAmount: number;
+  dueStatus: DueStatus | null;
+  dueAmount: number | null;
+  dueDate: string | null;
+};
+
+export type DivisionEnrollmentRow = {
+  enrollmentId: string;
+  membershipId: string;
+  memberNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  dueStatus: DueStatus | null;
+  dueAmount: number | null;
+  dueDate: string | null;
+};
+
 export const membershipStatusLabels: Record<MembershipStatus, string> = {
   active: "Activo",
   suspended: "Suspendido",

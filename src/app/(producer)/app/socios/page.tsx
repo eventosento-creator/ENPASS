@@ -5,6 +5,7 @@ import { getCurrentOrganization } from "@/modules/organizations/application/quer
 import { isClubEnabled, searchMembers, getMembershipCategories } from "@/modules/clubs/application/queries";
 import { generateDuesForPeriod } from "@/modules/clubs/application/actions";
 import { MemberSearch } from "@/modules/clubs/ui/member-search";
+import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { StatCard } from "@/shared/ui/stat-card";
 import { formatMoney } from "@/shared/lib/format";
@@ -26,6 +27,7 @@ export default async function MembersPage() {
       <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Socios</h1><p className="mt-3 text-neutral-500">Padrón, cuotas y estado de cada socio.</p></div>
       <Link className="btn btn-primary" href={"/app/socios/nuevo" as never}><Plus size={18}/>Nuevo socio</Link>
     </div>
+    <ClubSectionNav active="socios"/>
 
     <section className="mt-6 grid gap-4 sm:grid-cols-3">
       <StatCard icon={UserRoundCheck} tone="emerald" label="Socios activos" value={String(activeCount)}/>

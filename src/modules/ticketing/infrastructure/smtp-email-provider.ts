@@ -249,15 +249,16 @@ export class SmtpEmailProvider implements EmailProvider {
 
   async sendMembershipDue(message: MembershipDueEmail) {
     const accent = message.brand?.accentColor;
+    const title = message.concept ? `Cuota de ${message.concept}` : `Cuota de ${message.periodLabel}`;
     await this.transport.sendMail({
       from: this.brandedFrom(message.brand?.name),
       to: message.to,
-      subject: `Cuota de ${message.periodLabel} · ${message.organizationName}`,
-      text: `Hola ${message.memberFirstName},\n\nTu cuota de ${message.periodLabel} es de ${message.amountLabel}, vence el ${message.dueDateLabel}.${message.payUrl ? `\n\nPagar online: ${message.payUrl}` : ""}`,
+      subject: `${title} · ${message.organizationName}`,
+      text: `Hola ${message.memberFirstName},\n\n${message.concept ? `Tu cuota de ${message.concept} (${message.periodLabel})` : `Tu cuota de ${message.periodLabel}`} es de ${message.amountLabel}, vence el ${message.dueDateLabel}.${message.payUrl ? `\n\nPagar online: ${message.payUrl}` : ""}`,
       html: emailFrame(`
         ${heroBanner()}
-        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Cuota de ${escapeHtml(message.periodLabel)}</h1>
-        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, esta es tu cuota de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">${escapeHtml(title)}</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, esta es tu cuota${message.concept ? ` de ${escapeHtml(message.concept)}` : ""} de <strong>${escapeHtml(message.organizationName)}</strong> (${escapeHtml(message.periodLabel)}).</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:${accent || "#0a0a0b"}">${escapeHtml(message.amountLabel)}</p>
           <p style="margin:8px 0 0;font-size:12px;color:#9a9a9f">Vence el ${escapeHtml(message.dueDateLabel)}</p>
@@ -273,11 +274,11 @@ export class SmtpEmailProvider implements EmailProvider {
       from: this.brandedFrom(message.brand?.name),
       to: message.to,
       subject: `Pago confirmado · ${message.organizationName}`,
-      text: `Hola ${message.memberFirstName},\n\nRecibimos tu pago de la cuota de ${message.periodLabel}: ${message.amountLabel} (${message.paymentMethodLabel}). ¡Gracias!`,
+      text: `Hola ${message.memberFirstName},\n\nRecibimos tu pago de la cuota${message.concept ? ` de ${message.concept}` : ""} de ${message.periodLabel}: ${message.amountLabel} (${message.paymentMethodLabel}). ¡Gracias!`,
       html: emailFrame(`
         ${heroBanner()}
         <h1 style="margin:0 0 10px;font-size:28px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Pago recibido!</h1>
-        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya registramos tu pago en <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya registramos tu pago${message.concept ? ` de ${escapeHtml(message.concept)}` : ""} en <strong>${escapeHtml(message.organizationName)}</strong>.</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">${escapeHtml(message.periodLabel)}</p>
           <p style="margin:6px 0 0;font-size:24px;font-weight:900;letter-spacing:-.02em;color:${accent || "#0a0a0b"}">${escapeHtml(message.amountLabel)}</p>

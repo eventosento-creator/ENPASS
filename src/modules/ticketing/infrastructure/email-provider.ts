@@ -108,6 +108,8 @@ export type MembershipDueEmail = {
   to: string;
   memberFirstName: string;
   organizationName: string;
+  /** Ej. "Fútbol" para una cuota de división — si no se pasa, es la cuota de socio general. */
+  concept?: string;
   periodLabel: string;
   amountLabel: string;
   dueDateLabel: string;
@@ -119,6 +121,7 @@ export type MembershipDuePaidEmail = {
   to: string;
   memberFirstName: string;
   organizationName: string;
+  concept?: string;
   periodLabel: string;
   amountLabel: string;
   paymentMethodLabel: string;

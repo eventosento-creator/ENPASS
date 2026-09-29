@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
-import { isClubEnabled, getMembershipDetail, getMembershipDues, getMembershipCategories } from "@/modules/clubs/application/queries";
+import { isClubEnabled, getMembershipDetail, getMembershipDues, getMembershipCategories, getMembershipDivisions, getAvailableDivisionsForMembership } from "@/modules/clubs/application/queries";
 import { membershipStatusLabels } from "@/modules/clubs/domain/club";
 import { DuesList } from "@/modules/clubs/ui/dues-list";
 import { NewDueForm } from "@/modules/clubs/ui/new-due-form";
 import { MembershipStatusForm } from "@/modules/clubs/ui/membership-status-form";
+import { MembershipDivisionsCard } from "@/modules/clubs/ui/membership-divisions-card";
 
 const statusTone: Record<string, string> = { active: "status-success", suspended: "status-danger", cancelled: "text-neutral-500" };
 
@@ -18,7 +19,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
 
   const membership = await getMembershipDetail(membershipId);
   if (!membership || membership.organizationId !== org.id) notFound();
-  const [dues, categories] = await Promise.all([getMembershipDues(membershipId), getMembershipCategories(org.id)]);
+  const [dues, categories, memberDivisions, availableDivisions] = await Promise.all([
+    getMembershipDues(membershipId), getMembershipCategories(org.id),
+    getMembershipDivisions(membershipId), getAvailableDivisionsForMembership(membershipId),
+  ]);
   const category = categories.find((c) => c.id === membership.categoryId);
 
   return <>
@@ -38,5 +42,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">Cuotas</h2><NewDueForm membershipId={membership.membershipId} defaultAmount={category?.monthly_fee_amount ?? 0} startsAt={membership.startsAt}/></div>
       <div className="mt-5"><DuesList membershipId={membership.membershipId} dues={dues} currency={org.default_currency}/></div>
     </section>
+
+    <MembershipDivisionsCard membershipId={membership.membershipId} divisions={memberDivisions} available={availableDivisions} currency={org.default_currency}/>
   </>;
 }

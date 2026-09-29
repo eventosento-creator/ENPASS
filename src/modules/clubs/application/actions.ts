@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createDueCheckout } from "./create-due-checkout";
-import { sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
-import type { CustomerCandidate } from "../domain/club";
+import { sendDivisionDueGeneratedEmail, sendDivisionDuePaidEmail, sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
+import type { CustomerCandidate, MemberRow, MembershipDue } from "../domain/club";
+import { getDivisionDues, searchMembers } from "./queries";
 
 const brandFrom = (row: { brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }) => ({
   logoUrl: row.brand_logo_url, name: row.brand_name, accentColor: row.brand_accent_color,
@@ -151,7 +152,7 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
   redirect(`/app/socios/${result?.membership_id}` as never);
 }
 
-const categorySchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0) });
+const categorySchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0), active: z.string().optional() });
 
 export async function upsertMembershipCategory(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
   const parsed = categorySchema.safeParse(Object.fromEntries(formData));
@@ -159,12 +160,27 @@ export async function upsertMembershipCategory(_: ClubActionState, formData: For
   const supabase = await createClient();
   const { error } = await supabase.rpc("upsert_membership_category", {
     target_org: parsed.data.organizationId, target_id: parsed.data.id ?? null,
-    target_name: parsed.data.name, target_monthly_fee_amount: Math.round(parsed.data.monthlyFeeAmount * 100), target_active: true,
+    target_name: parsed.data.name, target_monthly_fee_amount: Math.round(parsed.data.monthlyFeeAmount * 100), target_active: parsed.data.active === "true",
   });
   if (error) return { error: "No pudimos guardar la categoría." };
   revalidatePath("/app/socios");
   revalidatePath("/app/socios/nuevo");
+  revalidatePath("/app/socios/categorias");
   return { success: "Categoría guardada." };
+}
+
+export async function toggleCategoryActive(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const monthlyFeeAmount = Number(formData.get("monthlyFeeAmount") ?? 0);
+  const nextActive = formData.get("nextActive") === "true";
+  if (!organizationId || !id) return;
+  const supabase = await createClient();
+  await supabase.rpc("upsert_membership_category", {
+    target_org: organizationId, target_id: id, target_name: name, target_monthly_fee_amount: monthlyFeeAmount, target_active: nextActive,
+  });
+  revalidatePath("/app/socios/categorias");
 }
 
 export async function setMembershipStatus(formData: FormData) {
@@ -234,4 +250,142 @@ export async function recordManualDuePayment(_: ClubActionState, formData: FormD
   revalidatePath(`/app/socios/${parsed.data.membershipId}`);
   revalidatePath("/app/socios");
   return { success: "Pago registrado." };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Divisiones
+// ---------------------------------------------------------------------------------------------
+
+const divisionSchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0), active: z.string().optional() });
+
+export async function upsertDivision(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = divisionSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el nombre y el monto de la cuota." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("upsert_division", {
+    target_org: parsed.data.organizationId, target_id: parsed.data.id ?? null,
+    target_name: parsed.data.name, target_monthly_fee_amount: Math.round(parsed.data.monthlyFeeAmount * 100), target_active: parsed.data.active === "true",
+  });
+  if (error) return { error: error.message?.includes("DIVISION_NAME_TAKEN") ? "Ya existe una división con ese nombre." : "No pudimos guardar la división." };
+  revalidatePath("/app/socios/divisiones");
+  return { success: "División guardada." };
+}
+
+export async function toggleDivisionActive(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const monthlyFeeAmount = Number(formData.get("monthlyFeeAmount") ?? 0);
+  const nextActive = formData.get("nextActive") === "true";
+  if (!organizationId || !id) return;
+  const supabase = await createClient();
+  await supabase.rpc("upsert_division", { target_org: organizationId, target_id: id, target_name: name, target_monthly_fee_amount: monthlyFeeAmount, target_active: nextActive });
+  revalidatePath("/app/socios/divisiones");
+}
+
+export async function enrollMembershipInDivision(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const membershipId = String(formData.get("membershipId") ?? "");
+  const divisionId = String(formData.get("divisionId") ?? "");
+  if (!membershipId || !divisionId) return { error: "Elegí una división." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("enroll_membership_in_division", { target_membership: membershipId, target_division: divisionId });
+  if (error) return { error: "No pudimos anotar al socio." };
+  const result = data?.[0];
+  if (result?.customer_email && result.due_id) {
+    await sendDivisionDueGeneratedEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      divisionName: result.division_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+      brand: brandFrom(result),
+    });
+  }
+  revalidatePath(`/app/socios/${membershipId}`);
+  revalidatePath("/app/socios/divisiones");
+  return { success: "Socio anotado." };
+}
+
+export async function removeMembershipFromDivision(formData: FormData) {
+  const enrollmentId = String(formData.get("enrollmentId") ?? "");
+  const membershipId = String(formData.get("membershipId") ?? "");
+  if (!enrollmentId) return;
+  const supabase = await createClient();
+  await supabase.rpc("remove_membership_from_division", { target_enrollment: enrollmentId });
+  if (membershipId) revalidatePath(`/app/socios/${membershipId}`);
+  revalidatePath("/app/socios/divisiones");
+}
+
+export async function generateDivisionDuesForPeriod(formData: FormData) {
+  const divisionId = String(formData.get("divisionId") ?? "");
+  const period = String(formData.get("period") ?? "");
+  if (!divisionId || !period) return;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("generate_division_dues_for_period", { target_division: divisionId, target_period: period });
+  await Promise.allSettled((data ?? []).filter((row) => row.customer_email).map((row) => sendDivisionDueGeneratedEmail({
+    to: row.customer_email, firstName: row.customer_first_name, organizationName: row.organization_name,
+    divisionName: row.division_name, period: row.due_period, amount: row.due_amount, dueDate: row.due_date, brand: brandFrom(row),
+  })));
+  revalidatePath(`/app/socios/divisiones/${divisionId}`);
+}
+
+export async function createDivisionDue(formData: FormData) {
+  const enrollmentId = String(formData.get("enrollmentId") ?? "");
+  const divisionId = String(formData.get("divisionId") ?? "");
+  const period = String(formData.get("period") ?? "");
+  const amount = Number(formData.get("amount") ?? 0);
+  const dueDate = String(formData.get("dueDate") ?? "");
+  if (!enrollmentId || !period || !dueDate || Number.isNaN(amount)) return;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("create_division_due", { target_enrollment: enrollmentId, target_period: period, target_amount: Math.round(amount * 100), target_due_date: dueDate });
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendDivisionDueGeneratedEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      divisionName: result.division_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+      brand: brandFrom(result),
+    });
+  }
+  revalidatePath(`/app/socios/divisiones/${divisionId}`);
+}
+
+const manualDivisionPaymentSchema = z.object({
+  divisionId: z.string().uuid(), dueId: z.string().uuid(), paidAmount: z.coerce.number().min(0),
+  paymentMethod: z.enum(["cash", "transfer", "other"]), paymentReference: z.string().max(80).optional(),
+});
+
+export async function recordManualDivisionDuePayment(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = manualDivisionPaymentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el importe y el medio de pago." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("record_manual_division_due_payment", {
+    target_due: parsed.data.dueId, target_paid_amount: Math.round(parsed.data.paidAmount * 100),
+    target_payment_method: parsed.data.paymentMethod, target_payment_reference: parsed.data.paymentReference ?? null,
+  });
+  if (error) return { error: error.message?.includes("DUE_ALREADY_PAID") ? "Esa cuota ya estaba pagada." : "No pudimos registrar el pago." };
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendDivisionDuePaidEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      divisionName: result.division_name, period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method,
+      brand: brandFrom(result),
+    });
+  }
+  revalidatePath(`/app/socios/divisiones/${parsed.data.divisionId}`);
+  return { success: "Pago registrado." };
+}
+
+export type MemberSearchState = { results: MemberRow[] };
+
+export async function searchMembersForEnroll(_: MemberSearchState, formData: FormData): Promise<MemberSearchState> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const query = String(formData.get("query") ?? "");
+  if (!organizationId) return { results: [] };
+  const results = await searchMembers(organizationId, query);
+  return { results: results.filter((m) => m.membershipStatus === "active") };
+}
+
+export type DivisionDuesState = { dues: MembershipDue[] };
+
+export async function loadDivisionDues(_: DivisionDuesState, formData: FormData): Promise<DivisionDuesState> {
+  const enrollmentId = String(formData.get("enrollmentId") ?? "");
+  if (!enrollmentId) return { dues: [] };
+  return { dues: await getDivisionDues(enrollmentId) };
 }
