@@ -14,7 +14,7 @@ export function InfiniteEventMarquee({ events, favoritedIds = [] }: { events: Di
     >
       {loopEvents.map((event, index) => {
         const isDuplicate = index >= events.length;
-        return <div key={`${event.id}-${index}`} className={`w-[46vw] shrink-0 sm:w-[26vw] lg:w-[18vw] ${isDuplicate ? "pointer-events-none" : ""}`} aria-hidden={isDuplicate}>
+        return <div key={`${event.id}-${index}`} className="w-[46vw] shrink-0 sm:w-[26vw] lg:w-[18vw]" aria-hidden={isDuplicate}>
           <PublicEventCard event={event} favorited={favoritedSet.has(event.id)}/>
         </div>;
       })}

@@ -567,7 +567,7 @@ export interface Database {
       club_staff: { Row: { organization_id: string; user_id: string; role: "member_staff"; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       divisions: { Row: DivisionRecord; Insert: never; Update: never; Relationships: [] };
       membership_division_enrollments: { Row: { id: string; organization_id: string; membership_id: string; division_id: string; status: "active" | "inactive"; starts_at: string; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
-      division_dues: { Row: { id: string; organization_id: string; enrollment_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | null; payment_reference: string | null; registered_by: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
+      division_dues: { Row: { id: string; organization_id: string; enrollment_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | "mercado_pago" | null; payment_reference: string | null; registered_by: string | null; created_at: string }; Insert: never; Update: Partial<{ paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | "mercado_pago" | null; payment_reference: string | null; registered_by: string | null }>; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {
