@@ -36,6 +36,7 @@ export type MembershipRecord = { id: string; organization_id: string; customer_i
 export type MembershipDueRecord = { id: string; organization_id: string; membership_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | "mercado_pago" | null; payment_reference: string | null; registered_by: string | null; created_at: string };
 export type MembershipDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string };
 export type DivisionRecord = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
+export type DivisionDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string };
 export type DueStatus = "paid" | "overdue" | "pending";
 
 export type ProductCategory = { id: string; organization_id: string; name: string; sort_order: number; active: boolean; created_at: string; updated_at: string };
@@ -562,6 +563,7 @@ export interface Database {
       memberships: { Row: MembershipRecord; Insert: never; Update: never; Relationships: [] };
       membership_dues: { Row: MembershipDueRecord; Insert: never; Update: Partial<Pick<MembershipDueRecord, "paid_at" | "paid_amount" | "payment_method" | "payment_reference" | "registered_by">>; Relationships: [] };
       membership_due_payments: { Row: MembershipDuePayment; Insert: Omit<MembershipDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null }; Update: Partial<MembershipDuePayment>; Relationships: [] };
+      division_due_payments: { Row: DivisionDuePayment; Insert: Omit<DivisionDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null }; Update: Partial<DivisionDuePayment>; Relationships: [] };
       club_staff: { Row: { organization_id: string; user_id: string; role: "member_staff"; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       divisions: { Row: DivisionRecord; Insert: never; Update: never; Relationships: [] };
       membership_division_enrollments: { Row: { id: string; organization_id: string; membership_id: string; division_id: string; status: "active" | "inactive"; starts_at: string; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
@@ -711,6 +713,7 @@ export interface Database {
       membership_due_date_for_period: { Args: { target_starts_at: string; target_period: string }; Returns: string };
       record_manual_due_payment: { Args: { target_due: string; target_paid_amount: number; target_payment_method: "cash" | "transfer" | "other"; target_payment_reference: string | null }; Returns: { customer_email: string; customer_first_name: string; organization_name: string; due_period: string; paid_amount: number; payment_method: string; brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }[] };
       get_membership_due_public_status: { Args: { target_due: string }; Returns: { organization_name: string; member_first_name: string; period: string; amount: number; currency: string; status: "paid" | "pending" }[] };
+      get_division_due_public_status: { Args: { target_due: string }; Returns: { organization_name: string; member_first_name: string; division_name: string; period: string; amount: number; currency: string; status: "paid" | "pending" }[] };
       set_club_branding: { Args: { target_org: string; target_logo_url: string | null; target_name: string | null; target_accent_color: string | null }; Returns: undefined };
       upsert_division: { Args: { target_org: string; target_id: string | null; target_name: string; target_monthly_fee_amount: number; target_active: boolean }; Returns: string };
       list_divisions: { Args: { target_org: string }; Returns: { division_id: string; name: string; monthly_fee_amount: number; active: boolean; enrolled_count: number }[] };

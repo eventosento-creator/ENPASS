@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createDueCheckout } from "./create-due-checkout";
+import { createDivisionDueCheckout } from "./create-division-due-checkout";
 import { sendDivisionDueGeneratedEmail, sendDivisionDuePaidEmail, sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
 import type { CustomerCandidate, MemberRow, MembershipDue } from "../domain/club";
 import { getDivisionDues, searchMembers } from "./queries";
@@ -38,6 +39,20 @@ export async function createDueCheckoutLink(_: DueCheckoutState, formData: FormD
   if (!dueId) return { error: "Falta la cuota." };
   try {
     const { checkoutUrl } = await createDueCheckout(dueId);
+    return { checkoutUrl };
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "Conectá Mercado Pago en Ajustes antes de cobrar cuotas online." };
+    if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
+    return { error: "No pudimos generar el link de pago." };
+  }
+}
+
+export async function createDivisionDueCheckoutLink(_: DueCheckoutState, formData: FormData): Promise<DueCheckoutState> {
+  const dueId = String(formData.get("dueId") ?? "");
+  if (!dueId) return { error: "Falta la cuota." };
+  try {
+    const { checkoutUrl } = await createDivisionDueCheckout(dueId);
     return { checkoutUrl };
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
@@ -293,7 +308,7 @@ export async function enrollMembershipInDivision(_: ClubActionState, formData: F
   const result = data?.[0];
   if (result?.customer_email && result.due_id) {
     await sendDivisionDueGeneratedEmail({
-      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       divisionName: result.division_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
       brand: brandFrom(result),
     });
@@ -320,7 +335,7 @@ export async function generateDivisionDuesForPeriod(formData: FormData) {
   const supabase = await createClient();
   const { data } = await supabase.rpc("generate_division_dues_for_period", { target_division: divisionId, target_period: period });
   await Promise.allSettled((data ?? []).filter((row) => row.customer_email).map((row) => sendDivisionDueGeneratedEmail({
-    to: row.customer_email, firstName: row.customer_first_name, organizationName: row.organization_name,
+    dueId: row.due_id, to: row.customer_email, firstName: row.customer_first_name, organizationName: row.organization_name,
     divisionName: row.division_name, period: row.due_period, amount: row.due_amount, dueDate: row.due_date, brand: brandFrom(row),
   })));
   revalidatePath(`/app/socios/divisiones/${divisionId}`);
@@ -338,7 +353,7 @@ export async function createDivisionDue(formData: FormData) {
   const result = data?.[0];
   if (result?.customer_email) {
     await sendDivisionDueGeneratedEmail({
-      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       divisionName: result.division_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
       brand: brandFrom(result),
     });

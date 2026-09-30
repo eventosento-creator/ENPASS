@@ -5,6 +5,7 @@ import { formatMoney } from "@/shared/lib/format";
 import { dueStatusLabels, type DivisionEnrollmentRow } from "../domain/club";
 import { loadDivisionDues, removeMembershipFromDivision, createDivisionDue, type DivisionDuesState } from "../application/actions";
 import { DivisionDuePaymentForm } from "./division-due-payment-form";
+import { DivisionDueOnlineCheckoutButton } from "./division-due-online-checkout-button";
 
 const statusTone: Record<string, string> = { paid: "status-success", pending: "text-neutral-500", overdue: "status-danger" };
 const methodLabels: Record<string, string> = { cash: "Efectivo", transfer: "Transferencia", other: "Otro" };
@@ -46,8 +47,9 @@ export function DivisionMemberRow({ divisionId, defaultAmount, currency, row }: 
         {duesState.dues.map((due) => <div key={due.dueId} className="rounded-xl border border-white/[.08] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div><p className="text-sm font-bold">{new Date(`${due.period}T00:00:00`).toLocaleDateString("es-AR", { month: "long", year: "numeric" })}</p><p className="text-xs text-neutral-500">Vence {new Date(`${due.dueDate}T00:00:00`).toLocaleDateString("es-AR")}{due.paidAt ? ` · Pagada (${methodLabels[due.paymentMethod ?? ""] ?? due.paymentMethod})` : ""}</p></div>
-            <div className="flex items-center gap-2"><span className="font-bold">{formatMoney(due.amount, currency)}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusTone[due.status]}`}>{dueStatusLabels[due.status]}</span>
-              {due.status !== "paid" && <button type="button" className="btn btn-secondary" onClick={() => setPayingDueId(payingDueId === due.dueId ? null : due.dueId)}>Registrar pago</button>}
+            <div className="flex flex-wrap items-center gap-2"><span className="font-bold">{formatMoney(due.amount, currency)}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusTone[due.status]}`}>{dueStatusLabels[due.status]}</span>
+              {due.status !== "paid" && <DivisionDueOnlineCheckoutButton dueId={due.dueId}/>}
+              {due.status !== "paid" && <button type="button" className="btn btn-secondary" onClick={() => setPayingDueId(payingDueId === due.dueId ? null : due.dueId)}>Registrar pago manual</button>}
             </div>
           </div>
           {payingDueId === due.dueId && <DivisionDuePaymentForm divisionId={divisionId} dueId={due.dueId} defaultAmount={due.amount} onClose={() => setPayingDueId(null)}/>}

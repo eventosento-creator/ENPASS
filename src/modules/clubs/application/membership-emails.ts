@@ -5,6 +5,7 @@ import type { ClubBrand } from "@/modules/ticketing/infrastructure/email-provide
 import { formatMoney } from "@/shared/lib/format";
 import { membershipDueLog } from "@/shared/lib/structured-log";
 import { createDueCheckout } from "./create-due-checkout";
+import { createDivisionDueCheckout } from "./create-division-due-checkout";
 
 // Todos best-effort: un mail que falla (SMTP caído, dirección inválida) nunca debe tirar abajo
 // el alta, el cobro o la generación de cuotas — solo se loguea.
@@ -62,16 +63,19 @@ export async function sendDuePaidEmail(input: {
 }
 
 // Cuotas de división: mismo template que las de socio, con el nombre de la división como
-// "concepto" en el asunto. Sin cobro online por ahora — el pago sigue siendo manual (efectivo/
-// transferencia), como arrancamos con las cuotas de socio antes de sumar Mercado Pago.
+// "concepto" en el asunto — y mismo intento de link de pago online que las cuotas de socio.
 export async function sendDivisionDueGeneratedEmail(input: {
-  to: string; firstName: string; organizationName: string; divisionName: string; period: string; amount: number; dueDate: string; currency?: string; brand?: ClubBrand;
+  dueId: string; to: string; firstName: string; organizationName: string; divisionName: string; period: string; amount: number; dueDate: string; currency?: string; brand?: ClubBrand;
 }) {
+  let payUrl: string | null = null;
+  try {
+    payUrl = (await createDivisionDueCheckout(input.dueId)).checkoutUrl;
+  } catch { /* Sin Mercado Pago conectado, o cualquier otro motivo — el mail sale sin botón. */ }
   try {
     await new SmtpEmailProvider().sendMembershipDue({
       to: input.to, memberFirstName: input.firstName, organizationName: input.organizationName, concept: input.divisionName,
       periodLabel: periodLabel(input.period), amountLabel: formatMoney(input.amount, input.currency ?? "ARS"),
-      dueDateLabel: dateLabel(input.dueDate), payUrl: null, brand: input.brand,
+      dueDateLabel: dateLabel(input.dueDate), payUrl, brand: input.brand,
     });
   } catch (error) {
     membershipDueLog("membership_due.email.failed", { context: "division_due_email", errorCode: error instanceof Error ? error.message : "unknown" });
