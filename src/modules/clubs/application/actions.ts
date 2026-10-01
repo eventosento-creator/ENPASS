@@ -404,3 +404,61 @@ export async function loadDivisionDues(_: DivisionDuesState, formData: FormData)
   if (!enrollmentId) return { dues: [] };
   return { dues: await getDivisionDues(enrollmentId) };
 }
+
+const listingSchema = z.object({ organizationId: z.string().uuid(), wantPublic: z.string().optional(), description: z.string().max(600).optional() });
+
+export async function updateClubPublicListing(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = listingSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá los datos." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_club_public_listing", {
+    target_org: parsed.data.organizationId,
+    target_want_public: parsed.data.wantPublic === "true",
+    target_description: parsed.data.description ?? null,
+  });
+  if (error) return { error: "No pudimos guardar." };
+  revalidatePath("/app/settings");
+  return { success: parsed.data.wantPublic === "true" ? "Enviado a revisión de ENPASS." : "Club dado de baja del listado público." };
+}
+
+export async function approveMembershipRequest(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const requestId = String(formData.get("requestId") ?? "");
+  const memberNumber = String(formData.get("memberNumber") ?? "").trim();
+  if (!requestId || !memberNumber) return { error: "Falta el número de socio." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("approve_club_membership_request", { target_request: requestId, target_member_number: memberNumber });
+  if (error) {
+    if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
+    if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
+    if (error.message?.includes("REQUEST_ALREADY_REVIEWED")) return { error: "Esa solicitud ya fue revisada." };
+    return { error: "No pudimos aprobar la solicitud." };
+  }
+  const result = data?.[0];
+  if (result?.customer_email) {
+    await sendMembershipWelcomeEmail({
+      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      memberNumber, categoryName: result.category_name, brand: brandFrom(result),
+    });
+    if (result.due_id) {
+      await sendDueGeneratedEmail({
+        dueId: result.due_id, to: result.customer_email, firstName: result.customer_first_name,
+        organizationName: result.organization_name, period: result.due_period, amount: result.due_amount, dueDate: result.due_date,
+        brand: brandFrom(result),
+      });
+    }
+  }
+  revalidatePath("/app/socios/solicitudes");
+  revalidatePath("/app/socios");
+  return { success: "Socio dado de alta." };
+}
+
+export async function rejectMembershipRequest(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const requestId = String(formData.get("requestId") ?? "");
+  const reason = String(formData.get("reason") ?? "");
+  if (!requestId) return { error: "Falta la solicitud." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reject_club_membership_request", { target_request: requestId, target_rejection_reason: reason || null });
+  if (error) return { error: "No pudimos rechazar la solicitud." };
+  revalidatePath("/app/socios/solicitudes");
+  return { success: "Solicitud rechazada." };
+}

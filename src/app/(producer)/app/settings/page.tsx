@@ -4,9 +4,10 @@ import { CreditCard, ExternalLink, MapPin, Package, ShieldCheck, UserRoundCheck,
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { disconnectMercadoPago } from "@/modules/payments/application/actions";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
-import { getClubBranding, isClubEnabled } from "@/modules/clubs/application/queries";
+import { getClubBranding, getClubListingSettings, isClubEnabled } from "@/modules/clubs/application/queries";
 import { toggleClubEnabled } from "@/modules/clubs/application/actions";
 import { ClubBrandingForm } from "@/modules/clubs/ui/club-branding-form";
+import { ClubPublicListingForm } from "@/modules/clubs/ui/club-public-listing-form";
 import { createClient } from "@/shared/database/server";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { IconBadge } from "@/shared/ui/icon-badge";
@@ -16,6 +17,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   if (!organization) redirect("/app/onboarding");
   const [{ payment: notice, detail }, supabase, clubEnabled] = await Promise.all([searchParams, createClient(), isClubEnabled(organization.id)]);
   const branding = clubEnabled ? await getClubBranding(organization.id) : null;
+  const listingSettings = clubEnabled ? await getClubListingSettings(organization.id) : null;
   const { data } = await supabase.rpc("get_payment_account_status", { target_organization: organization.id });
   const account = data?.[0];
   const environment = paymentEnvironment();
@@ -36,6 +38,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <section className="card mt-4 overflow-hidden">
       <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={UserRoundCheck} tone="violet" size={11}/><div><h2 className="font-bold">Socios</h2><p className="mt-1 text-sm text-neutral-500">Padrón, categorías y cobro de cuotas — pensado para clubes.</p></div></div><form action={toggleClubEnabled}><input type="hidden" name="organizationId" value={organization.id}/><input type="hidden" name="enabled" value={clubEnabled ? "false" : "true"}/><SubmitButton className={`btn w-full sm:w-auto ${clubEnabled ? "btn-ghost" : "btn-secondary"}`}>{clubEnabled ? "Desactivar módulo" : "Activar módulo"}</SubmitButton></form></div>
       {clubEnabled && branding && <div className="border-t border-white/[.07] p-5 sm:p-7"><p className="mb-4 text-sm font-bold">Identidad del club</p><ClubBrandingForm organizationId={organization.id} logoUrl={branding.logoUrl} name={branding.name} accentColor={branding.accentColor}/></div>}
+      {clubEnabled && listingSettings && <div className="border-t border-white/[.07] p-5 sm:p-7"><ClubPublicListingForm organizationId={organization.id} settings={listingSettings}/></div>}
     </section>
   </div>;
 }

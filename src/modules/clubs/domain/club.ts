@@ -93,3 +93,65 @@ export const dueStatusLabels: Record<DueStatus, string> = {
   pending: "Pendiente",
   overdue: "Con deuda",
 };
+
+export type PublicListingStatus = "none" | "pending" | "approved" | "rejected";
+
+export type ClubListingSettings = {
+  status: PublicListingStatus;
+  description: string | null;
+  requestedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+};
+
+export type PublicClubListing = {
+  organizationId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  accentColor: string | null;
+  categoryCount: number;
+};
+
+export type PublicClubProfile = {
+  organizationId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  accentColor: string | null;
+  currency: string;
+};
+
+export type PublicClubCategory = { id: string; name: string; monthlyFeeAmount: number };
+
+export type MembershipRequestStatus = "pending" | "approved" | "rejected";
+
+export type MembershipRequestRow = {
+  id: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  document: string | null;
+  message: string | null;
+  status: MembershipRequestStatus;
+  createdAt: string;
+};
+
+export const membershipRequestStatusLabels: Record<MembershipRequestStatus, string> = {
+  pending: "Pendiente",
+  approved: "Aprobada",
+  rejected: "Rechazada",
+};
+
+export type PendingClubListingRow = {
+  organizationId: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  requestedAt: string | null;
+};

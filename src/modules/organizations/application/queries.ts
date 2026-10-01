@@ -45,6 +45,20 @@ export async function getAllOrganizationsForAdmin() {
   return data ?? [];
 }
 
+export async function getPendingClubListings() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_settings")
+    .select("organization_id, public_description, public_listing_requested_at, organizations(name, slug)")
+    .eq("public_listing_status", "pending").order("public_listing_requested_at");
+  return (data ?? []).map((row) => {
+    const organization = row.organizations as unknown as { name: string; slug: string } | null;
+    return {
+      organizationId: row.organization_id, name: organization?.name ?? "", slug: organization?.slug ?? "",
+      description: row.public_description, requestedAt: row.public_listing_requested_at,
+    };
+  });
+}
+
 export const getCollaboratorEventIds = cache(async () => {
   const user = await getAuthUser();
   if (!user) return [];

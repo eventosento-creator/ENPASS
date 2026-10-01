@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarDays, LayoutDashboard, LogIn, Mail, Ticket } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogIn, Mail, Ticket, Users2 } from "lucide-react";
 import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export function PublicHeader({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const pathname = usePathname();
   const isEventos = pathname === "/eventos" || pathname?.startsWith("/e/");
+  const isClubes = pathname?.startsWith("/clubes");
   const isMisEntradas = pathname?.startsWith("/mis-entradas") || pathname?.startsWith("/order/");
   const [scrolled, setScrolled] = useState(false);
 
@@ -25,6 +26,7 @@ export function PublicHeader({ isAuthenticated = false }: { isAuthenticated?: bo
       <Link href="/" className="shrink-0"><EnpassLogo/></Link>
       <nav aria-label="Navegación principal" className="flex items-center gap-0.5 text-sm sm:gap-1">
         <NavTab active={isEventos} href="/eventos" label="Eventos" icon={CalendarDays}/>
+        <NavTab active={isClubes} href={"/clubes" as never} label="Clubes" icon={Users2} labelClassName="hidden lg:inline"/>
         <NavTab active={isMisEntradas} href={"/mis-entradas" as never} label="Mis entradas" icon={Ticket} labelClassName="hidden lg:inline"/>
         {isAuthenticated
           ? <Link aria-label="Ir a mi panel" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent)] px-2.5 py-2 text-[var(--on-accent)] transition hover:brightness-105 sm:ml-1 sm:px-3" href="/app"><LayoutDashboard aria-hidden size={16}/><span className="hidden md:inline">Ir al panel</span></Link>

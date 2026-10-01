@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
-import type { DivisionEnrollmentRow, DivisionRow, MemberRow, MembershipDetail, MembershipDivisionRow, MembershipDue } from "../domain/club";
+import type { ClubListingSettings, DivisionEnrollmentRow, DivisionRow, MemberRow, MembershipDetail, MembershipDivisionRow, MembershipDue, MembershipRequestRow } from "../domain/club";
 
 export const isClubEnabled = cache(async (organizationId: string) => {
   const supabase = await createClient();
@@ -32,6 +32,35 @@ export async function getMembershipCategories(organizationId: string) {
   const supabase = await createClient();
   const { data } = await supabase.from("membership_categories").select("*").eq("organization_id", organizationId).order("sort_order");
   return data ?? [];
+}
+
+export const getClubListingSettings = cache(async (organizationId: string): Promise<ClubListingSettings> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_settings")
+    .select("public_description, public_listing_status, public_listing_requested_at, public_listing_reviewed_at, public_listing_rejection_reason")
+    .eq("organization_id", organizationId).maybeSingle();
+  return {
+    status: data?.public_listing_status ?? "none",
+    description: data?.public_description ?? null,
+    requestedAt: data?.public_listing_requested_at ?? null,
+    reviewedAt: data?.public_listing_reviewed_at ?? null,
+    rejectionReason: data?.public_listing_rejection_reason ?? null,
+  };
+});
+
+export async function getMembershipRequests(organizationId: string): Promise<MembershipRequestRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_membership_requests")
+    .select("id, first_name, last_name, email, phone, document, message, status, created_at, membership_categories(id, name)")
+    .eq("organization_id", organizationId).order("created_at", { ascending: false });
+  return (data ?? []).map((row) => {
+    const category = row.membership_categories as unknown as { id: string; name: string } | null;
+    return {
+      id: row.id, categoryId: category?.id ?? null, categoryName: category?.name ?? null,
+      firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone,
+      document: row.document, message: row.message, status: row.status, createdAt: row.created_at,
+    };
+  });
 }
 
 export async function getMembershipDetail(membershipId: string): Promise<MembershipDetail | null> {
