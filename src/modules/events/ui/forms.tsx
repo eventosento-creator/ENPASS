@@ -154,5 +154,10 @@ export function TicketTypeEditForm({ organizationId, eventId, ticketType }: { or
 export function EventCoverUpload({ organizationId, eventId }: { organizationId: string; eventId: string }) {
   const [state, action] = useActionState(replaceEventCover, {});
   const [selected, setSelected] = useState(false);
-  return <form action={action} className="grid gap-2"><input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="eventId" value={eventId}/><label className="btn btn-secondary w-full cursor-pointer justify-start"><span>Cambiar flyer</span><input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => setSelected(Boolean(event.target.files?.length))}/></label>{selected && <SubmitButton className="btn btn-primary w-full">Guardar flyer</SubmitButton>}<ActionMessage message={state.error}/></form>;
+  // El menú contenedor (EventActionsMenu) cierra el dropdown con un onClick en todo el panel,
+  // pensado para que un botón de una sola acción (ej. "Marcar agotado") cierre el menú al
+  // disparar. Acá rompía la carga de flyer: el click para ABRIR el selector de archivo
+  // burbujeaba y cerraba el menú (desmontando este form) antes de poder elegir la imagen.
+  // stopPropagation evita que ese click (y el de "Guardar flyer") llegue al handler del menú.
+  return <form action={action} className="grid gap-2" onClick={(event) => event.stopPropagation()}><input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="eventId" value={eventId}/><label className="btn btn-secondary w-full cursor-pointer justify-start"><span>Cambiar flyer</span><input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => setSelected(Boolean(event.target.files?.length))}/></label>{selected && <SubmitButton className="btn btn-primary w-full">Guardar flyer</SubmitButton>}<ActionMessage message={state.error}/></form>;
 }
