@@ -8,7 +8,7 @@ import { slugify } from "@/shared/lib/format";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { safeProducerPath } from "@/shared/lib/navigation";
 
-const organizationSchema = z.object({ name: z.string().trim().min(2).max(100) });
+const organizationSchema = z.object({ name: z.string().trim().min(2).max(100), intent: z.enum(["event", "club"]).optional() });
 const venueSchema = z.object({
   organizationId: z.uuid(), name: z.string().trim().min(2).max(120), address: z.string().trim().min(3).max(200),
   city: z.string().trim().min(2), province: z.string().trim().min(2), capacity: z.coerce.number().int().positive().max(100000),
@@ -21,6 +21,12 @@ export async function createOrganization(_: ActionState, formData: FormData): Pr
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_organization", { org_name: parsed.data.name, org_slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}` });
   if (error || !data) return { error: "No pudimos crear la organización." };
+  if (parsed.data.intent === "club") {
+    // El club no necesita el paso de "lugar" del onboarding de eventos — va directo a
+    // activar el módulo y cargar su primera categoría.
+    await supabase.rpc("set_club_enabled", { target_org: data, target_enabled: true });
+    redirect("/app/socios/categorias?welcome=1" as never);
+  }
   redirect(`/app/onboarding?organization=${data}&next=${encodeURIComponent(safeProducerPath(formData.get("next")))}`);
 }
 

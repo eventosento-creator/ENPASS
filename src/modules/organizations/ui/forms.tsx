@@ -8,9 +8,16 @@ import { SubmitButton } from "@/shared/ui/submit-button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { Venue } from "@/shared/database/types";
 
-export function OrganizationForm({ nextPath = "/app" }: { nextPath?: string }) {
+export function OrganizationForm({ nextPath = "/app", intent }: { nextPath?: string; intent?: "event" | "club" }) {
   const [state, action] = useActionState(createOrganization, {});
-  return <form action={action} className="card mt-7 grid gap-5 p-5 sm:p-7"><input type="hidden" name="next" value={nextPath}/><label className="label">Nombre de la organización<input className="field" name="name" placeholder="Club XYZ" required/></label><ActionMessage message={state.error}/><SubmitButton>Crear organización</SubmitButton></form>;
+  const isClub = intent === "club";
+  return <form action={action} className="card mt-7 grid gap-5 p-5 sm:p-7">
+    <input type="hidden" name="next" value={nextPath}/>
+    {intent && <input type="hidden" name="intent" value={intent}/>}
+    <label className="label">{isClub ? "Nombre del club" : "Nombre de la organización"}<input className="field" name="name" placeholder={isClub ? "Club Central" : "Club XYZ"} required/></label>
+    <ActionMessage message={state.error}/>
+    <SubmitButton>{isClub ? "Crear club" : "Crear organización"}</SubmitButton>
+  </form>;
 }
 
 export function VenueForm({ organizationId, venue, compact = false, nextPath = "/app" }: { organizationId: string; venue?: Venue; compact?: boolean; nextPath?: string }) {
