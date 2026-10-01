@@ -241,6 +241,7 @@ export type PaymentAccount = {
   organization_id: string;
   provider: "mercado_pago";
   provider_account_id: string | null;
+  provider_account_email: string | null;
   provider_public_key: string | null;
   access_token_encrypted: string | null;
   refresh_token_encrypted: string | null;
@@ -636,7 +637,7 @@ export interface Database {
       get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean; discovery_category: EventDiscoveryCategory }[] };
       toggle_event_favorite: { Args: { target_event: string; target_session_hash: string }; Returns: boolean };
       get_favorited_event_ids: { Args: { target_session_hash: string }; Returns: string[] };
-      get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean }[] };
+      get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean; provider_account_email: string | null }[] };
       complete_free_order: { Args: { target_order_public_id: string }; Returns: string };
       disconnect_payment_account: { Args: { target_organization: string }; Returns: undefined };
       prepare_payment_attempt: { Args: { target_order_public_id: string }; Returns: { payment_id: string; payment_public_id: string; payment_account_id: string; reused: boolean }[] };

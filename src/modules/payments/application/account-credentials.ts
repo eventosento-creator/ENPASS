@@ -76,6 +76,24 @@ export async function getPaymentAccountAccessToken(accountId: string) {
   }
 }
 
+/** Backfill best-effort para cuentas conectadas antes de que guardáramos el email (provider_account_email
+ * null). Se llama al abrir Ajustes; si falla o la cuenta no está conectada, no rompe nada, solo no muestra el email. */
+export async function ensurePaymentAccountEmail(organizationId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("payment_accounts").select("id, status, provider_account_email")
+    .eq("organization_id", organizationId).eq("provider", "mercado_pago").maybeSingle();
+  if (!data || data.status !== "connected") return null;
+  if (data.provider_account_email) return data.provider_account_email;
+  try {
+    const accessToken = await getPaymentAccountAccessToken(data.id);
+    const email = await new MercadoPagoProvider().getAccountEmail(accessToken);
+    if (email) await admin.from("payment_accounts").update({ provider_account_email: email }).eq("id", data.id);
+    return email;
+  } catch {
+    return null;
+  }
+}
+
 async function readConcurrentlyRefreshedToken(previous: PaymentAccount) {
   const admin = createAdminClient();
   const { data } = await admin.from("payment_accounts").select("*").eq("id", previous.id).single();

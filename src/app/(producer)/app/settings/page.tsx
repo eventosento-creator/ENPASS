@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CreditCard, ExternalLink, MapPin, Package, ShieldCheck, UserRoundCheck, Unplug } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { disconnectMercadoPago } from "@/modules/payments/application/actions";
+import { ensurePaymentAccountEmail } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
 import { getClubBranding, getClubListingSettings, isClubEnabled } from "@/modules/clubs/application/queries";
 import { toggleClubEnabled } from "@/modules/clubs/application/actions";
@@ -22,12 +23,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const account = data?.[0];
   const environment = paymentEnvironment();
   const connected = account?.status === "connected";
+  const accountEmail = connected && !account?.provider_account_email ? await ensurePaymentAccountEmail(organization.id) : (account?.provider_account_email ?? null);
 
   return <div className="mx-auto max-w-4xl">
     <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Configuración</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Administrá los lugares y cómo recibís el dinero de tus ventas.</p>
     {notice && <Notice code={notice} detail={detail}/>}
     <section className="card mt-8 overflow-hidden">
-      <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago{connected ? ` · ${account?.live_mode ? "cobro real" : "entorno de prueba"}` : ""}</p></div></div><StatusBadge connected={connected} status={account?.status}/></div>
+      <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago{connected ? ` · ${account?.live_mode ? "cobro real" : "entorno de prueba"}` : ""}</p>{connected && accountEmail && <p className="mt-0.5 text-xs text-neutral-600">Cuenta conectada: <span className="font-mono text-neutral-400">{accountEmail}</span></p>}</div></div><StatusBadge connected={connected} status={account?.status}/></div>
       <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-end"><div><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[var(--accent)]" size={18}/><div><p className="text-sm font-bold">Conexión segura</p><p className="mt-1 max-w-xl text-sm leading-6 text-neutral-500">Tu cuenta se conecta de forma segura. ENPASS no muestra tus credenciales y valida cada pago automáticamente.</p></div></div>{account?.expires_at && connected && <p className="mt-4 text-xs text-neutral-600">La conexión se renueva automáticamente antes de vencer.</p>}{connected && <p className="mt-4 text-xs text-neutral-600">El tiempo en que se acredita tu dinero lo define Mercado Pago (según el medio de pago del comprador y la antigüedad de tu cuenta), no ENPASS. Podés verlo y ajustarlo en tu cuenta de Mercado Pago, en <span className="font-mono">Tu dinero → Cuándo se libera tu dinero</span>.</p>}</div>
         {connected ? <form action={disconnectMercadoPago}><SubmitButton className="btn btn-ghost w-full lg:w-auto" pendingLabel="Desconectando…"><Unplug size={17}/>Desconectar</SubmitButton></form> : environment.ready ? <a className="btn btn-primary w-full lg:w-auto" href="/api/payments/mercadopago/connect">Conectar Mercado Pago <ExternalLink size={16}/></a> : <button className="btn btn-secondary w-full lg:w-auto" disabled>Conectar Mercado Pago</button>}
       </div>

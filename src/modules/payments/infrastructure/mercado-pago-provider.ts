@@ -146,7 +146,7 @@ export class MercadoPagoProvider implements PaymentProvider {
     code: string;
     codeVerifier: string;
   }) {
-    return requestOAuthToken({
+    const credentials = await requestOAuthToken({
       client_id: input.clientId,
       client_secret: input.clientSecret,
       grant_type: "authorization_code",
@@ -154,6 +154,15 @@ export class MercadoPagoProvider implements PaymentProvider {
       redirect_uri: input.redirectUri,
       code_verifier: input.codeVerifier,
     });
+    // Solo en la conexión inicial: no vale la pena pegarle a /users/me en cada refresh de
+    // token (pasa en caliente, en cada checkout cerca del vencimiento), y el email de la
+    // cuenta no cambia entre refreshes igual.
+    return { ...credentials, accountEmail: await fetchAccountEmail(credentials.accessToken) };
+  }
+
+  /** Para backfillear cuentas conectadas antes de que existiera provider_account_email. */
+  async getAccountEmail(accessToken: string) {
+    return fetchAccountEmail(accessToken);
   }
 
   async refreshAccountCredentials(input: { clientId: string; clientSecret: string; refreshToken: string }) {
@@ -199,11 +208,30 @@ async function requestOAuthToken(body: Record<string, string>): Promise<OAuthCre
     accessToken: parsed.access_token,
     refreshToken: parsed.refresh_token ?? null,
     providerAccountId: String(parsed.user_id),
+    accountEmail: null,
     publicKey: parsed.public_key ?? null,
     expiresInSeconds: parsed.expires_in ?? null,
     scope: parsed.scope ?? null,
     liveMode: parsed.live_mode,
   };
+}
+
+const meResponseSchema = z.object({ email: z.string().min(1).nullable().optional() });
+
+/** Solo para mostrar "qué cuenta está conectada" en Ajustes — best-effort, nunca tira abajo
+ * la conexión si falla (queda sin mostrar el email, nada más). */
+async function fetchAccountEmail(accessToken: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://api.mercadopago.com/users/me", {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const parsed = meResponseSchema.safeParse(await response.json());
+    return parsed.success ? (parsed.data.email ?? null) : null;
+  } catch {
+    return null;
+  }
 }
 
 type MercadoPagoPaymentResponse = {

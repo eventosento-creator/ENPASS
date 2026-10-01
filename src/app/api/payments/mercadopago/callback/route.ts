@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
       organization_id: organizationId,
       provider: "mercado_pago",
       provider_account_id: credentials.providerAccountId,
+      provider_account_email: credentials.accountEmail,
       provider_public_key: credentials.publicKey,
       access_token_encrypted: encryptCredential(credentials.accessToken),
       refresh_token_encrypted: credentials.refreshToken ? encryptCredential(credentials.refreshToken) : null,

@@ -8,6 +8,8 @@ export type OAuthCredentials = {
   accessToken: string;
   refreshToken: string | null;
   providerAccountId: string;
+  /** Email de la cuenta de Mercado Pago conectada (de GET /users/me), para mostrar "qué cuenta está conectada" en Ajustes. null si no se pudo obtener. */
+  accountEmail: string | null;
   publicKey: string | null;
   expiresInSeconds: number | null;
   scope: string | null;
