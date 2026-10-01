@@ -13,10 +13,13 @@ export const BUYER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 export const BUYER_ACCESS_RESPONSE = BUYER_ACCESS_PUBLIC_MESSAGE;
 const emailSchema = z.string().trim().email().max(320);
 
-export async function createBuyerMagicLink(email: string) {
+export async function createBuyerMagicLink(email: string, options: { expiresAt?: Date } = {}) {
   const normalizedEmail = normalizeEmail(email);
   const rawToken = generateOpaqueToken();
-  const expiresAt = new Date(Date.now() + 15 * 60_000);
+  // Default: 15 min, para el flujo interactivo de "mandame un acceso" (se clickea al toque).
+  // El recordatorio de evento pasa un vencimiento más largo explícito (ver send-event-reminders.ts),
+  // porque ese mail se manda hasta 36hs antes y se abre recién en la puerta del evento.
+  const expiresAt = options.expiresAt ?? new Date(Date.now() + 15 * 60_000);
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("create_buyer_access_token", {
     target_email: normalizedEmail,

@@ -22,12 +22,17 @@ export async function sendEventReminders(eventId: string, options: { provider?: 
   if (!emails.length) return { sent: 0, failed: 0, total: 0 };
   const { dateLabel, timeLabel } = formatEventDateParts(event.starts_at, venue.timezone);
   const provider = options.provider ?? new SmtpEmailProvider();
+  // Este mail se manda hasta 36hs antes del evento (ver api/cron/event-reminders) y la gente
+  // lo abre recién al llegar a la puerta — el link tiene que seguir vivo para ese momento, no
+  // solo los 15 minutos del flujo interactivo. Vence 8hs después del fin del evento (mismo
+  // margen que usa el cron para marcar el evento como "finished").
+  const linkExpiresAt = new Date(new Date(event.ends_at ?? event.starts_at).getTime() + 8 * 3_600_000);
 
   let sent = 0;
   let failed = 0;
   for (const email of emails) {
     try {
-      const accessUrl = await createBuyerMagicLink(email);
+      const accessUrl = await createBuyerMagicLink(email, { expiresAt: linkExpiresAt });
       if (!accessUrl) throw new Error("BUYER_ACCESS_CREATE_FAILED");
       await provider.sendEventReminder({
         to: email,
