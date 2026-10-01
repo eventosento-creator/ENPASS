@@ -3,6 +3,7 @@ import "server-only";
 import nodemailer from "nodemailer";
 import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
+import { googleMapsUrl } from "@/shared/lib/maps";
 
 export class SmtpEmailProvider implements EmailProvider {
   private readonly transport;
@@ -114,7 +115,7 @@ export class SmtpEmailProvider implements EmailProvider {
           <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
             <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(message.eventDateLabel)} · ${escapeHtml(message.eventTimeLabel)}</p>
             <p style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.15">${escapeHtml(message.eventName)}</p>
-            <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(message.venueName)}${message.venueAddress ? `, ${escapeHtml(message.venueAddress)}` : ""}</p>
+            ${venueMapsLine(message.venueName, message.venueAddress)}
           </div>
         </div>
         ${accessButton(message.accessUrl, "Ver mi entrada")}
@@ -183,7 +184,7 @@ export class SmtpEmailProvider implements EmailProvider {
           <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
             <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(message.eventDateLabel)} · ${escapeHtml(message.eventTimeLabel)}</p>
             <p style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.15">${escapeHtml(message.eventName)}</p>
-            <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(message.venueName)}${message.venueAddress ? `, ${escapeHtml(message.venueAddress)}` : ""}</p>
+            ${venueMapsLine(message.venueName, message.venueAddress)}
           </div>
         </div>
         ${accessButton(message.accessUrl, "Ver mi entrada")}
@@ -365,7 +366,7 @@ function ticketCard(eventName: string, dateLabel: string, timeLabel: string, ven
     <div style="background:#0a0a0b;color:#ffffff;padding:20px 22px 18px">
       <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b0b0b6">${escapeHtml(dateLabel)} · ${escapeHtml(timeLabel)}</p>
       <p style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.15">${escapeHtml(eventName)}</p>
-      <p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">${escapeHtml(venueName)}${venueAddress ? `, ${escapeHtml(venueAddress)}` : ""}</p>
+      ${venueMapsLine(venueName, venueAddress)}
     </div>
     <div style="background:#ffffff;padding:20px 22px">
       <table role="presentation" width="100%" style="border-collapse:collapse"><tr>
@@ -391,6 +392,14 @@ function noticeBox(title: string, description: string) {
       </td>
     </tr></table>
   </div>`;
+}
+
+/** Línea de lugar con link a Google Maps, para poder ir hasta ahí directo desde el mail. */
+function venueMapsLine(venueName: string, venueAddress: string) {
+  const mapsUrl = googleMapsUrl({ name: venueName, address: venueAddress });
+  return `<p style="margin:6px 0 0;font-size:13px;color:#b0b0b6">
+    <a href="${escapeHtml(mapsUrl)}" style="color:#b0b0b6;text-decoration:underline">${escapeHtml(venueName)}${venueAddress ? `, ${escapeHtml(venueAddress)}` : ""} ↗</a>
+  </p>`;
 }
 
 function accessButton(accessUrl: string, label = "Ver mis accesos", accentColor?: string | null) {

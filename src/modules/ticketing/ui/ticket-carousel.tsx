@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Expand, MapPin, ShieldCheck, X
 import { EventCover } from "@/modules/events/ui/event-cover";
 import type { TicketPresentation } from "../application/queries";
 import { formatEventDate } from "@/shared/lib/format";
+import { googleMapsUrl } from "@/shared/lib/maps";
 
 export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
   const [index, setIndex] = useState(0);
@@ -45,7 +46,7 @@ export function TicketCarousel({ tickets }: { tickets: TicketPresentation[] }) {
           {hasMultiple && <span className="shrink-0 rounded-full bg-white/[.06] px-3 py-1.5 text-xs font-bold text-neutral-300">{index + 1} de {tickets.length}</span>}
         </div>
         <p className="mt-3 text-sm text-neutral-400">{formatEventDate(ticket.startsAt, ticket.timezone)}</p>
-        <p className="mt-2 flex items-start gap-2 text-sm text-neutral-500"><MapPin className="mt-0.5 shrink-0" size={15}/><span>{ticket.venueName} · {ticket.venueAddress}</span></p>
+        <a href={googleMapsUrl({ name: ticket.venueName, address: ticket.venueAddress })} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-start gap-2 text-sm text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline"><MapPin className="mt-0.5 shrink-0" size={15}/><span>{ticket.venueName} · {ticket.venueAddress}</span></a>
 
         <div className="mt-6 rounded-[1.35rem] bg-white p-4 text-[#090909] sm:p-6">
           {ticket.status === "valid" && ticket.qrSvg ? <>
