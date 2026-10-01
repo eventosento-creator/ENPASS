@@ -416,7 +416,8 @@ export async function updateClubPublicListing(_: ClubActionState, formData: Form
     target_want_public: parsed.data.wantPublic === "true",
     target_description: parsed.data.description ?? null,
   });
-  if (error) return { error: "No pudimos guardar." };
+  // TODO(temp-debug): volver a "No pudimos guardar." una vez identificada la causa del error en producción.
+  if (error) return { error: `No pudimos guardar. (${error.message || error.code || "sin detalle"})` };
   revalidatePath("/app/settings");
   return { success: parsed.data.wantPublic === "true" ? "Enviado a revisión de ENPASS." : "Club dado de baja del listado público." };
 }
