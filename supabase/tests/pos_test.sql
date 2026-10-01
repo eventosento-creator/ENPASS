@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(40);
 
 select has_table('public', 'products', 'products table exists');
 select has_table('public', 'event_products', 'event products table exists');
@@ -19,8 +19,7 @@ select is((select count(*) from public.sales_locations), 0::bigint, 'another ten
 set local role service_role;
 select is((select activation_status from public.activate_pos_device('000000', repeat('f', 64), repeat('0', 64))), 'invalid', 'an invalid PIN is rejected');
 select is((select activation_status from public.activate_pos_device('481920', repeat('a', 64), repeat('b', 64))), 'ok', 'a valid PIN activates the device');
-select is((select activation_count from public.pos_device_authorizations where id = 'f6000000-0000-4000-8000-000000000501'), 1, 'activation is single use');
-select is((select activation_status from public.activate_pos_device('481920', repeat('c', 64), repeat('d', 64))), 'invalid', 'an activated PIN cannot be reused');
+select is((select activation_count from public.pos_device_authorizations where id = 'f6000000-0000-4000-8000-000000000501'), 1, 'first activation sets activation_count to 1');
 select lives_ok($$select public.open_pos_session(repeat('a', 64), 500000, 'Operador QA')$$, 'device opens a cash session');
 select is((select count(*) from public.get_pos_catalog(repeat('a', 64))), 4::bigint, 'device only receives products assigned to its location');
 select lives_ok(
@@ -58,6 +57,18 @@ select throws_ok(
   $$select * from public.finalize_pos_sale(repeat('a', 64), 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', jsonb_build_array(jsonb_build_object('event_product_id', 'f6000000-0000-4000-8000-000000000301', 'quantity', 1)), 'cash', 1000000, null)$$,
   'P0001', 'CASH_SESSION_REQUIRED', 'closed sessions cannot accept another sale'
 );
+select lives_ok($$select public.revoke_current_pos_device_session(repeat('a', 64))$$, 'device can self-close its session on logout');
+select is((select activation_status from public.activate_pos_device('481920', repeat('e', 64), repeat('f', 64))), 'ok', 'the same PIN reopens the same caja after logout');
+select is((select activation_count from public.pos_device_authorizations where id = 'f6000000-0000-4000-8000-000000000501'), 2, 'activation_count increments on reactivation');
+
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
+select lives_ok($$select public.revoke_pos_device('f6000000-0000-4000-8000-000000000501')$$, 'producer can permanently revoke the device');
+
+reset role;
+set local role service_role;
+select is((select activation_status from public.activate_pos_device('481920', repeat('g', 64), repeat('h', 64))), 'invalid', 'a manually revoked PIN can never reactivate');
 
 reset role;
 set local role authenticated;

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(39);
 
 -- Isolated scanner sessions for deterministic checks inside this transaction.
 insert into public.scanner_device_authorizations (
@@ -219,7 +219,15 @@ select is(
 );
 select is(
   (select activation_status from public.activate_scanner_device('987654', repeat('e', 64), repeat('2', 64))),
-  'invalid', 'activation PIN is one-time use'
+  'ok', 'the same PIN reactivates the same scanner to reopen it later'
+);
+select is(
+  (select activation_count from public.scanner_device_authorizations where id = 'a3f00000-0000-4000-8000-000000000020'),
+  2, 'activation_count increments on reactivation'
+);
+select ok(
+  (select revoked_at is not null from public.scanner_sessions where session_token_hash = repeat('d', 64)),
+  'reactivating revokes the previous live session for that scanner'
 );
 
 select is(
