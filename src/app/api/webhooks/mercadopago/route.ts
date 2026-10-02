@@ -71,12 +71,24 @@ export async function POST(request: NextRequest) {
     if (!claimed) return NextResponse.json({ received: true, processing: true });
 
     const providerAccountId = String(webhook.user_id);
-    const { data: accountData } = await admin.from("payment_accounts").select("*")
-      .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected").single();
-    if (!accountData) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
-    const account = accountData as PaymentAccount;
-    const accessToken = await getPaymentAccountAccessToken(account.id);
+    // La misma cuenta de Mercado Pago puede estar conectada a más de una organización (ej. un
+    // productor con dos espacios): los tokens de cualquiera sirven para consultar el pago, y la
+    // organización dueña se resuelve por la referencia de la orden, no por el ID de MP.
+    const { data: accountRows } = await admin.from("payment_accounts").select("*")
+      .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected");
+    const candidates = (accountRows ?? []) as PaymentAccount[];
+    const [firstCandidate] = candidates;
+    if (!firstCandidate) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
+    const accessToken = await getPaymentAccountAccessToken(firstCandidate.id);
     const providerPayment = await new MercadoPagoProvider().getPayment(dataId, { accessToken });
+    let account = firstCandidate;
+    if (candidates.length > 1) {
+      const { data: owner } = await admin.from("payments").select("payment_account_id")
+        .eq("public_id", providerPayment.externalReference).in("payment_account_id", candidates.map((candidate) => candidate.id)).maybeSingle();
+      const matched = candidates.find((candidate) => candidate.id === owner?.payment_account_id);
+      if (!matched) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
+      account = matched;
+    }
 
     const { payment, result } = await applyProviderPayment({ accountId: account.id, providerPayment, expectedResourceId: dataId });
 

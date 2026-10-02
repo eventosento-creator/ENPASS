@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const providerAccountId = String(webhook.user_id);
     const { data: accountData } = await admin.from("payment_accounts").select("*")
-      .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected").single();
+      .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected").order("connected_at", { ascending: false }).limit(1).maybeSingle();
     if (!accountData) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
     const account = accountData as PaymentAccount;
     const accessToken = await getPaymentAccountAccessToken(account.id);
