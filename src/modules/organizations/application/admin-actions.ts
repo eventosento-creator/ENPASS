@@ -32,3 +32,20 @@ export async function reviewClubListing(formData: FormData) {
   });
   revalidatePath("/app/admin/clubs");
 }
+
+export type ReconcileState = { error?: string; success?: string };
+
+export async function reconcilePayment(_: ReconcileState, formData: FormData): Promise<ReconcileState> {
+  const mpPaymentId = String(formData.get("mpPaymentId") ?? "").trim();
+  if (!/^\d{6,20}$/.test(mpPaymentId)) return { error: "Ingresá el ID numérico de la operación de Mercado Pago." };
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("is_platform_admin");
+  if (data !== true) return { error: "No autorizado." };
+  try {
+    const { reconcileMercadoPagoPayment } = await import("@/modules/payments/application/reconcile-payment");
+    const { status, result } = await reconcileMercadoPagoPayment(mpPaymentId);
+    return { success: `Pago ${mpPaymentId} reprocesado (estado MP: ${status}, resultado: ${result}).` };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "No pudimos reprocesar el pago." };
+  }
+}
