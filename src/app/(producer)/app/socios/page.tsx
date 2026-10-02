@@ -5,6 +5,7 @@ import { getCurrentOrganization } from "@/modules/organizations/application/quer
 import { isClubEnabled, searchMembers, getMembershipCategories } from "@/modules/clubs/application/queries";
 import { generateDuesForPeriod } from "@/modules/clubs/application/actions";
 import { MemberSearch } from "@/modules/clubs/ui/member-search";
+import { MembersImport } from "@/modules/clubs/ui/members-import";
 import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { StatCard } from "@/shared/ui/stat-card";
@@ -28,6 +29,7 @@ export default async function MembersPage() {
       <Link className="btn btn-primary" href={"/app/socios/nuevo" as never}><Plus size={18}/>Nuevo socio</Link>
     </div>
     <ClubSectionNav active="socios"/>
+    {["owner", "admin"].includes(org.role) && <MembersImport/>}
 
     <section className="mt-6 grid gap-4 sm:grid-cols-3">
       <StatCard icon={UserRoundCheck} tone="emerald" label="Socios activos" value={String(activeCount)}/>

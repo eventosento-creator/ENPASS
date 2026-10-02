@@ -8,7 +8,9 @@ import { createDueCheckout } from "./create-due-checkout";
 import { createDivisionDueCheckout } from "./create-division-due-checkout";
 import { sendDivisionDueGeneratedEmail, sendDivisionDuePaidEmail, sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
 import type { CustomerCandidate, MemberRow, MembershipDue } from "../domain/club";
-import { getDivisionDues, searchMembers } from "./queries";
+import { getDivisionDues, getNextMemberNumber, searchMembers } from "./queries";
+import { getCurrentOrganization } from "@/modules/organizations/application/queries";
+import { incrementMemberNumber, mapHeaders, normalizeKey, parseCsv } from "../domain/members-csv";
 
 const brandFrom = (row: { brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }) => ({
   logoUrl: row.brand_logo_url, name: row.brand_name, accentColor: row.brand_accent_color,
@@ -462,4 +464,81 @@ export async function rejectMembershipRequest(_: ClubActionState, formData: Form
   if (error) return { error: "No pudimos rechazar la solicitud." };
   revalidatePath("/app/socios/solicitudes");
   return { success: "Solicitud rechazada." };
+}
+
+export type ImportMembersState = { error?: string; created?: number; skipped?: number; problems?: Array<{ line: number; message: string }> };
+
+const IMPORT_MAX_ROWS = 1000;
+
+/** Importa socios desde un CSV (Nº Socio, Nombre, Apellido, DNI, Mail, Celular, Categoria, Division).
+ * Por fila: valida, da de alta con create_membership (reusa/crea el cliente por DNI o mail) y anota en las
+ * divisiones. No manda mails: son socios que el club ya tenía. Las categorías y divisiones tienen que existir. */
+export async function importMembersCsv(_: ImportMembersState, formData: FormData): Promise<ImportMembersState> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Elegí un archivo CSV." };
+  if (file.size > 1_000_000) return { error: "El archivo es muy grande (máximo 1 MB)." };
+  const org = await getCurrentOrganization();
+  if (!org || !["owner", "admin"].includes(org.role)) return { error: "No tenés permiso para importar socios." };
+
+  const rows = parseCsv(await file.text());
+  const header = rows.shift();
+  if (!header) return { error: "El archivo está vacío." };
+  const columns = mapHeaders(header);
+  const missing = (["firstName", "lastName", "email", "category"] as const).filter((field) => columns[field] === undefined);
+  if (missing.length) return { error: "Faltan columnas en la primera fila. Usá la plantilla: Nº Socio, Nombre, Apellido, DNI, Mail, Celular, Categoria, Division." };
+  if (rows.length > IMPORT_MAX_ROWS) return { error: `Máximo ${IMPORT_MAX_ROWS} socios por archivo. Dividilo en partes.` };
+
+  const supabase = await createClient();
+  const [{ data: categories }, { data: divisionRows }, firstNumber] = await Promise.all([
+    supabase.from("membership_categories").select("id, name").eq("organization_id", org.id).eq("active", true),
+    supabase.from("divisions").select("id, name").eq("organization_id", org.id).eq("active", true),
+    getNextMemberNumber(org.id),
+  ]);
+  const categoryByName = new Map((categories ?? []).map((category) => [normalizeKey(category.name), category.id]));
+  const divisionByName = new Map((divisionRows ?? []).map((division) => [normalizeKey(division.name), division.id]));
+
+  const cell = (row: string[], field: keyof typeof columns) => (columns[field] === undefined ? "" : (row[columns[field]!] ?? "").trim());
+  let nextNumber = firstNumber;
+  let created = 0;
+  const problems: Array<{ line: number; message: string }> = [];
+
+  for (const [index, row] of rows.entries()) {
+    const line = index + 2;
+    const firstName = cell(row, "firstName");
+    const lastName = cell(row, "lastName");
+    const email = cell(row, "email");
+    const categoryName = cell(row, "category");
+    const categoryId = categoryByName.get(normalizeKey(categoryName));
+    const divisions = cell(row, "division").split(/[;|]/).map((name) => name.trim()).filter(Boolean);
+    const unknownDivision = divisions.find((name) => !divisionByName.has(normalizeKey(name)));
+    if (!firstName || !lastName) { problems.push({ line, message: "Falta nombre o apellido." }); continue; }
+    if (!z.email().safeParse(email).success) { problems.push({ line, message: `Mail inválido: "${email}".` }); continue; }
+    if (!categoryId) { problems.push({ line, message: categoryName ? `La categoría "${categoryName}" no existe o está inactiva. Creala en Categorías.` : "Falta la categoría." }); continue; }
+    if (unknownDivision) { problems.push({ line, message: `La división "${unknownDivision}" no existe o está inactiva. Creala en Divisiones.` }); continue; }
+
+    const providedNumber = cell(row, "memberNumber");
+    let memberNumber = providedNumber || nextNumber;
+    let membershipId: string | undefined;
+    for (let attempt = 0; attempt < 5 && !membershipId; attempt += 1) {
+      const { data, error } = await supabase.rpc("create_membership", {
+        target_org: org.id, target_category: categoryId, target_member_number: memberNumber,
+        target_first_name: firstName, target_last_name: lastName, target_email: email,
+        target_phone: cell(row, "phone") || null, target_document: cell(row, "document") || null, target_customer_id: null,
+      });
+      if (!error) { membershipId = data?.[0]?.membership_id; break; }
+      if (error.message?.includes("MEMBER_NUMBER_TAKEN") && !providedNumber && /^\d+$/.test(memberNumber)) { memberNumber = incrementMemberNumber(memberNumber); continue; }
+      problems.push({ line, message: error.message?.includes("MEMBER_NUMBER_TAKEN") ? `El N° de socio ${memberNumber} ya está en uso.` : error.message?.includes("CUSTOMER_ALREADY_MEMBER") ? "Esa persona ya es socia (mismo DNI o mail)." : "No pudimos dar de alta este socio." });
+      break;
+    }
+    if (!membershipId) continue;
+    created += 1;
+    if (!providedNumber && /^\d+$/.test(memberNumber)) nextNumber = incrementMemberNumber(memberNumber);
+    for (const name of divisions) {
+      const { error } = await supabase.rpc("enroll_membership_in_division", { target_membership: membershipId, target_division: divisionByName.get(normalizeKey(name))! });
+      if (error) problems.push({ line, message: `Socio creado, pero no pudimos anotarlo en la división "${name}".` });
+    }
+  }
+  revalidatePath("/app/socios");
+  revalidatePath("/app/socios/divisiones");
+  return { created, skipped: rows.length - created, problems };
 }
