@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(19);
 
 insert into public.club_settings (organization_id, enabled) values ('22222222-2222-4222-8222-222222222222', true)
   on conflict (organization_id) do update set enabled = true, debt_blocks_entry = false;
@@ -38,6 +38,22 @@ update public.membership_dues set paid_at = now(), paid_amount = amount, payment
 select is((select result from public.check_in_member(repeat('5', 64), 'ca000000-0000-4000-8000-000000000003')), 'allowed', 'a member up to date enters');
 select is((select activation_status from public.activate_club_door_device('135790', repeat('7', 64), repeat('6', 64))), 'ok', 'the same PIN reopens the same door');
 select is((select result from public.check_in_member(repeat('5', 64), 'ca000000-0000-4000-8000-000000000003')), 'device_not_authorized', 'reopening ends the previous door session');
+
+reset role;
+insert into public.customers (id, organization_id, first_name, last_name, email, document)
+values ('ca000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'Otro', 'Socio', 'otro-qa@example.com', '40111222');
+select throws_ok(
+  $$insert into public.memberships (organization_id, customer_id, membership_category_id, member_number, created_by)
+    values ('22222222-2222-4222-8222-222222222222', 'ca000000-0000-4000-8000-000000000012', 'ca000000-0000-4000-8000-000000000001', 'QA8', '11111111-1111-4111-8111-111111111111')$$,
+  'P0001', 'DOCUMENT_TAKEN', 'a second member cannot share a DNI (dots and spaces ignored)');
+insert into public.customers (id, organization_id, first_name, last_name, email, document)
+values ('ca000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222', 'Libre', 'Socio', 'libre-qa@example.com', '30999888');
+insert into public.memberships (id, organization_id, customer_id, membership_category_id, member_number, created_by)
+values ('ca000000-0000-4000-8000-000000000014', '22222222-2222-4222-8222-222222222222', 'ca000000-0000-4000-8000-000000000013', 'ca000000-0000-4000-8000-000000000001', 'QA9', '11111111-1111-4111-8111-111111111111');
+select lives_ok($$select 1$$, 'a member with a different DNI is accepted');
+select throws_ok(
+  $$update public.customers set document = '40.111.222' where id = 'ca000000-0000-4000-8000-000000000013'$$,
+  'P0001', 'DOCUMENT_TAKEN', 'an existing member cannot take another member''s DNI');
 
 select * from finish();
 rollback;

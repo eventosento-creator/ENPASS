@@ -150,6 +150,7 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
     if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
+    if (error.message?.includes("DOCUMENT_TAKEN")) return { error: "Ya hay otro socio con ese DNI." };
     return { error: "No pudimos crear el socio." };
   }
   const result = data?.[0];
@@ -433,6 +434,7 @@ export async function approveMembershipRequest(_: ClubActionState, formData: For
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
     if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
+    if (error.message?.includes("DOCUMENT_TAKEN")) return { error: "Ya hay otro socio con ese DNI." };
     if (error.message?.includes("REQUEST_ALREADY_REVIEWED")) return { error: "Esa solicitud ya fue revisada." };
     return { error: "No pudimos aprobar la solicitud." };
   }
@@ -527,7 +529,7 @@ export async function importMembersCsv(_: ImportMembersState, formData: FormData
       });
       if (!error) { membershipId = data?.[0]?.membership_id; break; }
       if (error.message?.includes("MEMBER_NUMBER_TAKEN") && !providedNumber && /^\d+$/.test(memberNumber)) { memberNumber = incrementMemberNumber(memberNumber); continue; }
-      problems.push({ line, message: error.message?.includes("MEMBER_NUMBER_TAKEN") ? `El N° de socio ${memberNumber} ya está en uso.` : error.message?.includes("CUSTOMER_ALREADY_MEMBER") ? "Esa persona ya es socia (mismo DNI o mail)." : "No pudimos dar de alta este socio." });
+      problems.push({ line, message: error.message?.includes("MEMBER_NUMBER_TAKEN") ? `El N° de socio ${memberNumber} ya está en uso.` : error.message?.includes("CUSTOMER_ALREADY_MEMBER") ? "Esa persona ya es socia (mismo DNI o mail)." : error.message?.includes("DOCUMENT_TAKEN") ? "Ya hay otro socio con ese DNI." : "No pudimos dar de alta este socio." });
       break;
     }
     if (!membershipId) continue;
