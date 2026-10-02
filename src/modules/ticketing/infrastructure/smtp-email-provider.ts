@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
 
@@ -244,6 +244,23 @@ export class SmtpEmailProvider implements EmailProvider {
           <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:${accent || "#0a0a0b"}">${escapeHtml(message.memberNumber)}</p>
           <p style="margin:10px 0 0;font-size:12px;color:#9a9a9f">${escapeHtml(message.categoryName)}</p>
         </div>
+      `, message.brand),
+    });
+  }
+
+  async sendMemberPassword(message: MemberPasswordEmail) {
+    const accent = message.brand?.accentColor;
+    await this.transport.sendMail({
+      from: this.brandedFrom(message.brand?.name),
+      to: message.to,
+      subject: `Tu perfil de socio de ${message.organizationName}`,
+      text: `Hola ${message.memberFirstName}, creá tu contraseña para entrar a tu perfil de socio de ${message.organizationName}: ${message.setupUrl}\n\nEl link vence en 2 horas. Si no lo pediste vos, ignorá este mail.`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Tu perfil de socio</h1>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, creá tu contraseña para entrar a tu perfil de <strong>${escapeHtml(message.organizationName)}</strong>: ahí ves tu estado, tus pagos y tu QR para ingresar al club.</p>
+        ${accessButton(message.setupUrl, "Crear mi contraseña", accent)}
+        <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#9a9a9f;text-align:center">El link vence en 2 horas. Si no lo pediste vos, ignorá este mail.</p>
       `, message.brand),
     });
   }

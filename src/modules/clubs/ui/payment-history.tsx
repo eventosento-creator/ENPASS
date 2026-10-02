@@ -11,7 +11,7 @@ const periodLabel = (period: string) => new Date(`${period}T00:00:00`).toLocaleD
 const paidLabel = (paidAt: string) => new Date(paidAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE });
 
 /** Pagos registrados del socio (cuota de socio + divisiones), del más reciente al más antiguo. */
-export function PaymentHistory({ entries, currency }: { entries: PaymentHistoryEntry[]; currency: string }) {
+export function PaymentHistory({ entries, currency, description = "Todo lo que pagó este socio: cuota del club y divisiones." }: { entries: PaymentHistoryEntry[]; currency: string; description?: string }) {
   const paid = entries
     .filter((entry): entry is PaymentHistoryEntry & { due: MembershipDue & { paidAt: string } } => Boolean(entry.due.paidAt))
     .sort((a, b) => b.due.paidAt.localeCompare(a.due.paidAt));
@@ -21,7 +21,7 @@ export function PaymentHistory({ entries, currency }: { entries: PaymentHistoryE
 
   return <section className="card mt-6 p-5 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h2 className="flex items-center gap-2 text-lg font-bold"><Receipt size={18}/>Historial de pagos</h2><p className="mt-1 text-sm text-neutral-500">Todo lo que pagó este socio: cuota del club y divisiones.</p></div>
+      <div><h2 className="flex items-center gap-2 text-lg font-bold"><Receipt size={18}/>Historial de pagos</h2><p className="mt-1 text-sm text-neutral-500">{description}</p></div>
       <div className="flex gap-5 text-right">
         <div><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Total pagado</p><p className="text-xl font-black">{formatMoney(total, currency)}</p></div>
         {debt > 0 && <div><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Deuda vencida</p><p className="text-xl font-black text-red-500">{formatMoney(debt, currency)}</p></div>}

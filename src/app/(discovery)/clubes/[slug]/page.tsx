@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Users2 } from "lucide-react";
 import { getPublicClubCategories, getPublicClubProfile } from "@/modules/clubs/application/public-queries";
 import { MembershipRequestForm } from "@/modules/clubs/ui/membership-request-form";
@@ -23,6 +24,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
       {club.logoUrl ? <img src={club.logoUrl} alt={club.name} className="size-16 rounded-2xl border border-white/[.08] bg-white object-contain p-2"/> : <div className="grid size-16 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><Users2 size={26}/></div>}
       <div><p className="eyebrow">Club</p><h1 className="text-2xl font-black tracking-[-.02em] sm:text-3xl">{club.name}</h1></div>
     </div>
+    <p className="mt-4 text-sm text-neutral-500">¿Ya sos socio? <Link className="font-bold underline" href={`/mi-club/${club.slug}` as never}>Ingresá a tu perfil</Link> para ver tu QR y tus pagos.</p>
     {club.description && <p className="mt-5 max-w-2xl leading-7 text-neutral-400">{club.description}</p>}
 
     {categories.length > 0 && <section className="mt-8">

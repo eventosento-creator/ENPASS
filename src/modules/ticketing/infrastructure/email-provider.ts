@@ -104,6 +104,15 @@ export type MembershipWelcomeEmail = {
   brand?: ClubBrand;
 };
 
+export type MemberPasswordEmail = {
+  to: string;
+  memberFirstName: string;
+  organizationName: string;
+  /** Link para crear o cambiar la contraseña del perfil de socio (vence en 2 horas). */
+  setupUrl: string;
+  brand?: ClubBrand;
+};
+
 export type MembershipDueEmail = {
   to: string;
   memberFirstName: string;
@@ -140,6 +149,7 @@ export interface EmailProvider {
   sendArrepentimientoVerification(message: ArrepentimientoVerificationEmail): Promise<void>;
   sendArrepentimientoReceived(message: ArrepentimientoReceivedEmail): Promise<void>;
   sendMembershipWelcome(message: MembershipWelcomeEmail): Promise<void>;
+  sendMemberPassword(message: MemberPasswordEmail): Promise<void>;
   sendMembershipDue(message: MembershipDueEmail): Promise<void>;
   sendMembershipDuePaid(message: MembershipDuePaidEmail): Promise<void>;
 }
