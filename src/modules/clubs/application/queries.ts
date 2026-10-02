@@ -34,6 +34,20 @@ export async function getMembershipCategories(organizationId: string) {
   return data ?? [];
 }
 
+/** Próximo N° de socio sugerido: el mayor número existente + 1, conservando los ceros a la izquierda
+ * (0124 → 0125). Los números no numéricos (ej. "A-12") se ignoran. El club puede cambiarlo a mano. */
+export async function getNextMemberNumber(organizationId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("memberships").select("member_number").eq("organization_id", organizationId);
+  let max = 0;
+  let width = 1;
+  for (const { member_number: value } of data ?? []) {
+    if (!/^\d{1,15}$/.test(value)) continue;
+    if (Number(value) >= max) { max = Number(value); width = value.startsWith("0") ? value.length : 1; }
+  }
+  return String(max + 1).padStart(width, "0");
+}
+
 export const getClubListingSettings = cache(async (organizationId: string): Promise<ClubListingSettings> => {
   const supabase = await createClient();
   const { data } = await supabase.from("club_settings")

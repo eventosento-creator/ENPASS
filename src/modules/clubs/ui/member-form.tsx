@@ -9,7 +9,7 @@ import type { CustomerCandidate } from "../domain/club";
 
 type Category = { id: string; name: string };
 
-export function MemberForm({ organizationId, categories }: { organizationId: string; categories: Category[] }) {
+export function MemberForm({ organizationId, categories, suggestedNumber }: { organizationId: string; categories: Category[]; suggestedNumber?: string }) {
   const [state, action] = useActionState<ClubActionState, FormData>(createMembership, {});
   const [linked, setLinked] = useState<CustomerCandidate | null>(null);
 
@@ -33,7 +33,7 @@ export function MemberForm({ organizationId, categories }: { organizationId: str
     </>}
 
     <div className="grid gap-4 sm:grid-cols-2">
-      <label className="label">N° de socio<input className="field" name="memberNumber" required/></label>
+      <label className="label">N° de socio<input className="field" name="memberNumber" defaultValue={suggestedNumber} required/><span className="mt-1 block text-xs font-normal text-neutral-500">Se completa solo con el siguiente número. Si tu club ya tiene su numeración, podés cambiarlo.</span></label>
       <label className="label">Categoría
         <select className="field" name="categoryId" required defaultValue="">
           <option value="" disabled>Elegí una categoría</option>

@@ -8,7 +8,7 @@ import { SubmitButton } from "@/shared/ui/submit-button";
 
 const statusTone: Record<string, string> = { pending: "text-neutral-500", approved: "status-success", rejected: "status-danger" };
 
-function RequestCard({ request }: { request: MembershipRequestRow }) {
+function RequestCard({ request, suggestedNumber }: { request: MembershipRequestRow; suggestedNumber?: string }) {
   const [approveState, approveAction] = useActionState<ClubActionState, FormData>(approveMembershipRequest, {});
   const [rejectState, rejectAction] = useActionState<ClubActionState, FormData>(rejectMembershipRequest, {});
   const [reviewing, setReviewing] = useState<"approve" | "reject" | null>(null);
@@ -32,7 +32,7 @@ function RequestCard({ request }: { request: MembershipRequestRow }) {
         </>}
         {reviewing === "approve" && <form action={approveAction} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="requestId" value={request.id}/>
-          <label className="label">N° de socio<input className="field" name="memberNumber" placeholder="Ej. 0124" required autoFocus/></label>
+          <label className="label">N° de socio<input className="field" name="memberNumber" defaultValue={suggestedNumber} placeholder="Ej. 0124" required autoFocus/></label>
           <SubmitButton className="btn btn-primary">Confirmar alta</SubmitButton>
           <button type="button" className="btn btn-secondary" onClick={() => setReviewing(null)}>Cancelar</button>
         </form>}
@@ -48,12 +48,12 @@ function RequestCard({ request }: { request: MembershipRequestRow }) {
   </div>;
 }
 
-export function MembershipRequestsManager({ pending, reviewed }: { pending: MembershipRequestRow[]; reviewed: MembershipRequestRow[] }) {
+export function MembershipRequestsManager({ pending, reviewed, suggestedNumber }: { pending: MembershipRequestRow[]; reviewed: MembershipRequestRow[]; suggestedNumber?: string }) {
   return <div className="mt-6 grid gap-6">
     <section>
       <h2 className="text-sm font-bold text-neutral-400">Pendientes {pending.length > 0 && `(${pending.length})`}</h2>
       <div className="mt-3 grid gap-3">
-        {pending.map((request) => <RequestCard key={request.id} request={request}/>)}
+        {pending.map((request) => <RequestCard key={request.id} request={request} suggestedNumber={suggestedNumber}/>)}
         {!pending.length && <p className="text-sm text-neutral-500">No hay solicitudes pendientes.</p>}
       </div>
     </section>
