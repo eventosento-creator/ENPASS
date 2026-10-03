@@ -37,6 +37,16 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const duplicatedStartsAt = formatInTimeZone(new Date(new Date(event.starts_at).getTime() + 7 * 86_400_000), venue.timezone, "yyyy-MM-dd'T'HH:mm");
   const totalRevenue = ticketAttribution.promoterRevenue + ticketAttribution.directRevenue + tableAttribution.promoter_table_revenue + tableAttribution.direct_table_revenue + tableMetrics.table_revenue;
   const capacityOversold = ticketInventory + tableInventory > event.capacity;
+  // Desglose de las entradas emitidas: pagas (orden con importe), cortesías (emitidas a mano desde Invitados)
+  // y gratis (tipo de entrada de $0 que sacó el público). Las tres suman tickets_issued.
+  const countTickets = (filter: (query: ReturnType<typeof ticketsBase>) => ReturnType<typeof ticketsBase>) => filter(ticketsBase()).then(({ count }) => count ?? 0);
+  function ticketsBase() { return supabase.from("tickets").select("id, orders!inner(total_amount, is_courtesy)", { count: "exact", head: true }).eq("event_id", eventId).not("ticket_type_id", "is", null); }
+  const [paidTickets, courtesyTickets, freeTickets] = capabilities.tickets ? await Promise.all([
+    countTickets((query) => query.gt("orders.total_amount", 0)),
+    countTickets((query) => query.eq("orders.is_courtesy", true)),
+    countTickets((query) => query.eq("orders.total_amount", 0).eq("orders.is_courtesy", false)),
+  ]) : [0, 0, 0];
+  const breakdown = [paidTickets && `${paidTickets} ${paidTickets === 1 ? "vendida" : "vendidas"}`, courtesyTickets && `${courtesyTickets} ${courtesyTickets === 1 ? "cortesía" : "cortesías"}`, freeTickets && `${freeTickets} gratis`].filter(Boolean).join(" · ");
   const soldTableIds = new Set((soldTableHolds ?? []).map((hold) => hold.event_table_id));
   const soldTableCapacity = capabilities.tables ? Array.from(soldTableIds).reduce((sum, id) => sum + (tableCapacityById.get(id) ?? 0), 0) : 0;
   const soldCount = ticketMetrics.tickets_issued + soldTableCapacity;
@@ -63,7 +73,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     {query.reopened && <p className="status-success mt-6 rounded-xl p-4 text-sm">La venta volvió a estar abierta.</p>}
     <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard icon={Wallet} tone="emerald" label="Ventas pagadas" value={String(ticketMetrics.paid_orders)} sublabel="Ahora mismo"/>
-      {capabilities.tickets && <StatCard icon={Ticket} tone="blue" label="Entradas emitidas" value={String(ticketMetrics.tickets_issued)} sublabel="Total de entradas"/>}
+      {capabilities.tickets && <StatCard icon={Ticket} tone="blue" label="Entradas emitidas" value={String(ticketMetrics.tickets_issued)} sublabel={breakdown || "Total de entradas"}/>}
       <div className="card p-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-neutral-500/10 text-neutral-500"><Users size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Vendido</p></div><div className="mt-4 flex items-baseline justify-between"><p className="text-2xl font-black">{soldCount} / {event.capacity}</p><span className="text-xs font-bold text-neutral-500">{soldRealPct}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-500/15"><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${soldPct}%` }}/></div>{capacityOversold && <p className="mt-2 text-[11px] font-semibold text-amber-500">Configuraste más cupos ({ticketInventory + tableInventory}) que la capacidad del lugar.</p>}</div>
       <StatCard icon={BarChart3} tone="violet" label="Facturación" value={formatMoney(totalRevenue, event.currency)} sublabel="Ventas confirmadas"/>
     </section>
