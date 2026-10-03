@@ -51,7 +51,14 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const soldTableCapacity = capabilities.tables ? Array.from(soldTableIds).reduce((sum, id) => sum + (tableCapacityById.get(id) ?? 0), 0) : 0;
   const soldCount = ticketMetrics.tickets_issued + soldTableCapacity;
   const soldRealPct = event.capacity > 0 ? Math.round((soldCount / event.capacity) * 100) : 0;
-  const soldPct = Math.min(100, soldRealPct);
+  // Barra segmentada: cada tramo es un tipo de ocupación, en % de la capacidad del lugar (el total se topea en 100%).
+  const segmentPct = (count: number) => (event.capacity > 0 ? Math.min(100, (count / event.capacity) * 100) : 0);
+  const segments = [
+    { label: paidTickets === 1 ? "vendida" : "vendidas", count: paidTickets, color: "bg-[var(--accent)]" },
+    { label: courtesyTickets === 1 ? "cortesía" : "cortesías", count: courtesyTickets, color: "bg-amber-400" },
+    { label: "gratis", count: freeTickets, color: "bg-emerald-400" },
+    { label: "en mesas", count: soldTableCapacity, color: "bg-sky-400" },
+  ].filter((segment) => segment.count > 0).map((segment) => ({ ...segment, pct: segmentPct(segment.count) }));
   const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://enpass.com.ar"}/e/${event.slug}`;
   const primaryTicketType = (ticketTypes ?? [])[(ticketTypes ?? []).length - 1];
   const primaryTicketStock = primaryTicketType ? Math.max(0, primaryTicketType.quantity - ticketMetrics.tickets_issued) : 0;
@@ -74,7 +81,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard icon={Wallet} tone="emerald" label="Ventas pagadas" value={String(ticketMetrics.paid_orders)} sublabel="Ahora mismo"/>
       {capabilities.tickets && <StatCard icon={Ticket} tone="blue" label="Entradas emitidas" value={String(ticketMetrics.tickets_issued)} sublabel={breakdown || "Total de entradas"}/>}
-      <div className="card p-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-neutral-500/10 text-neutral-500"><Users size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Vendido</p></div><div className="mt-4 flex items-baseline justify-between"><p className="text-2xl font-black">{soldCount} / {event.capacity}</p><span className="text-xs font-bold text-neutral-500">{soldRealPct}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-500/15"><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${soldPct}%` }}/></div>{capacityOversold && <p className="mt-2 text-[11px] font-semibold text-amber-500">Configuraste más cupos ({ticketInventory + tableInventory}) que la capacidad del lugar.</p>}</div>
+      <div className="card p-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-neutral-500/10 text-neutral-500"><Users size={19}/></span><p className="text-xs font-bold uppercase tracking-wider text-neutral-600">Vendido</p></div><div className="mt-4 flex items-baseline justify-between"><p className="text-2xl font-black">{soldCount} / {event.capacity}</p><span className="text-xs font-bold text-neutral-500">{soldRealPct}%</span></div><div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-neutral-500/15">{segments.map((segment) => <div key={segment.label} className={`h-full ${segment.color}`} style={{ width: `${segment.pct}%` }}/>)}</div>{segments.length > 0 && <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-neutral-500">{segments.map((segment) => <span key={segment.label} className="inline-flex items-center gap-1.5"><span className={`size-2 rounded-full ${segment.color}`}/>{segment.count} {segment.label}</span>)}</p>}{capacityOversold && <p className="mt-2 text-[11px] font-semibold text-amber-500">Configuraste más cupos ({ticketInventory + tableInventory}) que la capacidad del lugar.</p>}</div>
       <StatCard icon={BarChart3} tone="violet" label="Facturación" value={formatMoney(totalRevenue, event.currency)} sublabel="Ventas confirmadas"/>
     </section>
     <section className="mt-4 card p-5 sm:p-6"><div className="grid gap-5 sm:grid-cols-3 sm:divide-x sm:divide-white/[.07]">
