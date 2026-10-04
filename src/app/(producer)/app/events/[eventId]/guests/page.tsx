@@ -20,20 +20,25 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
   const capabilities = isManager ? getEventCapabilities(event) : restrictCapabilitiesForCollaborator(getEventCapabilities(event));
 
   const [{ data: tickets }, { data: ticketTypes }, { data: eventTables }, { data: eventSeats }] = await Promise.all([
-    supabase.from("tickets").select("*").eq("event_id", eventId).order("holder_last_name"),
+    // Solo columnas con permiso de lectura (las del QR están bloqueadas a propósito): un select("*") falla entero.
+    supabase.from("tickets").select("id, ticket_type_id, holder_first_name, holder_last_name, holder_document, status, used_entries, max_entries, issued_at").eq("event_id", eventId).order("holder_last_name"),
     supabase.from("ticket_types").select("id, name, active").eq("event_id", eventId).order("sort_order"),
     supabase.from("event_tables").select("id, name").eq("event_id", eventId),
     supabase.from("event_seats").select("id, label").eq("event_id", eventId),
   ]);
 
+  // Mesa/asiento de cada entrada: consulta aparte y tolerante, para que si esas columnas no tienen permiso la lista igual se vea.
+  const { data: placements } = await supabase.from("tickets").select("id, event_table_id, event_seat_id").eq("event_id", eventId).or("event_table_id.not.is.null,event_seat_id.not.is.null");
+  const placementByTicket = new Map((placements ?? []).map((row) => [row.id, row]));
   const typeNameById = new Map((ticketTypes ?? []).map((type) => [type.id, type.name]));
   const tableNameById = new Map((eventTables ?? []).map((table) => [table.id, table.name]));
   const seatLabelById = new Map((eventSeats ?? []).map((seat) => [seat.id, seat.label]));
 
   const guests: GuestRow[] = (tickets ?? []).map((ticket) => {
+    const placement = placementByTicket.get(ticket.id);
     const typeLabel = ticket.ticket_type_id ? (typeNameById.get(ticket.ticket_type_id) ?? "Entrada")
-      : ticket.event_table_id ? `Mesa · ${tableNameById.get(ticket.event_table_id) ?? "—"}`
-      : ticket.event_seat_id ? `Asiento ${seatLabelById.get(ticket.event_seat_id) ?? "—"}`
+      : placement?.event_table_id ? `Mesa · ${tableNameById.get(placement.event_table_id) ?? "—"}`
+      : placement?.event_seat_id ? `Asiento ${seatLabelById.get(placement.event_seat_id) ?? "—"}`
       : "Entrada";
     return {
       id: ticket.id,
@@ -42,6 +47,8 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
       typeLabel,
       status: ticket.status,
       checkedIn: ticket.used_entries > 0,
+      usedEntries: ticket.used_entries,
+      maxEntries: ticket.max_entries,
       issuedAt: ticket.issued_at,
     };
   }).sort((a, b) => a.name.localeCompare(b.name, "es-AR"));
@@ -56,7 +63,7 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
     {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}
     <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_300px] xl:items-start">
-      {guests.length ? <GuestSearch guests={guests}/> : <div><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
+      {guests.length ? <GuestSearch guests={guests} eventId={event.id} canMarkEntry/> : <div><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
       <HowItWorksCard title="Cómo funciona" layout="column" steps={[
         { icon: Mail, title: "Las cortesías se envían por mail", description: "Agregá una cortesía y la persona recibirá su entrada por correo electrónico." },
         { icon: CheckCircle2, title: "Podés hacer seguimiento", description: "Vas a ver quién confirmó, quién ingresó y quién aún no lo hizo." },
