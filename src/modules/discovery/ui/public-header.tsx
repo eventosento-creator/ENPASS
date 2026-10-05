@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { CalendarDays, LayoutDashboard, LogIn, Mail, Ticket, Users2 } from "lucide-react";
 import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
@@ -12,27 +11,22 @@ export function PublicHeader({ isAuthenticated = false }: { isAuthenticated?: bo
   const isEventos = pathname === "/eventos" || pathname?.startsWith("/e/");
   const isClubes = pathname?.startsWith("/clubes");
   const isMisEntradas = pathname?.startsWith("/mis-entradas") || pathname?.startsWith("/order/");
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return <header className={`sticky top-0 z-30 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-300 ${scrolled ? "border-b border-[var(--border)] bg-[color:var(--background)]/75 shadow-[var(--shadow-xs)] backdrop-blur-xl" : "border-b border-transparent bg-[var(--background)]"}`}>
-    <div className="container-shell flex h-16 items-center justify-between gap-2">
-      <Link href="/" className="shrink-0"><EnpassLogo/></Link>
-      <nav aria-label="Navegación principal" className="flex items-center gap-0.5 text-sm sm:gap-1">
+    // En /eventos el contenido es más ancho (1440px): el header acompaña ese ancho; en el resto de las páginas públicas no cambia.
+  const wide = pathname === "/eventos";
+  return <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[color:var(--background)]/80 backdrop-blur-xl">
+    <div className={`grid h-[4.5rem] items-center gap-2 sm:h-20 ${wide ? "mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-10" : "container-shell"} grid-cols-[auto_1fr_auto] gap-1 sm:grid-cols-[1fr_auto_1fr]`}>
+      <Link href="/" className="shrink-0 justify-self-start"><EnpassLogo className="!h-6 sm:!h-8"/></Link>
+      <nav aria-label="Navegación principal" className="flex items-center justify-center gap-0.5 text-sm sm:gap-1">
         <NavTab active={isEventos} href="/eventos" label="Eventos" icon={CalendarDays}/>
-        <NavTab active={isClubes} href={"/clubes" as never} label="Clubes" icon={Users2} labelClassName="hidden lg:inline"/>
-        <NavTab active={isMisEntradas} href={"/mis-entradas" as never} label="Mis entradas" icon={Ticket} labelClassName="hidden lg:inline"/>
-        {isAuthenticated
-          ? <Link aria-label="Ir a mi panel" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent)] px-2.5 py-2 text-[var(--on-accent)] transition hover:brightness-105 sm:ml-1 sm:px-3" href="/app"><LayoutDashboard aria-hidden size={16}/><span className="hidden md:inline">Ir al panel</span></Link>
-          : <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.08] px-2.5 py-2 text-neutral-400 transition hover:border-white/[.14] hover:text-white sm:ml-1 sm:px-3" href="/login"><LogIn aria-hidden size={16}/><span className="hidden md:inline">Ingresar</span></Link>}
-        <ThemeToggle className="rounded-full"/>
+        <NavTab active={isClubes} href={"/clubes" as never} label="Clubes" icon={Users2}/>
+        <NavTab active={isMisEntradas} href={"/mis-entradas" as never} label="Mis entradas" icon={Ticket}/>
       </nav>
+      <div className="flex items-center justify-self-end gap-1.5">
+        {isAuthenticated
+          ? <Link aria-label="Ir a mi panel" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-strong)] px-3 text-[13px] font-bold transition hover:border-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)]" href="/app"><LayoutDashboard aria-hidden size={15}/><span className="hidden md:inline">Ir al panel</span></Link>
+          : <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-strong)] px-3 text-[13px] font-bold transition hover:border-[var(--accent)]" href="/login"><LogIn aria-hidden size={15}/><span className="hidden md:inline">Ingresar</span></Link>}
+        <ThemeToggle className="rounded-full"/>
+      </div>
     </div>
   </header>;
 }
@@ -41,7 +35,7 @@ function NavTab({ active, href, label, icon: Icon, labelClassName = "hidden sm:i
   return <Link
     aria-label={label}
     aria-current={active ? "page" : undefined}
-    className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2.5 py-2 transition sm:px-3 ${active ? "bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-xs)]" : "text-neutral-400 hover:bg-white/[.05] hover:text-white"}`}
+    className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2 py-2 transition sm:px-3 ${active ? "bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-xs)]" : "text-[var(--muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]"}`}
     href={href}
   ><Icon aria-hidden size={16}/><span className={labelClassName}>{label}</span></Link>;
 }

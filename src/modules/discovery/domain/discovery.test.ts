@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterDiscoveryEvents, getDiscoveryCities, getStartingPrice, matchesWhen, parseDiscoveryFilters, type DiscoveryEvent } from "./discovery";
+import { filterDiscoveryEvents, getDiscoveryCities, getStartingPrice, matchesPrice, matchesWhen, parseDiscoveryFilters, type DiscoveryEvent } from "./discovery";
 
 const base: DiscoveryEvent = {
   id: "1", slug: "evento", name: "Evento", description: "", cover_image_url: null,
@@ -48,5 +48,16 @@ describe("starting price", () => {
       { price_amount: 1300000, active: true, sale_open: true, available_quantity: 10 },
       { price_amount: 1600000, active: true, sale_open: true, available_quantity: 30 },
     ])).toBe(0);
+  });
+
+  it("filtra por precio: gratis, pago, y deja afuera los que no tienen precio", () => {
+    expect(matchesPrice({ from_price_amount: 0 }, "free")).toBe(true);
+    expect(matchesPrice({ from_price_amount: 5000 }, "free")).toBe(false);
+    expect(matchesPrice({ from_price_amount: 5000 }, "paid")).toBe(true);
+    expect(matchesPrice({ from_price_amount: 0 }, "paid")).toBe(false);
+    expect(matchesPrice({ from_price_amount: null }, "paid")).toBe(false);
+    expect(matchesPrice({ from_price_amount: null }, undefined)).toBe(true);
+    expect(parseDiscoveryFilters({ price: "free" }).price).toBe("free");
+    expect(parseDiscoveryFilters({ price: "otro" }).price).toBeUndefined();
   });
 });

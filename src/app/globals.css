@@ -172,6 +172,8 @@ html[data-theme="light"] .footer-inverted .theme-icon-dark { display: inline-fle
 
 @keyframes shimmer { to { background-position-x: -200%; } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.no-scrollbar, .hero-carousel-track { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar, .hero-carousel-track::-webkit-scrollbar { display: none; }
 
 @media (min-width: 768px) {
   .container-shell { width: min(100% - 3rem, 1120px); }
