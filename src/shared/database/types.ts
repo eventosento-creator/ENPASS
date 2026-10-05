@@ -715,6 +715,7 @@ export interface Database {
       approve_club_membership_request: { Args: { target_request: string; target_member_number: string }; Returns: { membership_id: string; due_id: string; customer_email: string; customer_first_name: string; organization_name: string; category_name: string; due_period: string; due_amount: number; due_date: string; brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }[] };
       mark_ticket_entry: { Args: { target_ticket: string }; Returns: { checkin_id: string; entry_number: number; used_entries: number; max_entries: number } };
       undo_ticket_entry: { Args: { target_ticket: string }; Returns: { used_entries: number; max_entries: number } };
+      auth_email_status: { Args: { target_email: string }; Returns: string };
       reject_club_membership_request: { Args: { target_request: string; target_rejection_reason: string | null }; Returns: undefined };
       member_portal_club: { Args: { target_slug: string }; Returns: { organization_id: string; name: string; slug: string; logo_url: string | null; brand_name: string | null; accent_color: string | null }[] };
       member_request_password_token: { Args: { target_org: string; target_identifier: string; target_token_hash: string }; Returns: { membership_id: string; email: string; first_name: string; organization_name: string; brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }[] };

@@ -19,15 +19,19 @@ type AuthMode = "login" | "register" | "magic" | "recover";
 
 export function AuthForms({ initialMode = "login", nextPath = "/app", notice, errorNotice }: { initialMode?: AuthMode; nextPath?: string; notice?: string; errorNotice?: string }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
+  // El mail va controlado para que no se borre al terminar el envío ni al pasar de "Ingresar" a "Crear cuenta";
+  // el resultado del último envío solo se muestra en el modo donde se hizo.
+  const [email, setEmail] = useState("");
+  const [submittedMode, setSubmittedMode] = useState<AuthMode | null>(null);
   const action = mode === "login" ? login : mode === "register" ? register : mode === "magic" ? sendMagicLink : requestPasswordReset;
   const [state, formAction] = useActionState(action, {});
   return <div className="card w-full max-w-md p-5 sm:p-8">
     <p className="eyebrow">Creá tu evento o fiesta</p><h1 className="mt-3 text-3xl font-black tracking-[-.04em]">{mode === "login" ? "Entrá a tu espacio" : mode === "register" ? "Creá tu cuenta" : mode === "magic" ? "Acceso por email" : "Recuperá tu contraseña"}</h1><p className="mt-3 text-sm leading-6 text-neutral-500">{mode === "login" ? "Administrá tus eventos, ventas y accesos." : mode === "register" ? "Empezá con tu organización y primer evento." : mode === "magic" ? "Te enviamos un enlace seguro para ingresar." : "Recibí un enlace seguro para elegir una contraseña nueva."}</p>
-    <form action={formAction} className="mt-7 grid gap-4">
+    <form action={formAction} onSubmit={() => setSubmittedMode(mode)} className="mt-7 grid gap-4">
       <input type="hidden" name="next" value={nextPath}/>
-      <label className="label">Email<input className="field" name="email" type="email" autoComplete="email" required /></label>
+      <label className="label">Email<input className="field" name="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
       {(mode === "login" || mode === "register") && <PasswordField label="Contraseña" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"}/>}
-      <ActionMessage message={notice} tone="success"/><ActionMessage message={errorNotice}/><ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/><SubmitButton pendingLabel="Enviando…">{mode === "login" ? "Ingresar" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}</SubmitButton>
+      <ActionMessage message={notice} tone="success"/><ActionMessage message={errorNotice}/><ActionMessage message={submittedMode === mode ? state.error : undefined}/>{mode === "login" && submittedMode === "login" && state.suggestRegister && <button type="button" className="btn btn-secondary w-full" onClick={() => setMode("register")}>Crear mi cuenta</button>}<ActionMessage message={submittedMode === mode ? state.success : undefined} tone="success"/><SubmitButton pendingLabel="Enviando…">{mode === "login" ? "Ingresar" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}</SubmitButton>
     </form>
     {(mode === "login" || mode === "register") && <>
       <div className="my-5 flex items-center gap-3 text-xs text-neutral-400"><span className="h-px flex-1 bg-[var(--border)]"/>o<span className="h-px flex-1 bg-[var(--border)]"/></div>

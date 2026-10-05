@@ -1,11 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { createAdminClient } from "@/shared/database/admin";
 import { createClient } from "@/shared/database/server";
 import { safeProducerPath } from "@/shared/lib/navigation";
 import { z } from "zod";
 
-export type ActionState = { error?: string; success?: string };
+export type ActionState = { error?: string; success?: string; /** El email no tiene cuenta: la pantalla ofrece pasar a "Crear cuenta". */ suggestRegister?: boolean };
 
 const credentialsSchema = z.object({ email: z.email(), password: z.string().min(8) });
 const passwordSchema = z.object({
@@ -36,8 +37,20 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
   if (!parsed.success) return { error: "Ingresá un email válido y una contraseña de al menos 8 caracteres." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: "No pudimos iniciar sesión. Revisá tus datos." };
+  if (error) return explainLoginFailure(parsed.data.email, error.code);
   redirect(safeProducerPath(formData.get("next")));
+}
+
+// Dice por qué falló el ingreso (en vez de un error genérico): no tiene cuenta, la cuenta es de Google o la
+// contraseña no coincide. Si no se puede consultar (ej. falta la función en la base), cae al mensaje genérico.
+async function explainLoginFailure(email: string, code: string | undefined): Promise<ActionState> {
+  const generic = { error: "No pudimos iniciar sesión. Revisá tus datos." };
+  if (code === "email_not_confirmed") return { error: "Todavía no confirmaste tu email. Abrí el mail que te mandamos para activar la cuenta." };
+  const { data, error } = await createAdminClient().rpc("auth_email_status", { target_email: email });
+  if (error || typeof data !== "string") return generic;
+  if (data === "none") return { error: "No encontramos una cuenta con ese email. Creá tu cuenta para empezar.", suggestRegister: true };
+  if (data === "password") return { error: "La contraseña no es correcta. Si no la recordás, usá \"Olvidé mi contraseña\"." };
+  return { error: `Ese email se registró con ${data === "google" ? "Google" : data}. Usá el botón "Continuar con ${data === "google" ? "Google" : data}".` };
 }
 
 export async function register(_: ActionState, formData: FormData): Promise<ActionState> {
