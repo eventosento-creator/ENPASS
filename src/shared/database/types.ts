@@ -716,6 +716,7 @@ export interface Database {
       mark_ticket_entry: { Args: { target_ticket: string }; Returns: { checkin_id: string; entry_number: number; used_entries: number; max_entries: number } };
       undo_ticket_entry: { Args: { target_ticket: string }; Returns: { used_entries: number; max_entries: number } };
       auth_email_status: { Args: { target_email: string }; Returns: string };
+      get_org_report: { Args: { target_org: string; p_from: string; p_to: string; p_event?: string | null; p_group?: string; p_channel?: string | null; p_city?: string | null; p_status?: string | null }; Returns: unknown };
       reject_club_membership_request: { Args: { target_request: string; target_rejection_reason: string | null }; Returns: undefined };
       member_portal_club: { Args: { target_slug: string }; Returns: { organization_id: string; name: string; slug: string; logo_url: string | null; brand_name: string | null; accent_color: string | null }[] };
       member_request_password_token: { Args: { target_org: string; target_identifier: string; target_token_hash: string }; Returns: { membership_id: string; email: string; first_name: string; organization_name: string; brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }[] };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Home, Settings, UserRoundCheck, Users } from "lucide-react";
+import { BarChart3, CalendarDays, Home, Settings, UserRoundCheck, Users } from "lucide-react";
 
 const baseItems = [
   { href: "/app", label: "Inicio", icon: Home },
@@ -11,10 +11,11 @@ const baseItems = [
 const clubItem = { href: "/app/socios", label: "Club", icon: UserRoundCheck } as const;
 const trailingItems = [
   { href: "/app/clientes", label: "Clientes", icon: Users },
+  { href: "/app/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/app/settings", label: "Ajustes", icon: Settings },
 ] as const;
 
-const mobileGridCols: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5" };
+const mobileGridCols: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
 
 export function ProducerNavigation({ mobile = false, collaboratorOnly = false, clubEnabled = false }: { mobile?: boolean; collaboratorOnly?: boolean; clubEnabled?: boolean }) {
   const pathname = usePathname();
