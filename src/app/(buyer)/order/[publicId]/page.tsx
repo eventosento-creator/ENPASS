@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2, CreditCard, LoaderCircle, LockKeyhole } from "lucide-react";
@@ -13,6 +14,8 @@ import { EnpassLogo } from "@/shared/ui/brand";
 import { recoverPaidOrderByPublicId } from "@/modules/ticketing/application/fulfillment";
 import { getTicketPresentationsForOrder } from "@/modules/ticketing/application/queries";
 import { TicketCarousel } from "@/modules/ticketing/ui/ticket-carousel";
+import { AnalyticsEvent } from "@/shared/ui/analytics-event";
+import { toPesos } from "@/shared/lib/analytics";
 import { TicketIssuancePoller } from "@/modules/ticketing/ui/ticket-issuance-poller";
 
 type PublicOrderItem = { item_type: "ticket" | "table"; name: string; quantity: number; unit_price_amount: number };
@@ -36,7 +39,10 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const tickets = paid || refunded ? await getTicketPresentationsForOrder(publicId) : [];
   const developmentAttribution = process.env.NODE_ENV === "development" ? await getDevelopmentAttribution(publicId) : null;
 
-  if (paid || (refunded && tickets.length > 0)) return <main className="container-shell min-h-screen py-6 sm:py-10"><section className="mx-auto w-full max-w-2xl">
+  // transaction_id de GA: un hash del código de la orden (el código en sí da acceso a la compra, no se manda a Google).
+  const transactionId = createHash("sha256").update(publicId).digest("hex").slice(0, 16);
+
+  if (paid || (refunded && tickets.length > 0)) return <main className="container-shell min-h-screen py-6 sm:py-10">{paid && <AnalyticsEvent kind="purchase" transactionId={transactionId} currency={order.currency} value={toPesos(order.total_amount)} items={items.map((item, index) => ({ item_id: `${order.event_slug}-${index}`, item_name: order.event_name, item_variant: item.name, price: toPesos(item.unit_price_amount), quantity: item.quantity }))}/>}<section className="mx-auto w-full max-w-2xl">
     <header className="mb-6 flex items-center justify-between"><Link href="/"><EnpassLogo/></Link><Link href={"/mis-entradas" as never} className="text-xs font-bold text-neutral-500 hover:text-white">Mis accesos</Link></header>
     <div className="mb-6"><p className="eyebrow">{refunded ? "Compra reembolsada" : free ? "Entradas confirmadas" : "Pago confirmado"}</p><div className="mt-3 flex items-start gap-3"><CheckCircle2 className="mt-1 shrink-0 text-[var(--accent)]" size={28}/><div><h1 className="text-3xl font-black tracking-[-.045em] sm:text-4xl">{refunded ? "Estado de tus accesos" : tickets.length ? "¡Ya tenés tus accesos!" : "Estamos preparando tus accesos"}</h1><p className="mt-2 text-sm leading-6 text-neutral-500">{refunded ? "El pago fue reintegrado y los QR dejaron de ser válidos." : tickets.length ? "Guardá este acceso o recuperalo cuando quieras desde Mis accesos." : free ? "La reserva gratuita quedó confirmada. Estamos generando tus accesos." : "Tu pago está confirmado. No vuelvas a pagar."}</p></div></div></div>
     {tickets.length > 0 ? <TicketCarousel tickets={tickets}/> : <div className="card p-7 sm:p-9"><LoaderCircle className="animate-spin text-[var(--accent)]" size={30}/><h2 className="mt-5 text-xl font-black">Terminando la emisión</h2><p className="mt-2 text-sm leading-6 text-neutral-500">Estamos generando tus credenciales de forma segura. Si demora, podés cerrar esta pantalla: el pago ya quedó confirmado.</p><TicketIssuancePoller/>{issuance?.status === "processing" && <p className="mt-4 rounded-xl border border-amber-300/10 bg-amber-300/[.04] p-4 text-sm text-amber-100/75">Hay una demora extraordinaria en la emisión. No vuelvas a pagar; el equipo puede reintentarla sin generar otro cobro.</p>}</div>}
