@@ -15,8 +15,9 @@ export async function requestBuyerAccessAction(
   formData: FormData,
 ): Promise<BuyerAccessActionState> {
   const email = String(formData.get("email") ?? "");
+  const next = String(formData.get("next") ?? "");
   try {
-    return await requestBuyerAccess(email);
+    return await requestBuyerAccess(email, next);
   } catch {
     return { message: BUYER_ACCESS_RESPONSE };
   }

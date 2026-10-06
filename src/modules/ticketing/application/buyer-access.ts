@@ -13,7 +13,7 @@ export const BUYER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 export const BUYER_ACCESS_RESPONSE = BUYER_ACCESS_PUBLIC_MESSAGE;
 const emailSchema = z.string().trim().email().max(320);
 
-export async function createBuyerMagicLink(email: string, options: { expiresAt?: Date } = {}) {
+export async function createBuyerMagicLink(email: string, options: { expiresAt?: Date; next?: string } = {}) {
   const normalizedEmail = normalizeEmail(email);
   const rawToken = generateOpaqueToken();
   // Default: 15 min, para el flujo interactivo de "mandame un acceso" (se clickea al toque).
@@ -33,16 +33,24 @@ export async function createBuyerMagicLink(email: string, options: { expiresAt?:
   if (!appUrl) throw new Error("APP_URL_NOT_CONFIGURED");
   const accessUrl = new URL("/buyer/access", appUrl);
   accessUrl.searchParams.set("token", rawToken);
+  const next = safeNextPath(options.next);
+  if (next) accessUrl.searchParams.set("next", next);
   return accessUrl.toString();
 }
 
-export async function requestBuyerAccess(emailInput: string, provider: EmailProvider = new SmtpEmailProvider()) {
+// Solo rutas internas ("/algo"): evita que el link del mail redirija a otro sitio.
+export function safeNextPath(next: string | null | undefined) {
+  if (!next || next.length > 2000 || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return null;
+  return next;
+}
+
+export async function requestBuyerAccess(emailInput: string, next?: string, provider: EmailProvider = new SmtpEmailProvider()) {
   const parsed = emailSchema.safeParse(emailInput);
   ticketingLog("buyer.access.requested", { validEmail: parsed.success });
   if (!parsed.success) return buyerAccessPublicResult("not_found");
 
   try {
-    const accessUrl = await createBuyerMagicLink(parsed.data);
+    const accessUrl = await createBuyerMagicLink(parsed.data, { next });
     if (accessUrl) await provider.sendBuyerAccess({ to: normalizeEmail(parsed.data), accessUrl });
     return buyerAccessPublicResult(accessUrl ? "sent" : "not_found");
   } catch {
@@ -74,6 +82,13 @@ export async function getBuyerSessionCustomerIds(rawSession: string | undefined)
   });
   if (error) return [];
   return (data ?? []).map((row) => row.customer_id);
+}
+
+/** Email verificado de la cuenta del comprador, o null si no hay sesión válida. */
+export async function getBuyerSessionEmail(rawSession: string | undefined) {
+  if (!rawSession || !/^[A-Za-z0-9_-]{43}$/.test(rawSession)) return null;
+  const { data, error } = await createAdminClient().rpc("get_buyer_session_email", { target_session_hash: hashOpaqueToken(rawSession) });
+  return error || !data ? null : data;
 }
 
 export async function revokeBuyerSession(rawSession: string | undefined) {

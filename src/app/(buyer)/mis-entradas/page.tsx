@@ -3,7 +3,7 @@ import Link from "next/link";
 import { KeyRound, LogOut, MapPin, Ticket } from "lucide-react";
 import { BuyerAccessForm } from "@/modules/ticketing/ui/buyer-access-form";
 import { EventCover } from "@/modules/events/ui/event-cover";
-import { BUYER_SESSION_COOKIE, getBuyerSessionCustomerIds } from "@/modules/ticketing/application/buyer-access";
+import { BUYER_SESSION_COOKIE, getBuyerSessionCustomerIds, getBuyerSessionEmail } from "@/modules/ticketing/application/buyer-access";
 import { logoutBuyer } from "@/modules/ticketing/application/actions";
 import { getTicketPresentationsForCustomers } from "@/modules/ticketing/application/queries";
 import { formatEventDate } from "@/shared/lib/format";
@@ -12,12 +12,12 @@ import { EnpassLogo } from "@/shared/ui/brand";
 export default async function MyTicketsPage({ searchParams }: { searchParams: Promise<{ access?: string }> }) {
   const query = await searchParams;
   const rawSession = (await cookies()).get(BUYER_SESSION_COOKIE)?.value;
-  const customerIds = await getBuyerSessionCustomerIds(rawSession);
+  const [customerIds, accountEmail] = await Promise.all([getBuyerSessionCustomerIds(rawSession), getBuyerSessionEmail(rawSession)]);
   const tickets = await getTicketPresentationsForCustomers(customerIds);
 
-  if (customerIds.length === 0) return <main className="container-shell grid min-h-screen place-items-center py-8 sm:py-12"><section className="w-full max-w-md">
+  if (!accountEmail) return <main className="container-shell grid min-h-screen place-items-center py-8 sm:py-12"><section className="w-full max-w-md">
     <header className="mb-8 flex items-center justify-between"><Link href="/"><EnpassLogo/></Link><span className="flex items-center gap-1.5 text-xs text-neutral-600"><KeyRound size={14}/> Acceso sin contraseña</span></header>
-    <div className="card p-6 sm:p-8"><div className="grid size-12 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><Ticket size={23}/></div><p className="eyebrow mt-7">Mis accesos</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em]">Encontrá tus entradas y mesas.</h1><p className="mt-4 text-sm leading-6 text-neutral-500">Ingresá el email que usaste para comprar. Te enviaremos un acceso seguro, sin contraseña.</p>{query.access === "invalid" && <p className="mt-5 rounded-xl border border-amber-300/10 bg-amber-300/[.04] p-4 text-sm text-amber-100/75" role="alert">Ese acceso venció o ya fue utilizado. Pedí uno nuevo.</p>}<BuyerAccessForm/></div>
+    <div className="card p-6 sm:p-8"><div className="grid size-12 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><Ticket size={23}/></div><p className="eyebrow mt-7">Mis accesos</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em]">Ingresá a tu cuenta.</h1><p className="mt-4 text-sm leading-6 text-neutral-500">Poné tu email y te mandamos un link seguro, sin contraseña. Si es tu primera vez, tu cuenta se crea sola.</p>{query.access === "invalid" && <p className="mt-5 rounded-xl border border-amber-300/10 bg-amber-300/[.04] p-4 text-sm text-amber-100/75" role="alert">Ese acceso venció o ya fue utilizado. Pedí uno nuevo.</p>}<BuyerAccessForm/></div>
   </section></main>;
 
   const currentTime = new Date().getTime();

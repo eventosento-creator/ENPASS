@@ -9,9 +9,14 @@ import { checkoutSchema, courtesyTicketInputSchema } from "../domain/checkout";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
+import { cookies } from "next/headers";
+import { BUYER_SESSION_COOKIE, getBuyerSessionEmail } from "@/modules/ticketing/application/buyer-access";
 
 export async function createCheckout(_: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = checkoutSchema.safeParse(Object.fromEntries(formData));
+  // El email sale de la cuenta verificada (sesión), nunca de lo que mande el formulario.
+  const accountEmail = await getBuyerSessionEmail((await cookies()).get(BUYER_SESSION_COOKIE)?.value);
+  if (!accountEmail) return { error: "Tu sesión venció. Volvé a ingresar para comprar." };
+  const parsed = checkoutSchema.safeParse({ ...Object.fromEntries(formData), email: accountEmail });
   if (!parsed.success) return { error: "Revisá tus datos y seleccioná al menos una opción." };
   const attributionSessionHash = await getPromoterAttributionSessionHash();
   const { data, error } = await createAdminClient().rpc("create_guest_checkout_attributed", {

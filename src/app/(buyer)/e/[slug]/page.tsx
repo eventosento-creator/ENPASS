@@ -106,7 +106,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
           {seats.length > 0 && <section className={types.length || tables.length ? "mt-8 border-t border-[var(--border)] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Grid3x3 size={20} className="text-[var(--accent)]"/>Asientos</h2><p className="mt-2 text-sm text-neutral-500">Elegí tu ubicación exacta en el mapa.</p><div className="mt-5"><SeatMapSelector eventSlug={event.slug} seats={seats}/></div></section>}
           {!hasPurchase && <div className="py-8 text-center"><p className="font-bold">Sin entradas disponibles</p><p className="mt-2 text-sm text-neutral-500">La venta no está abierta o se agotaron. Volvé a revisar más adelante.</p></div>}
         </div>}
-        {!finished && hasPurchase && <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] font-semibold text-neutral-500"><li className="flex items-center gap-1.5"><ShieldCheck size={13} aria-hidden/>Compra segura</li><li>Sin crear una cuenta</li><li>Confirmación inmediata</li></ul>}
+        {!finished && hasPurchase && <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] font-semibold text-neutral-500"><li className="flex items-center gap-1.5"><ShieldCheck size={13} aria-hidden/>Compra segura</li><li>Ingresás con tu email, sin contraseña</li><li>Confirmación inmediata</li></ul>}
       </aside>
       <div className="grid gap-5 md:col-start-1">
         {description && <section className="surface p-5 sm:p-7"><h2 className="text-xl font-black tracking-[-.02em]">Descripción</h2><p className="mt-3 whitespace-pre-line leading-7 text-neutral-400">{description}</p></section>}
