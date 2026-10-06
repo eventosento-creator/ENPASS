@@ -3,10 +3,10 @@ import { ArrowRight, MapPin } from "lucide-react";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { formatMoney } from "@/shared/lib/format";
 import { FavoriteButton } from "./favorite-button";
-import type { DiscoveryEvent } from "../domain/discovery";
+import { formatDistance, type DiscoveryEvent } from "../domain/discovery";
 
 /** Card editorial: foto grande con la fecha encima, corazón de favoritos, título, lugar y CTA. */
-export function PublicEventCard({ event, priority = false, favorited = false }: { event: DiscoveryEvent; priority?: boolean; favorited?: boolean }) {
+export function PublicEventCard({ event, priority = false, favorited = false, distanceKm = null }: { event: DiscoveryEvent; priority?: boolean; favorited?: boolean; distanceKm?: number | null }) {
   const parts = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", timeZone: event.timezone }).formatToParts(new Date(event.starts_at));
   const day = parts.find((part) => part.type === "day")?.value ?? "";
   const month = (parts.find((part) => part.type === "month")?.value ?? "").replace(".", "").toUpperCase();
@@ -20,7 +20,7 @@ export function PublicEventCard({ event, priority = false, favorited = false }: 
       <div className="flex-1 p-4 pb-3">
         <h3 className="line-clamp-2 text-base font-black leading-tight tracking-[-.02em] sm:text-[17px]">{event.name}</h3>
         <p className="mt-2 truncate text-xs text-[var(--muted)] sm:text-[13px]">{event.venue_name}</p>
-        <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)] sm:text-[13px]"><MapPin aria-hidden size={12} className="shrink-0"/><span className="truncate">{event.city}</span></p>
+        <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)] sm:text-[13px]"><MapPin aria-hidden size={12} className="shrink-0"/><span className="truncate">{event.city}{distanceKm !== null && <> · {formatDistance(distanceKm)}</>}</span></p>
         {price && <p className={`mt-2 text-xs font-bold ${event.has_availability ? "text-[var(--text-secondary)]" : "text-red-400"}`}>{price}</p>}
       </div>
     </Link>

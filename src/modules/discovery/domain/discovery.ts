@@ -21,6 +21,8 @@ export type DiscoveryEvent = {
   from_price_amount: number | null;
   has_availability: boolean;
   discovery_category: EventDiscoveryCategory;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export const discoveryPriceValues = ["free", "paid"] as const;
@@ -103,4 +105,42 @@ function shiftDateKey(value: string, days: number) {
   const date = new Date(`${value}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+export type UserLocation = { lat: number; lng: number };
+export const LOCATION_COOKIE = "nl_loc";
+
+/** Cookie "lat,lng" (ya redondeada a ~1 km desde el navegador); null si falta o es inválida. */
+export function parseLocationCookie(value: string | undefined): UserLocation | null {
+  if (!value) return null;
+  const [lat, lng] = value.split(",").map(Number);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat!) > 90 || Math.abs(lng!) > 180) return null;
+  return { lat: lat!, lng: lng! };
+}
+
+export function distanceKm(from: UserLocation, to: UserLocation) {
+  const rad = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = rad(to.lat - from.lat);
+  const dLng = rad(to.lng - from.lng);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(from.lat)) * Math.cos(rad(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+export type NearbyDiscoveryEvent = DiscoveryEvent & { distanceKm: number | null };
+
+/** Suma la distancia a cada evento y los ordena del más cercano al más lejano (sin coordenadas, al final, por fecha). */
+export function sortByProximity(events: DiscoveryEvent[], location: UserLocation): NearbyDiscoveryEvent[] {
+  return events
+    .map((event) => ({ ...event, distanceKm: event.latitude !== null && event.longitude !== null ? distanceKm(location, { lat: event.latitude, lng: event.longitude }) : null }))
+    .toSorted((a, b) => {
+      if (a.distanceKm === null && b.distanceKm === null) return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+      if (a.distanceKm === null) return 1;
+      if (b.distanceKm === null) return -1;
+      return a.distanceKm - b.distanceKm || new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+    });
+}
+
+export function formatDistance(km: number) {
+  if (km < 1) return "A menos de 1 km";
+  return `A ${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
 }

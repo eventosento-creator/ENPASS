@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { filterDiscoveryEvents, getDiscoveryCities, getStartingPrice, matchesPrice, matchesWhen, parseDiscoveryFilters, type DiscoveryEvent } from "./discovery";
+import { filterDiscoveryEvents, getDiscoveryCities, formatDistance, getStartingPrice, matchesPrice, parseLocationCookie, sortByProximity, matchesWhen, parseDiscoveryFilters, type DiscoveryEvent } from "./discovery";
 
 const base: DiscoveryEvent = {
   id: "1", slug: "evento", name: "Evento", description: "", cover_image_url: null,
   starts_at: "2026-08-21T03:00:00.000Z", currency: "ARS", venue_name: "Club",
   venue_address: "Calle 1", city: "Mendoza", province: "Mendoza",
   timezone: "America/Argentina/Mendoza", from_price_amount: 1000000, has_availability: true,
-  discovery_category: "party",
+  discovery_category: "party", latitude: null, longitude: null,
 };
 
 describe("discovery filters", () => {
@@ -59,5 +59,29 @@ describe("starting price", () => {
     expect(matchesPrice({ from_price_amount: null }, undefined)).toBe(true);
     expect(parseDiscoveryFilters({ price: "free" }).price).toBe("free");
     expect(parseDiscoveryFilters({ price: "otro" }).price).toBeUndefined();
+  });
+});
+
+describe("cercanía", () => {
+  const mendoza = { lat: -32.89, lng: -68.84 };
+  it("ordena del más cercano al más lejano y deja al final los lugares sin coordenadas", () => {
+    const events = [
+      { ...base, id: "cordoba", latitude: -31.42, longitude: -64.18 },
+      { ...base, id: "sin-coords" },
+      { ...base, id: "godoy-cruz", latitude: -32.92, longitude: -68.85 },
+    ];
+    expect(sortByProximity(events, mendoza).map((event) => event.id)).toEqual(["godoy-cruz", "cordoba", "sin-coords"]);
+    expect(sortByProximity(events, mendoza)[0]!.distanceKm).toBeLessThan(5);
+  });
+  it("lee la cookie de ubicación y rechaza valores inválidos", () => {
+    expect(parseLocationCookie("-32.89,-68.84")).toEqual(mendoza);
+    expect(parseLocationCookie("hola,mundo")).toBeNull();
+    expect(parseLocationCookie("999,0")).toBeNull();
+    expect(parseLocationCookie(undefined)).toBeNull();
+  });
+  it("formatea la distancia", () => {
+    expect(formatDistance(0.4)).toBe("A menos de 1 km");
+    expect(formatDistance(3.46)).toBe("A 3,5 km");
+    expect(formatDistance(42.2)).toBe("A 42 km");
   });
 });

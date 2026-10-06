@@ -9,6 +9,7 @@ export type Organization = {
 export type Venue = {
   id: string; organization_id: string; name: string; address: string; city: string;
   province: string; capacity: number; timezone: string;
+  latitude?: number | null; longitude?: number | null; geocode_attempted_at?: string | null;
 };
 export type Event = {
   id: string; organization_id: string; venue_id: string; name: string; slug: string;
@@ -635,7 +636,7 @@ export interface Database {
       delete_seat_map_section: { Args: { target_section: string }; Returns: undefined };
       set_event_seat_active: { Args: { target_seat: string; target_active: boolean }; Returns: undefined };
       get_public_event_seats: { Args: { target_event: string }; Returns: { id: string; event_id: string; section_id: string; section_name: string; row_label: string; seat_number: number; label: string; base_price_amount: number; currency: string; service_fee_bps: number | null; sort_order: number; availability_status: "available" | "held" | "sold" }[] };
-      get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean; discovery_category: EventDiscoveryCategory }[] };
+      get_public_events_discovery: { Args: Record<PropertyKey, never>; Returns: { id: string; slug: string; name: string; description: string; cover_image_url: string | null; starts_at: string; currency: string; venue_name: string; venue_address: string; city: string; province: string; timezone: string; from_price_amount: number | null; has_availability: boolean; discovery_category: EventDiscoveryCategory; latitude: number | null; longitude: number | null }[] };
       toggle_event_favorite: { Args: { target_event: string; target_session_hash: string }; Returns: boolean };
       get_favorited_event_ids: { Args: { target_session_hash: string }; Returns: string[] };
       get_payment_account_status: { Args: { target_organization: string }; Returns: { provider: string; status: PaymentAccountStatus; connected_at: string | null; disconnected_at: string | null; expires_at: string | null; live_mode: boolean; provider_account_email: string | null }[] };
