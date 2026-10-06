@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
+import { createAdminClient } from "@/shared/database/admin";
 import type { PublicClubCategory, PublicClubListing, PublicClubProfile } from "../domain/club";
 
 export const getPublicClubs = cache(async (): Promise<PublicClubListing[]> => {
@@ -28,4 +29,10 @@ export const getPublicClubCategories = cache(async (organizationId: string): Pro
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_public_club_categories", { target_org: organizationId });
   return (data ?? []).map((row) => ({ id: row.id, name: row.name, monthlyFeeAmount: row.monthly_fee_amount }));
+});
+
+/** IDs de los eventos publicados y futuros de la organización del club (datos públicos), para mostrarlos en su página. */
+export const getClubUpcomingEventIds = cache(async (organizationId: string): Promise<string[]> => {
+  const { data } = await createAdminClient().from("events").select("id").eq("organization_id", organizationId).in("status", ["published", "sold_out"]).gt("starts_at", new Date().toISOString());
+  return (data ?? []).map((event) => event.id);
 });
