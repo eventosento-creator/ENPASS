@@ -2,7 +2,7 @@ import { sendGAEvent } from "@next/third-parties/google";
 
 // Google Analytics 4. Solo corre en el navegador y solo si la etiqueta cargó (producción con NEXT_PUBLIC_GA_ID);
 // en desarrollo o sin ID estas funciones no hacen nada. Los importes de la base están en centavos: acá van en pesos.
-export type AnalyticsItem = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number };
+export type AnalyticsItem = { item_id: string; item_name: string; item_variant?: string; item_category?: string; item_category2?: string; item_brand?: string; price: number; quantity: number };
 
 type GtagWindow = Window & { dataLayer?: unknown[] };
 

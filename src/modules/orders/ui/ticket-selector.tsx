@@ -8,11 +8,11 @@ import { formatMoney } from "@/shared/lib/format";
 import { toPesos, trackAddToCart } from "@/shared/lib/analytics";
 
 type PublicTicketType = Omit<TicketType, "publicly_available" | "link_only" | "link_token"> & { available_quantity: number; sale_open: boolean };
-export function TicketSelector({ eventSlug, eventName = "", ticketTypes }: { eventSlug: string; eventName?: string; ticketTypes: PublicTicketType[] }) {
+export function TicketSelector({ eventSlug, eventName = "", analyticsMeta, ticketTypes }: { eventSlug: string; eventName?: string; analyticsMeta?: { item_category: string; item_category2: string; item_brand: string }; ticketTypes: PublicTicketType[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const selected = useMemo<Array<{ item_type: "ticket"; item_id: string; quantity: number }>>(() => ticketTypes.flatMap(t => quantities[t.id] ? [{ item_type: "ticket" as const, item_id: t.id, quantity: quantities[t.id]! }] : []), [quantities, ticketTypes]);
   const total = ticketTypes.reduce((sum, t) => sum + t.price_amount * (quantities[t.id] ?? 0), 0);
-  function change(type: PublicTicketType, delta: number) { if (!type.sale_open) return; if (delta > 0 && (quantities[type.id] ?? 0) < Math.min(type.max_per_order, type.available_quantity)) trackAddToCart({ item_id: type.id, item_name: eventName || type.name, item_variant: type.name, price: toPesos(type.price_amount), quantity: 1 }, type.currency); setQuantities(q => ({ ...q, [type.id]: Math.max(0, Math.min(type.max_per_order, type.available_quantity, (q[type.id] ?? 0) + delta)) })); }
+  function change(type: PublicTicketType, delta: number) { if (!type.sale_open) return; if (delta > 0 && (quantities[type.id] ?? 0) < Math.min(type.max_per_order, type.available_quantity)) trackAddToCart({ item_id: type.id, item_name: eventName || type.name, item_variant: type.name, ...analyticsMeta, price: toPesos(type.price_amount), quantity: 1 }, type.currency); setQuantities(q => ({ ...q, [type.id]: Math.max(0, Math.min(type.max_per_order, type.available_quantity, (q[type.id] ?? 0) + delta)) })); }
   const ticketCount = selected.reduce((sum, item) => sum + item.quantity, 0);
   const totalLabel = total === 0 ? "Gratis" : formatMoney(total);
   const href = selected.length ? `/e/${eventSlug}/checkout?selection=${encodeURIComponent(JSON.stringify(selected))}` : `/e/${eventSlug}`;

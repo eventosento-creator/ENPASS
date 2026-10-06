@@ -7,6 +7,7 @@ import { createClient } from "@/shared/database/server";
 import { TicketSelector } from "@/modules/orders/ui/ticket-selector";
 import { AnalyticsEvent } from "@/shared/ui/analytics-event";
 import { toPesos } from "@/shared/lib/analytics";
+import { getEventAnalyticsMeta } from "@/modules/events/application/analytics-meta";
 import { EventHero } from "@/modules/events/ui/event-hero";
 import { PublicHeader } from "@/modules/discovery/ui/public-header";
 import { formatEventDate } from "@/shared/lib/format";
@@ -74,6 +75,14 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
   const tz = venue.timezone;
   const clock = (value: string) => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz }).format(new Date(value));
   const finished = hasEnded(event.starts_at, event.ends_at);
+  const analyticsMeta = await getEventAnalyticsMeta(event.slug);
+  // Precio "desde": la entrada paga más barata que se puede comprar hoy (preventa vigente); si no hay, mesas/asientos; si todo es gratis, 0.
+  const payable = [
+    ...types.filter((type) => type.sale_open && type.available_quantity > 0 && type.price_amount > 0).map((type) => type.price_amount),
+    ...tables.filter((table) => table.availability_status === "available" && table.base_price_amount > 0).map((table) => table.base_price_amount),
+    ...seats.filter((seat) => seat.availability_status === "available" && seat.base_price_amount > 0).map((seat) => seat.base_price_amount),
+  ];
+  const startingPrice = payable.length ? Math.min(...payable) : 0;
   const hasPurchase = types.length > 0 || tables.length > 0 || seats.length > 0;
   const mapsUrl = googleMapsUrl({ name: venue.name, address: venue.address, city: venue.city });
   // Solo campos que existen de verdad; si no hay ninguno, la tarjeta no se muestra.
@@ -84,7 +93,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
   ];
   const description = event.description?.trim();
   return <main className="min-h-screen bg-[var(--background)] pb-28 md:pb-16"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}/>
-    <AnalyticsEvent kind="view_item" currency={event.currency} item={{ item_id: event.id, item_name: event.name, price: toPesos(Math.min(...(types.length ? types.map((type) => type.price_amount) : [0]))), quantity: 1 }}/>
+    <AnalyticsEvent kind="view_item" currency={event.currency} item={{ item_id: event.id, item_name: event.name, ...analyticsMeta, price: toPesos(startingPrice), quantity: 1 }}/>
     <div className="hidden md:block"><PublicHeader isAuthenticated={!!user}/></div>
     <header className="container-shell flex h-14 items-center justify-between md:hidden"><Link href="/eventos" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-neutral-500"><ChevronLeft size={17}/>Eventos</Link><Link href="/" aria-label="ENPASS"><EnpassLogo className="!h-5"/></Link><ThemeToggle/></header>
     <div className="container-shell md:pt-5"><Link href="/eventos" className="mb-4 hidden min-h-9 items-center gap-1 text-sm font-semibold text-neutral-500 transition hover:text-white md:inline-flex"><ChevronLeft size={16}/>Eventos</Link></div>
@@ -104,7 +113,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
         {attribution && <div className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-xs font-semibold"><UserRoundCheck size={15} className="text-[var(--accent)]"/>Invitación de {attribution.promoter_display_name}</div>}
         {finished ? <div className="surface p-6 text-center"><p className="font-black">Este evento ya finalizó</p><p className="mt-2 text-sm text-neutral-500">La venta de entradas está cerrada.</p></div>
         : <div className="surface p-5 sm:p-6">
-          {types.length > 0 && <section><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Ticket size={20} className="text-[var(--accent)]"/>Entradas</h2><p className="mt-2 text-sm text-neutral-500">Elegí la cantidad que necesitás.</p><div className="mt-4"><TicketSelector eventSlug={event.slug} eventName={event.name} ticketTypes={types}/></div></section>}
+          {types.length > 0 && <section><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Ticket size={20} className="text-[var(--accent)]"/>Entradas</h2><p className="mt-2 text-sm text-neutral-500">Elegí la cantidad que necesitás.</p><div className="mt-4"><TicketSelector eventSlug={event.slug} eventName={event.name} analyticsMeta={analyticsMeta} ticketTypes={types}/></div></section>}
           {tables.length > 0 && <section className={types.length ? "mt-8 border-t border-[var(--border)] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Armchair size={20} className="text-[var(--accent)]"/>Mesas</h2><p className="mt-2 text-sm text-neutral-500">Una reserva, un QR grupal para todos.</p><div className="mt-5"><TableSelector eventSlug={event.slug} tables={tables}/></div></section>}
           {seats.length > 0 && <section className={types.length || tables.length ? "mt-8 border-t border-[var(--border)] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Grid3x3 size={20} className="text-[var(--accent)]"/>Asientos</h2><p className="mt-2 text-sm text-neutral-500">Elegí tu ubicación exacta en el mapa.</p><div className="mt-5"><SeatMapSelector eventSlug={event.slug} seats={seats}/></div></section>}
           {!hasPurchase && <div className="py-8 text-center"><p className="font-bold">Sin entradas disponibles</p><p className="mt-2 text-sm text-neutral-500">La venta no está abierta o se agotaron. Volvé a revisar más adelante.</p></div>}
