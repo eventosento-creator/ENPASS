@@ -69,3 +69,17 @@ export async function deleteVenue(_: DeleteVenueState, formData: FormData): Prom
   revalidatePath("/app/venues");
   return {};
 }
+
+const renameSchema = z.object({ organizationId: z.uuid(), name: z.string().trim().min(2, "El nombre necesita al menos 2 letras.").max(100, "El nombre puede tener hasta 100 caracteres.") });
+
+/** Cambia el nombre del espacio. El link público (slug) NO cambia: los links ya compartidos siguen funcionando. */
+export async function renameOrganization(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = renameSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá el nombre." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("organizations").update({ name: parsed.data.name }).eq("id", parsed.data.organizationId).select("id");
+  // RLS no da error si no te deja editar: simplemente no actualiza ninguna fila.
+  if (error || !data?.length) return { error: "No pudimos cambiar el nombre. Solo el dueño o un admin puede hacerlo." };
+  revalidatePath("/app", "layout");
+  return { success: "Nombre actualizado." };
+}

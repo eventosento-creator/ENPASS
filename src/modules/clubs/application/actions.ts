@@ -144,7 +144,7 @@ export async function updateClubBranding(_: ClubActionState, formData: FormData)
   });
   if (profileError) return { error: "Guardamos el logo y el color, pero no pudimos guardar la portada, ubicación y actividad." };
   revalidatePath("/app/settings");
-  revalidatePath("/app/socios");
+  revalidatePath("/app/socios", "layout");
   return { success: "Identidad guardada." };
 }
 
@@ -452,7 +452,7 @@ export async function updateClubPublicListing(_: ClubActionState, formData: Form
     target_description: parsed.data.description ?? null,
   });
   if (error) return { error: "No pudimos guardar. Probá de nuevo en unos segundos." };
-  revalidatePath("/app/settings");
+  revalidatePath("/app/socios/ajustes");
   return { success: parsed.data.wantPublic === "true" ? "Enviado a revisión de ENPASS." : "Club dado de baja del listado público." };
 }
 
