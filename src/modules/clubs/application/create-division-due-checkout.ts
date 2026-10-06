@@ -8,14 +8,18 @@ import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-p
 
 // Mismo patrón que create-due-checkout.ts, pero para cuotas de división (tabla separada,
 // misma cuenta de Mercado Pago del club).
-export async function createDivisionDueCheckout(dueId: string): Promise<{ checkoutUrl: string }> {
-  const supabase = await createClient();
+// `verifiedDueAccess`: el llamador ya comprobó que la cuota es del socio de la sesión (pago desde su perfil),
+// así que se lee con el cliente de servicio y no se exige permiso de administrador del club.
+export async function createDivisionDueCheckout(dueId: string, options: { verifiedDueAccess?: boolean } = {}): Promise<{ checkoutUrl: string }> {
+  const supabase = options.verifiedDueAccess ? createAdminClient() : await createClient();
   const { data: due } = await supabase.from("division_dues").select("*").eq("id", dueId).single();
   if (!due) throw new Error("DUE_NOT_FOUND");
   if (due.paid_at) throw new Error("DUE_ALREADY_PAID");
 
-  const { data: canManage } = await supabase.rpc("can_manage_club", { target_org: due.organization_id });
-  if (!canManage) throw new Error("NOT_ALLOWED");
+  if (!options.verifiedDueAccess) {
+    const { data: canManage } = await (supabase as Awaited<ReturnType<typeof createClient>>).rpc("can_manage_club", { target_org: due.organization_id });
+    if (!canManage) throw new Error("NOT_ALLOWED");
+  }
 
   const { data: existing } = await supabase.from("division_due_payments")
     .select("checkout_url").eq("due_id", dueId).eq("status", "pending")

@@ -32,3 +32,13 @@ export async function getMemberDues(slug: string): Promise<Array<{ concept: stri
     due: { dueId: `${row.concept}-${row.period}`, period: row.period, amount: row.amount, dueDate: row.due_date, paidAt: row.paid_at, paidAmount: row.paid_amount, paymentMethod: row.payment_method, paymentReference: row.payment_reference, status: row.status },
   }));
 }
+
+export type MemberPendingDue = { dueId: string; kind: "club" | "division"; concept: string; period: string; amount: number; dueDate: string; overdue: boolean };
+
+/** Cuotas sin pagar del socio de la sesión (con su id real, para poder cobrarlas online). */
+export async function getMemberPendingDues(slug: string): Promise<MemberPendingDue[]> {
+  const hash = await getMemberSessionHash(slug);
+  if (!hash) return [];
+  const { data } = await createAdminClient().rpc("member_pending_dues", { target_session_hash: hash });
+  return (data ?? []).map((row) => ({ dueId: row.due_id, kind: row.kind as "club" | "division", concept: row.concept, period: row.period, amount: row.amount, dueDate: row.due_date, overdue: row.overdue }));
+}

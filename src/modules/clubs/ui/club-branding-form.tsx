@@ -5,8 +5,8 @@ import { updateClubBranding, type ClubActionState } from "../application/actions
 import { ActionMessage } from "@/shared/ui/action-message";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
-export function ClubBrandingForm({ organizationId, logoUrl, name, accentColor }: {
-  organizationId: string; logoUrl: string | null; name: string | null; accentColor: string | null;
+export function ClubBrandingForm({ organizationId, logoUrl, name, accentColor, coverUrl, location, activity }: {
+  organizationId: string; logoUrl: string | null; name: string | null; accentColor: string | null; coverUrl: string | null; location: string | null; activity: string | null;
 }) {
   const [state, action] = useActionState<ClubActionState, FormData>(updateClubBranding, {});
   return <form action={action} className="grid gap-4">
@@ -19,7 +19,20 @@ export function ClubBrandingForm({ organizationId, logoUrl, name, accentColor }:
       <label className="label">Nombre para el remitente del mail<input className="field" name="name" defaultValue={name ?? ""} placeholder="Club Demo" maxLength={60}/></label>
       <label className="label">Color de acento<input className="field h-11 cursor-pointer p-1" name="accentColor" type="color" defaultValue={accentColor ?? "#0a0a0b"}/></label>
     </div>
-    <p className="text-xs text-neutral-500">Se usa en los mails de socios (bienvenida, cuota, pago). El dominio de envío sigue siendo el de ENPASS.</p>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className="label">Ubicación<input className="field" name="location" defaultValue={location ?? ""} placeholder="Buenos Aires, Argentina" maxLength={120}/></label>
+      <label className="label">Actividad principal<input className="field" name="activity" defaultValue={activity ?? ""} placeholder="Futsal" maxLength={60}/></label>
+    </div>
+    <div className="grid gap-2">
+      <p className="text-sm font-semibold">Foto de portada</p>
+      {coverUrl && <img src={coverUrl} alt="Portada del club" className="h-28 w-full rounded-xl border border-white/[.08] object-cover"/>}
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="btn btn-secondary cursor-pointer"><span>{coverUrl ? "Cambiar portada" : "Subir portada"}</span><input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp"/></label>
+        {coverUrl && <label className="flex items-center gap-2 text-xs text-neutral-500"><input type="checkbox" name="removeCover"/>Quitar portada</label>}
+      </div>
+      <p className="text-xs text-neutral-500">Se ve de fondo en el panel del club y en su página pública. Mejor horizontal, hasta 3 MB.</p>
+    </div>
+    <p className="text-xs text-neutral-500">El logo y el color se usan en los mails de socios (bienvenida, cuota, pago). El dominio de envío sigue siendo el de ENPASS.</p>
     <ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/>
     <SubmitButton className="btn btn-primary w-fit">Guardar identidad</SubmitButton>
   </form>;

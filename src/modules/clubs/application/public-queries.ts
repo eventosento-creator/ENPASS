@@ -10,7 +10,7 @@ export const getPublicClubs = cache(async (): Promise<PublicClubListing[]> => {
   const { data } = await supabase.rpc("get_public_clubs_discovery");
   return (data ?? []).map((row) => ({
     organizationId: row.organization_id, slug: row.slug, name: row.name, description: row.description,
-    logoUrl: row.logo_url, accentColor: row.accent_color, categoryCount: row.category_count,
+    logoUrl: row.logo_url, accentColor: row.accent_color, categoryCount: row.category_count, coverUrl: row.cover_image_url, location: row.location_text,
   }));
 });
 
@@ -21,7 +21,7 @@ export const getPublicClubProfile = cache(async (slug: string): Promise<PublicCl
   if (!row) return null;
   return {
     organizationId: row.organization_id, slug: row.slug, name: row.name, description: row.description,
-    logoUrl: row.logo_url, accentColor: row.accent_color, currency: row.currency,
+    logoUrl: row.logo_url, accentColor: row.accent_color, currency: row.currency, coverUrl: row.cover_image_url, location: row.location_text, activity: row.main_activity,
   };
 });
 

@@ -6,6 +6,7 @@ import { isClubEnabled, searchMembers, getMembershipCategories } from "@/modules
 import { generateDuesForPeriod } from "@/modules/clubs/application/actions";
 import { MemberSearch } from "@/modules/clubs/ui/member-search";
 import { MembersImport } from "@/modules/clubs/ui/members-import";
+import { ClubBanner } from "@/modules/clubs/ui/club-banner";
 import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { StatCard } from "@/shared/ui/stat-card";
@@ -24,6 +25,7 @@ export default async function MembersPage() {
   const currentPeriod = defaultCurrentPeriod();
 
   return <>
+    <ClubBanner organizationId={org.id}/>
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Socios</h1><p className="mt-3 text-neutral-500">Padrón, cuotas y estado de cada socio.</p></div>
       <Link className="btn btn-primary" href={"/app/socios/nuevo" as never}><Plus size={18}/>Nuevo socio</Link>

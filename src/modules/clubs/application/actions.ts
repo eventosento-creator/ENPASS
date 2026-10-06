@@ -78,6 +78,8 @@ const brandingSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().max(60).optional(),
   accentColor: z.string().optional(),
+  location: z.string().max(120).optional(),
+  activity: z.string().max(60).optional(),
 });
 
 function validateLogo(file: File) {
@@ -112,7 +114,30 @@ export async function updateClubBranding(_: ClubActionState, formData: FormData)
     target_accent_color: accentColor,
   });
   if (error) return { error: "No pudimos guardar la identidad del club." };
+
+  // Portada (hasta 3 MB), ubicación y actividad. La portada se sube al mismo bucket que el logo.
+  let coverUrl: string | null | undefined;
+  const cover = formData.get("cover");
+  if (cover instanceof File && cover.size > 0) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(cover.type)) return { error: "La portada tiene que ser JPG, PNG o WebP." };
+    if (cover.size > 3 * 1024 * 1024) return { error: "La portada puede pesar hasta 3 MB." };
+    const extension = cover.type === "image/png" ? "png" : cover.type === "image/webp" ? "webp" : "jpg";
+    const path = `${parsed.data.organizationId}/cover-${crypto.randomUUID()}.${extension}`;
+    const { error: coverError } = await supabase.storage.from("club-logos").upload(path, cover, { contentType: cover.type, cacheControl: "3600" });
+    if (coverError) return { error: "No pudimos subir la portada." };
+    coverUrl = supabase.storage.from("club-logos").getPublicUrl(path).data.publicUrl;
+  }
+  const removeCover = formData.get("removeCover") === "on";
+  const { data: currentProfile } = await supabase.from("club_settings").select("cover_image_url").eq("organization_id", parsed.data.organizationId).maybeSingle();
+  const { error: profileError } = await supabase.rpc("set_club_profile", {
+    target_org: parsed.data.organizationId,
+    target_cover_url: removeCover ? null : coverUrl ?? currentProfile?.cover_image_url ?? null,
+    target_location: parsed.data.location ?? null,
+    target_activity: parsed.data.activity ?? null,
+  });
+  if (profileError) return { error: "Guardamos el logo y el color, pero no pudimos guardar la portada, ubicación y actividad." };
   revalidatePath("/app/settings");
+  revalidatePath("/app/socios");
   return { success: "Identidad guardada." };
 }
 

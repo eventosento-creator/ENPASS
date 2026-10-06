@@ -12,8 +12,8 @@ export const isClubEnabled = cache(async (organizationId: string) => {
 
 export const getClubBranding = cache(async (organizationId: string) => {
   const supabase = await createClient();
-  const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color").eq("organization_id", organizationId).maybeSingle();
-  return { logoUrl: data?.brand_logo_url ?? null, name: data?.brand_name ?? null, accentColor: data?.brand_accent_color ?? null };
+  const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity").eq("organization_id", organizationId).maybeSingle();
+  return { logoUrl: data?.brand_logo_url ?? null, name: data?.brand_name ?? null, accentColor: data?.brand_accent_color ?? null, coverUrl: data?.cover_image_url ?? null, location: data?.location_text ?? null, activity: data?.main_activity ?? null };
 });
 
 export async function searchMembers(organizationId: string, query = ""): Promise<MemberRow[]> {
@@ -158,3 +158,31 @@ export async function getDivisionDues(enrollmentId: string): Promise<MembershipD
     status: row.status,
   }));
 }
+
+/** Datos del banner del panel del club: identidad + 4 números (socios activos, próximo vencimiento, cuota, actividad). */
+export const getClubBannerData = cache(async (organizationId: string) => {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ data: settings }, { data: organization }, { count: activeMembers }, { data: nextDue }, { data: categories }] = await Promise.all([
+    supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity, public_description").eq("organization_id", organizationId).maybeSingle(),
+    supabase.from("organizations").select("name, default_currency").eq("id", organizationId).maybeSingle(),
+    supabase.from("memberships").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "active"),
+    supabase.from("membership_dues").select("due_date").eq("organization_id", organizationId).is("paid_at", null).gte("due_date", today).order("due_date").limit(1).maybeSingle(),
+    supabase.from("membership_categories").select("monthly_fee_amount").eq("organization_id", organizationId).eq("active", true).order("monthly_fee_amount"),
+  ]);
+  const fees = (categories ?? []).map((category) => category.monthly_fee_amount).filter((fee) => fee > 0);
+  return {
+    name: settings?.brand_name || organization?.name || "Tu club",
+    logoUrl: settings?.brand_logo_url ?? null,
+    accentColor: settings?.brand_accent_color ?? null,
+    coverUrl: settings?.cover_image_url ?? null,
+    location: settings?.location_text ?? null,
+    activity: settings?.main_activity ?? null,
+    description: settings?.public_description ?? null,
+    currency: organization?.default_currency ?? "ARS",
+    activeMembers: activeMembers ?? 0,
+    nextDueDate: nextDue?.due_date ?? null,
+    feeFrom: fees.length ? fees[0]! : null,
+    feeIsSingle: fees.length === 1 || (fees.length > 1 && fees[0] === fees[fees.length - 1]),
+  };
+});

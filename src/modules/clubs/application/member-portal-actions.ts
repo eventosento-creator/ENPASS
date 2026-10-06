@@ -8,7 +8,9 @@ import { hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { SmtpEmailProvider } from "@/modules/ticketing/infrastructure/smtp-email-provider";
 import { createMemberQrPayload } from "../infrastructure/member-qr";
 import { clearMemberSessionCookie, createMemberSessionCredential, getMemberSessionHash, setMemberSessionCookie } from "../infrastructure/member-session";
-import { getPortalClub } from "./member-portal";
+import { getMemberPendingDues, getPortalClub } from "./member-portal";
+import { createDueCheckout } from "./create-due-checkout";
+import { createDivisionDueCheckout } from "./create-division-due-checkout";
 
 export type MemberPortalState = { error?: string; success?: string };
 
@@ -99,4 +101,24 @@ export async function refreshMemberQr(slug: string): Promise<string | null> {
   const profile = data?.[0];
   if (!profile || profile.club_slug !== slug) return null;
   return createMemberQrPayload(profile.membership_id);
+}
+
+/** El socio paga una cuota pendiente suya con Mercado Pago (la del club o la de una división). */
+export async function payMemberDue(_: MemberPortalState, formData: FormData): Promise<MemberPortalState> {
+  const slug = slugSchema.safeParse(formData.get("slug"));
+  const dueId = z.string().uuid().safeParse(formData.get("dueId"));
+  if (!slug.success || !dueId.success) return { error: "No encontramos esa cuota." };
+  // Solo se puede pagar una cuota que figure entre las pendientes del socio de ESTA sesión.
+  const pending = (await getMemberPendingDues(slug.data)).find((due) => due.dueId === dueId.data);
+  if (!pending) return { error: "Esa cuota ya está pagada o no es tuya." };
+  let checkoutUrl: string;
+  try {
+    ({ checkoutUrl } = pending.kind === "division" ? await createDivisionDueCheckout(pending.dueId, { verifiedDueAccess: true }) : await createDueCheckout(pending.dueId, { verifiedDueAccess: true }));
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "El club todavía no habilitó el pago online. Pagá en el club." };
+    if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
+    return { error: "No pudimos abrir Mercado Pago. Probá de nuevo en unos segundos." };
+  }
+  redirect(checkoutUrl as never);
 }

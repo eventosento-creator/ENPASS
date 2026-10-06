@@ -3,6 +3,7 @@ import { DoorOpen } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { isClubEnabled } from "@/modules/clubs/application/queries";
 import { revokeClubDoorDevice, setClubDebtBlocksEntry } from "@/modules/clubs/application/club-access-actions";
+import { ClubBanner } from "@/modules/clubs/ui/club-banner";
 import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
 import { ClubDoorDeviceForm } from "@/modules/clubs/ui/club-door-device-form";
 import { CopyLinkButton } from "@/modules/events/ui/copy-link-button";
@@ -37,6 +38,7 @@ export default async function ClubAccessPage() {
   const activeDevices = (devices ?? []).filter((device) => !device.revoked_at);
 
   return <>
+    <ClubBanner organizationId={org.id}/>
     <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Acceso</h1><p className="mt-3 text-neutral-500">Que entren solo los socios al día: cada socio tiene su QR personal y la puerta lo valida.</p></div>
     <ClubSectionNav active="acceso"/>
 

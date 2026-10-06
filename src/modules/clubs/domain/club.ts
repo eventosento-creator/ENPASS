@@ -112,6 +112,8 @@ export type PublicClubListing = {
   logoUrl: string | null;
   accentColor: string | null;
   categoryCount: number;
+  coverUrl: string | null;
+  location: string | null;
 };
 
 export type PublicClubProfile = {
@@ -122,6 +124,9 @@ export type PublicClubProfile = {
   logoUrl: string | null;
   accentColor: string | null;
   currency: string;
+  coverUrl: string | null;
+  location: string | null;
+  activity: string | null;
 };
 
 export type PublicClubCategory = { id: string; name: string; monthlyFeeAmount: number };
