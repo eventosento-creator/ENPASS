@@ -113,6 +113,7 @@ export type PublicClubListing = {
   accentColor: string | null;
   categoryCount: number;
   coverUrl: string | null;
+  coverFocus: { x: number; y: number };
   location: string | null;
 };
 
@@ -125,6 +126,7 @@ export type PublicClubProfile = {
   accentColor: string | null;
   currency: string;
   coverUrl: string | null;
+  coverFocus: { x: number; y: number };
   location: string | null;
   activity: string | null;
 };

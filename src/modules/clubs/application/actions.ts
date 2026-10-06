@@ -74,6 +74,11 @@ export async function toggleClubEnabled(formData: FormData) {
   revalidatePath("/app");
 }
 
+function clampPercent(value: FormDataEntryValue | null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(Math.min(100, Math.max(0, number))) : 50;
+}
+
 const brandingSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().max(60).optional(),
@@ -134,6 +139,8 @@ export async function updateClubBranding(_: ClubActionState, formData: FormData)
     target_cover_url: removeCover ? null : coverUrl ?? currentProfile?.cover_image_url ?? null,
     target_location: parsed.data.location ?? null,
     target_activity: parsed.data.activity ?? null,
+    target_focus_x: clampPercent(formData.get("coverFocusX")),
+    target_focus_y: clampPercent(formData.get("coverFocusY")),
   });
   if (profileError) return { error: "Guardamos el logo y el color, pero no pudimos guardar la portada, ubicación y actividad." };
   revalidatePath("/app/settings");

@@ -14,7 +14,7 @@ export async function ClubBanner({ organizationId }: { organizationId: string })
     ...(club.activity ? [{ icon: Trophy, value: club.activity, label: "Actividad principal" }] : []),
   ];
   return <section className="relative -mt-2 mb-8 overflow-hidden rounded-[1.5rem] text-white" style={{ background: brand?.gradient ?? "#17171a" }}>
-    {club.coverUrl && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={club.coverUrl} alt="" className="absolute inset-0 size-full object-cover"/><div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/20"/></>}
+    {club.coverUrl && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={club.coverUrl} alt="" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${club.coverFocus.x}% ${club.coverFocus.y}%` }}/><div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/20"/></>}
     {!club.coverUrl && !brand && <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950"/>}
     <div className="relative flex flex-col gap-5 px-5 pb-6 pt-8 sm:flex-row sm:items-center sm:gap-7 sm:px-9 sm:pt-10">
       {club.logoUrl /* eslint-disable-next-line @next/next/no-img-element */ ? <img src={club.logoUrl} alt={`Logo de ${club.name}`} className="size-24 shrink-0 rounded-full border-4 bg-white object-contain p-1 shadow-xl sm:size-32" style={{ borderColor: "rgba(255,255,255,.9)" }}/> : <div className="grid size-24 shrink-0 place-items-center rounded-full border-4 sm:size-32" style={{ background: "rgba(255,255,255,.12)", borderColor: "rgba(255,255,255,.35)" }}><Users2 size={38}/></div>}

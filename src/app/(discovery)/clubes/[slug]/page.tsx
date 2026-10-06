@@ -35,7 +35,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
 
   return <main className="container-shell pb-20 pt-6 sm:pt-8" style={brandVars}>
     <section className="relative overflow-hidden rounded-[1.75rem] px-6 py-10 sm:px-12 sm:py-14" style={brand ? { background: brand.gradient, color: heroText } : undefined}>
-      {club.coverUrl && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={club.coverUrl} alt="" className="absolute inset-0 size-full object-cover"/><div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/25"/></>}
+      {club.coverUrl && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={club.coverUrl} alt="" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${club.coverFocus.x}% ${club.coverFocus.y}%` }}/><div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/25"/></>}
       {!brand && !club.coverUrl && <div aria-hidden className="absolute inset-0 -z-10 bg-[var(--surface)]"/>}
       <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-white/10 blur-2xl"/>
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">

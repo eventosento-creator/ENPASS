@@ -12,8 +12,8 @@ export const isClubEnabled = cache(async (organizationId: string) => {
 
 export const getClubBranding = cache(async (organizationId: string) => {
   const supabase = await createClient();
-  const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity").eq("organization_id", organizationId).maybeSingle();
-  return { logoUrl: data?.brand_logo_url ?? null, name: data?.brand_name ?? null, accentColor: data?.brand_accent_color ?? null, coverUrl: data?.cover_image_url ?? null, location: data?.location_text ?? null, activity: data?.main_activity ?? null };
+  const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity, cover_focus_x, cover_focus_y").eq("organization_id", organizationId).maybeSingle();
+  return { logoUrl: data?.brand_logo_url ?? null, name: data?.brand_name ?? null, accentColor: data?.brand_accent_color ?? null, coverUrl: data?.cover_image_url ?? null, coverFocus: { x: data?.cover_focus_x ?? 50, y: data?.cover_focus_y ?? 50 }, location: data?.location_text ?? null, activity: data?.main_activity ?? null };
 });
 
 export async function searchMembers(organizationId: string, query = ""): Promise<MemberRow[]> {
@@ -164,7 +164,7 @@ export const getClubBannerData = cache(async (organizationId: string) => {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const [{ data: settings }, { data: organization }, { count: activeMembers }, { data: nextDue }, { data: categories }] = await Promise.all([
-    supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity, public_description").eq("organization_id", organizationId).maybeSingle(),
+    supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, cover_focus_x, cover_focus_y, location_text, main_activity, public_description").eq("organization_id", organizationId).maybeSingle(),
     supabase.from("organizations").select("name, default_currency").eq("id", organizationId).maybeSingle(),
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "active"),
     supabase.from("membership_dues").select("due_date").eq("organization_id", organizationId).is("paid_at", null).gte("due_date", today).order("due_date").limit(1).maybeSingle(),
@@ -176,6 +176,7 @@ export const getClubBannerData = cache(async (organizationId: string) => {
     logoUrl: settings?.brand_logo_url ?? null,
     accentColor: settings?.brand_accent_color ?? null,
     coverUrl: settings?.cover_image_url ?? null,
+    coverFocus: { x: settings?.cover_focus_x ?? 50, y: settings?.cover_focus_y ?? 50 },
     location: settings?.location_text ?? null,
     activity: settings?.main_activity ?? null,
     description: settings?.public_description ?? null,
