@@ -32,7 +32,7 @@ export function ClubPublicListingForm({ organizationId, settings }: { organizati
       </button>
     </div>
     {settings.status === "rejected" && settings.rejectionReason && <p className="text-xs text-red-400">Motivo: {settings.rejectionReason}</p>}
-    {wantPublic && <label className="label">Descripción pública<textarea className="field min-h-24" name="description" maxLength={600} defaultValue={settings.description ?? ""} placeholder="Contá de qué se trata tu club, actividades, horarios…"/></label>}
+    {/* Siempre montada (oculta si está apagado) para que apagar el interruptor no borre la descripción guardada. */}<label className={wantPublic ? "label" : "hidden"}>Descripción pública<textarea className="field min-h-24" name="description" maxLength={600} defaultValue={settings.description ?? ""} placeholder="Contá de qué se trata tu club, actividades, horarios…"/></label>
     <ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/>
     <SubmitButton className="btn btn-primary w-fit">Guardar</SubmitButton>
   </form>;
