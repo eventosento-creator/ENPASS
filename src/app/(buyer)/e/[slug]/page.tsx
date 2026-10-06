@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Armchair, CalendarDays, ChevronLeft, Grid3x3, MapPin, ShieldCheck, Ticket, UserRoundCheck } from "lucide-react";
+import { Armchair, CalendarDays, ChevronLeft, Clock, DoorOpen, Grid3x3, IdCard, MapPin, ShieldCheck, Ticket, UserRoundCheck } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { TicketSelector } from "@/modules/orders/ui/ticket-selector";
-import { EventCover } from "@/modules/events/ui/event-cover";
+import { EventHero } from "@/modules/events/ui/event-hero";
+import { PublicHeader } from "@/modules/discovery/ui/public-header";
 import { formatEventDate } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
 import { getActivePromoterAttribution } from "@/modules/promoters/application/attribution";
@@ -67,7 +68,58 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
     image: event.cover_image_url ? [absoluteUrl(event.cover_image_url)] : undefined,
     location: { "@type": "Place", name: venue.name, address: { "@type": "PostalAddress", streetAddress: venue.address, addressLocality: venue.city, addressRegion: venue.province, addressCountry: "AR" } },
   };
-  return <main className="min-h-screen pb-10"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}/><header className="container-shell flex items-center justify-between py-5"><Link href="/eventos" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-neutral-500 transition hover:text-white"><ChevronLeft size={17}/>Eventos</Link><div className="flex items-center gap-2"><Link href="/"><EnpassLogo/></Link><ThemeToggle/></div></header><div className="container-shell grid items-start gap-7 md:grid-cols-[minmax(0,1fr)_320px] md:gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12"><section><div className="px-1 pb-7 sm:px-2 sm:pb-9"><p className="eyebrow">{venue.city}</p><h1 className="mt-3 text-4xl font-black uppercase leading-[1.04] tracking-[.02em] sm:text-5xl lg:text-6xl">{event.name}</h1><div className="mt-7 grid gap-5 text-neutral-300 lg:grid-cols-2"><div className="flex items-start gap-3"><CalendarDays className="mt-0.5 text-neutral-600" size={19}/><p className="font-semibold leading-6">{formatEventDate(event.starts_at, venue.timezone)}</p></div><a href={googleMapsUrl({ name: venue.name, address: venue.address, city: venue.city })} target="_blank" rel="noopener noreferrer" className="group flex items-start gap-3"><MapPin className="mt-0.5 text-neutral-600" size={19}/><div><p className="font-semibold group-hover:underline">{venue.name}</p><p className="mt-1 text-sm leading-5 text-neutral-500">{venue.address}, {venue.city}</p><p className="mt-1 text-xs font-bold text-[var(--accent)]">Cómo llegar</p></div></a></div></div><EventCover src={event.cover_image_url} alt={`Flyer de ${event.name}`} className="aspect-[4/5] max-h-[760px] rounded-[1.4rem]" priority sizes="(max-width: 767px) 100vw, (max-width: 1024px) 55vw, 62vw"/>{event.description && <p className="mt-8 max-w-2xl border-t border-white/[.07] px-1 pt-7 leading-7 text-neutral-400 sm:px-2">{event.description}</p>}</section><aside className="md:sticky md:top-6">{attribution && <div className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--accent)]/15 bg-[var(--accent)]/[.05] px-4 py-3 text-xs font-semibold text-neutral-300"><UserRoundCheck size={15} className="text-[var(--accent)]"/>Invitación de {attribution.promoter_display_name}</div>}<div className="surface p-5 sm:p-6">{types.length > 0 && <section><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Ticket size={20} className="text-[var(--accent)]"/>Entradas</h2><p className="mt-2 text-sm text-neutral-500">Elegí la cantidad que necesitás.</p><div className="mt-5"><TicketSelector eventSlug={event.slug} ticketTypes={types}/></div></section>}{tables.length > 0 && <section className={types.length ? "mt-8 border-t border-white/[.08] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Armchair size={20} className="text-[var(--accent)]"/>Mesas</h2><p className="mt-2 text-sm text-neutral-500">Una reserva, un QR grupal para todos.</p><div className="mt-5"><TableSelector eventSlug={event.slug} tables={tables}/></div></section>}{seats.length > 0 && <section className={types.length || tables.length ? "mt-8 border-t border-white/[.08] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Grid3x3 size={20} className="text-[var(--accent)]"/>Asientos</h2><p className="mt-2 text-sm text-neutral-500">Elegí tu ubicación exacta en el mapa.</p><div className="mt-5"><SeatMapSelector eventSlug={event.slug} seats={seats}/></div></section>}{!types.length && !tables.length && !seats.length && <div className="py-8 text-center"><p className="font-bold">Sin opciones disponibles</p><p className="mt-2 text-sm text-neutral-500">Volvé a revisar más adelante.</p></div>}</div><p className="mt-4 flex items-center justify-center gap-2 text-[11px] font-semibold text-neutral-600"><ShieldCheck size={14}/>Compra segura · Sin crear una cuenta</p></aside></div></main>;
+  const { data: { user } } = await supabase.auth.getUser();
+  const tz = venue.timezone;
+  const clock = (value: string) => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz }).format(new Date(value));
+  const finished = hasEnded(event.starts_at, event.ends_at);
+  const hasPurchase = types.length > 0 || tables.length > 0 || seats.length > 0;
+  const mapsUrl = googleMapsUrl({ name: venue.name, address: venue.address, city: venue.city });
+  // Solo campos que existen de verdad; si no hay ninguno, la tarjeta no se muestra.
+  const infoRows: Array<{ icon: typeof Clock; label: string; value: string }> = [
+    ...(event.doors_open_at ? [{ icon: DoorOpen, label: "Puertas", value: `${clock(event.doors_open_at)} hs` }] : []),
+    ...(event.ends_at ? [{ icon: Clock, label: "Finaliza", value: `${clock(event.ends_at)} hs` }] : []),
+    ...(event.require_document ? [{ icon: IdCard, label: "Acreditación", value: "Se pide DNI para comprar" }] : []),
+  ];
+  const description = event.description?.trim();
+  return <main className="min-h-screen bg-[var(--background)] pb-28 md:pb-16"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}/>
+    <div className="hidden md:block"><PublicHeader isAuthenticated={!!user}/></div>
+    <header className="container-shell flex h-14 items-center justify-between md:hidden"><Link href="/eventos" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-neutral-500"><ChevronLeft size={17}/>Eventos</Link><Link href="/" aria-label="ENPASS"><EnpassLogo className="!h-5"/></Link><ThemeToggle/></header>
+    <div className="container-shell md:pt-5"><Link href="/eventos" className="mb-4 hidden min-h-9 items-center gap-1 text-sm font-semibold text-neutral-500 transition hover:text-white md:inline-flex"><ChevronLeft size={16}/>Eventos</Link></div>
+    <div className="container-shell grid items-start gap-x-8 gap-y-6 md:grid-cols-[minmax(0,1fr)_330px] md:grid-rows-[auto_1fr] lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-12">
+      <section className="md:col-start-1">
+        <EventHero src={event.cover_image_url} alt={`Flyer de ${event.name}`}/>
+        <div className="mt-5 px-1">
+          <p className="eyebrow">{venue.city}</p>
+          <h1 className="mt-2 text-4xl font-black uppercase leading-[1.05] tracking-[.01em] md:text-5xl lg:text-6xl">{event.name}</h1>
+          <div className="mt-5 grid gap-4 text-[var(--text)] lg:grid-cols-2">
+            <div className="flex items-start gap-3"><CalendarDays aria-hidden className="mt-0.5 shrink-0 text-neutral-500" size={19}/><p className="font-semibold leading-6">{formatEventDate(event.starts_at, tz)}</p></div>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="group flex items-start gap-3"><MapPin aria-hidden className="mt-0.5 shrink-0 text-neutral-500" size={19}/><div><p className="font-semibold group-hover:underline">{venue.name}</p><p className="mt-0.5 text-sm leading-5 text-neutral-500">{venue.address}, {venue.city}</p><p className="mt-1 text-xs font-bold text-[var(--accent)]">Cómo llegar →</p></div></a>
+          </div>
+        </div>
+      </section>
+      <aside className="md:sticky md:top-24 md:col-start-2 md:row-span-2 md:row-start-1">
+        {attribution && <div className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-xs font-semibold"><UserRoundCheck size={15} className="text-[var(--accent)]"/>Invitación de {attribution.promoter_display_name}</div>}
+        {finished ? <div className="surface p-6 text-center"><p className="font-black">Este evento ya finalizó</p><p className="mt-2 text-sm text-neutral-500">La venta de entradas está cerrada.</p></div>
+        : <div className="surface p-5 sm:p-6">
+          {types.length > 0 && <section><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Ticket size={20} className="text-[var(--accent)]"/>Entradas</h2><p className="mt-2 text-sm text-neutral-500">Elegí la cantidad que necesitás.</p><div className="mt-4"><TicketSelector eventSlug={event.slug} ticketTypes={types}/></div></section>}
+          {tables.length > 0 && <section className={types.length ? "mt-8 border-t border-[var(--border)] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Armchair size={20} className="text-[var(--accent)]"/>Mesas</h2><p className="mt-2 text-sm text-neutral-500">Una reserva, un QR grupal para todos.</p><div className="mt-5"><TableSelector eventSlug={event.slug} tables={tables}/></div></section>}
+          {seats.length > 0 && <section className={types.length || tables.length ? "mt-8 border-t border-[var(--border)] pt-7" : ""}><h2 className="flex items-center gap-2 text-2xl font-black tracking-[-.03em]"><Grid3x3 size={20} className="text-[var(--accent)]"/>Asientos</h2><p className="mt-2 text-sm text-neutral-500">Elegí tu ubicación exacta en el mapa.</p><div className="mt-5"><SeatMapSelector eventSlug={event.slug} seats={seats}/></div></section>}
+          {!hasPurchase && <div className="py-8 text-center"><p className="font-bold">Sin entradas disponibles</p><p className="mt-2 text-sm text-neutral-500">La venta no está abierta o se agotaron. Volvé a revisar más adelante.</p></div>}
+        </div>}
+        {!finished && hasPurchase && <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] font-semibold text-neutral-500"><li className="flex items-center gap-1.5"><ShieldCheck size={13} aria-hidden/>Compra segura</li><li>Sin crear una cuenta</li><li>Confirmación inmediata</li></ul>}
+      </aside>
+      <div className="grid gap-5 md:col-start-1">
+        {description && <section className="surface p-5 sm:p-7"><h2 className="text-xl font-black tracking-[-.02em]">Descripción</h2><p className="mt-3 whitespace-pre-line leading-7 text-neutral-400">{description}</p></section>}
+        {infoRows.length > 0 && <section className="surface p-5 sm:p-7"><h2 className="text-xl font-black tracking-[-.02em]">Información del evento</h2><dl className="mt-4 grid gap-3.5">{infoRows.map(row => <div className="flex items-start gap-3 text-sm" key={row.label}><row.icon aria-hidden size={17} className="mt-0.5 shrink-0 text-neutral-500"/><dt className="w-28 shrink-0 text-neutral-500">{row.label}</dt><dd className="font-semibold">{row.value}</dd></div>)}</dl></section>}
+        <section className="surface p-5 sm:p-7"><h2 className="text-xl font-black tracking-[-.02em]">Ubicación</h2><div className="mt-4 flex items-start gap-3"><MapPin aria-hidden size={19} className="mt-0.5 shrink-0 text-neutral-500"/><div><p className="font-semibold">{venue.name}</p><p className="mt-0.5 text-sm text-neutral-500">{venue.address}, {venue.city}</p></div></div><a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary mt-4 min-h-11 w-full sm:w-auto">Abrir en Google Maps →</a></section>
+      </div>
+    </div>
+  </main>;
+}
+
+function hasEnded(startsAt: string, endsAt: string | null) {
+  const end = endsAt ? new Date(endsAt).getTime() : new Date(startsAt).getTime() + 12 * 3_600_000;
+  return end < Date.now();
 }
 
 function absoluteUrl(path: string) {
