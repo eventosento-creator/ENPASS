@@ -153,6 +153,7 @@ export async function updateClubBranding(_: ClubActionState, formData: FormData)
 const createMembershipSchema = z.object({
   organizationId: z.string().uuid(),
   categoryId: z.string().uuid(),
+  planId: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
   memberNumber: z.string().min(1).max(20),
   customerId: z.string().uuid().optional(),
   firstName: z.string().max(80).optional(),
@@ -180,6 +181,7 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
     target_phone: parsed.data.phone ?? null,
     target_document: parsed.data.document ?? null,
     target_customer_id: parsed.data.customerId ?? null,
+    target_plan: parsed.data.planId ?? null,
   });
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
@@ -641,4 +643,51 @@ export async function updateClubPayoutDetails(_: ClubActionState, formData: Form
   if (error) return { error: "No pudimos guardar los datos." };
   revalidatePath("/app/socios/ajustes");
   return { success: "Datos guardados." };
+}
+
+const planSchema = z.object({
+  organizationId: z.string().uuid(),
+  id: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
+  name: z.string().trim().min(1).max(60),
+  kind: z.enum(["standard", "family", "scholarship"]),
+  mode: z.enum(["none", "percent", "fixed"]),
+  percent: z.coerce.number().min(0).max(100).default(0),
+  fixedAmount: z.coerce.number().min(0).default(0),
+  active: z.string().optional(),
+});
+
+export async function upsertMembershipPlan(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = planSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá el nombre y los valores del plan." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("upsert_membership_plan", {
+    target_org: parsed.data.organizationId, target_id: parsed.data.id ?? null, target_name: parsed.data.name, target_kind: parsed.data.kind, target_mode: parsed.data.mode,
+    target_discount_bps: Math.round(parsed.data.percent * 100), target_fixed_amount: Math.round(parsed.data.fixedAmount * 100), target_active: parsed.data.active === "true",
+  });
+  if (error) return { error: error.message?.includes("PLAN_NAME_TAKEN") ? "Ya existe un plan con ese nombre." : "No pudimos guardar el plan." };
+  revalidatePath("/app/socios/membresias");
+  return { success: "Plan guardado." };
+}
+
+export async function deleteMembershipPlan(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = deleteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "No encontramos ese plan." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_membership_plan", { target_org: parsed.data.organizationId, target_id: parsed.data.id });
+  if (error) return { error: error.message?.includes("PLAN_IN_USE") ? "Este plan tiene socios asignados. Desactivalo, o pasá a los socios a otro plan para poder borrarlo." : "No pudimos borrar el plan." };
+  revalidatePath("/app/socios/membresias");
+  return { success: "Plan borrado." };
+}
+
+/** Asigna (o quita) el plan de un socio. Rige para las cuotas que se generen de ahí en adelante. */
+export async function setMembershipPlan(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const membershipId = z.string().uuid().safeParse(formData.get("membershipId"));
+  const planRaw = String(formData.get("planId") ?? "");
+  const planId = planRaw ? z.string().uuid().safeParse(planRaw) : null;
+  if (!membershipId.success || (planId && !planId.success)) return { error: "Revisá los datos." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_membership_plan", { target_membership: membershipId.data, target_plan: planId?.data ?? null });
+  if (error) return { error: "No pudimos cambiar la membresía." };
+  revalidatePath(`/app/socios/${membershipId.data}`);
+  return { success: "Membresía actualizada. Rige desde las próximas cuotas." };
 }

@@ -9,7 +9,7 @@ import type { CustomerCandidate } from "../domain/club";
 
 type Category = { id: string; name: string };
 
-export function MemberForm({ organizationId, categories, suggestedNumber }: { organizationId: string; categories: Category[]; suggestedNumber?: string }) {
+export function MemberForm({ organizationId, categories, plans = [], suggestedNumber }: { organizationId: string; categories: Category[]; plans?: Array<{ id: string; name: string; description: string }>; suggestedNumber?: string }) {
   const [state, action] = useActionState<ClubActionState, FormData>(createMembership, {});
   const [linked, setLinked] = useState<CustomerCandidate | null>(null);
 
@@ -41,6 +41,13 @@ export function MemberForm({ organizationId, categories, suggestedNumber }: { or
         </select>
       </label>
     </div>
+    {plans.length > 0 && <label className="label">Membresía <span className="font-normal text-neutral-500">(opcional)</span>
+      <select className="field" name="planId" defaultValue="">
+        <option value="">Sin plan · cuota completa</option>
+        {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} · {plan.description}</option>)}
+      </select>
+      <span className="mt-1 block text-xs font-normal text-neutral-500">Define cuánto paga: plan familiar, becado, etc. Se aplica a todas sus cuotas.</span>
+    </label>}
     {categories.length === 0 && <p className="status-warning rounded-xl p-3 text-sm">Todavía no creaste ninguna categoría de membresía. Cargá al menos una antes de dar de alta socios.</p>}
     <ActionMessage message={state.error}/>
     <SubmitButton>Guardar socio</SubmitButton>

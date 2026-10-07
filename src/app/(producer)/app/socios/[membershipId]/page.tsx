@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
-import { isClubEnabled, getDivisionDues, getMembershipDetail, getMembershipDues, getMembershipCategories, getMembershipDivisions, getAvailableDivisionsForMembership } from "@/modules/clubs/application/queries";
+import { isClubEnabled, getDivisionDues, getMembershipDetail, getMembershipDues, getMembershipCategories, getMembershipDivisions, getAvailableDivisionsForMembership, getMembershipPlanId, listMembershipPlans } from "@/modules/clubs/application/queries";
 import { membershipStatusLabels } from "@/modules/clubs/domain/club";
 import { DuesList } from "@/modules/clubs/ui/dues-list";
 import { NewDueForm } from "@/modules/clubs/ui/new-due-form";
 import { MembershipStatusForm } from "@/modules/clubs/ui/membership-status-form";
 import { PaymentHistory } from "@/modules/clubs/ui/payment-history";
+import { MembershipPlanCard } from "@/modules/clubs/ui/membership-plan-card";
 import { MembershipDivisionsCard } from "@/modules/clubs/ui/membership-divisions-card";
 
 const statusTone: Record<string, string> = { active: "status-success", suspended: "status-danger", cancelled: "text-neutral-500" };
@@ -20,9 +21,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
 
   const membership = await getMembershipDetail(membershipId);
   if (!membership || membership.organizationId !== org.id) notFound();
-  const [dues, categories, memberDivisions, availableDivisions] = await Promise.all([
+  const [dues, categories, memberDivisions, availableDivisions, plans, planId] = await Promise.all([
     getMembershipDues(membershipId), getMembershipCategories(org.id),
     getMembershipDivisions(membershipId), getAvailableDivisionsForMembership(membershipId),
+    listMembershipPlans(org.id), getMembershipPlanId(membershipId),
   ]);
   const divisionDues = await Promise.all(memberDivisions.map(async (division) => ({ name: division.divisionName, dues: await getDivisionDues(division.enrollmentId) })));
   const historyEntries = [
@@ -43,6 +45,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
       <h2 className="text-lg font-bold">Estado de la membresía</h2>
       <div className="mt-4"><MembershipStatusForm membershipId={membership.membershipId} currentStatus={membership.membershipStatus}/></div>
     </section>
+
+    <MembershipPlanCard membershipId={membership.membershipId} currentPlanId={planId} plans={plans} categoryFee={category?.monthly_fee_amount ?? 0} categoryName={category?.name ?? "la categoría"} currency={org.default_currency}/>
 
     <section className="card mt-6 p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">Cuotas</h2><NewDueForm membershipId={membership.membershipId} defaultAmount={category?.monthly_fee_amount ?? 0} startsAt={membership.startsAt}/></div>

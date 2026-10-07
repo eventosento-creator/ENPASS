@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
 import type { ClubReport } from "../domain/report";
+import type { MembershipPlan } from "../domain/plans";
 import type { ClubListingSettings, DivisionEnrollmentRow, DivisionRow, MemberRow, MembershipDetail, MembershipDivisionRow, MembershipDue, MembershipRequestRow } from "../domain/club";
 
 export const isClubEnabled = cache(async (organizationId: string) => {
@@ -211,4 +212,22 @@ export async function getClubSettlements(organizationId: string): Promise<ClubSe
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_club_settlements", { target_org: organizationId });
   return error || !data ? null : (data as ClubSettlements);
+}
+
+/** Planes de cobro del club con la cantidad de socios que tiene cada uno. */
+export async function listMembershipPlans(organizationId: string): Promise<MembershipPlan[]> {
+  const supabase = await createClient();
+  const [{ data: plans }, { data: assigned }] = await Promise.all([
+    supabase.from("membership_plans").select("*").eq("organization_id", organizationId).order("sort_order").order("name"),
+    supabase.from("memberships").select("membership_plan_id").eq("organization_id", organizationId).not("membership_plan_id", "is", null),
+  ]);
+  const counts = new Map<string, number>();
+  for (const row of assigned ?? []) if (row.membership_plan_id) counts.set(row.membership_plan_id, (counts.get(row.membership_plan_id) ?? 0) + 1);
+  return (plans ?? []).map((plan) => ({ id: plan.id, name: plan.name, kind: plan.kind, mode: plan.pricing_mode, discountBps: plan.discount_bps, fixedAmount: plan.fixed_amount, active: plan.active, memberCount: counts.get(plan.id) ?? 0 }));
+}
+
+export async function getMembershipPlanId(membershipId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("memberships").select("membership_plan_id").eq("id", membershipId).maybeSingle();
+  return data?.membership_plan_id ?? null;
 }
