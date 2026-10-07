@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Pencil, Plus, X } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { toggleCategoryActive } from "../application/actions";
+import { deleteCategory, toggleCategoryActive } from "../application/actions";
+import { DeleteItemButton } from "./delete-item-button";
 import { CategoryForm } from "./category-form";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { MembershipCategory } from "@/shared/database/types";
@@ -28,6 +29,7 @@ export function CategoriesManager({ organizationId, categories, currency }: { or
             <input type="hidden" name="nextActive" value={String(!category.active)}/>
             <button className="btn btn-ghost" type="submit">{category.active ? "Desactivar" : "Activar"}</button>
           </form>
+          <DeleteItemButton action={deleteCategory} organizationId={organizationId} id={category.id} name={category.name} kind="categoría"/>
         </div>
       </div>)}
     </div> : <EmptyState icon={UserRoundCheck} title="Todavía no tenés categorías" description="Creá al menos una para poder dar de alta socios." action={<button className="btn btn-primary" onClick={() => setCreating(true)}>Nueva categoría</button>}/>}</div>

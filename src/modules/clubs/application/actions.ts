@@ -219,6 +219,28 @@ export async function upsertMembershipCategory(_: ClubActionState, formData: For
   return { success: "Categoría guardada." };
 }
 
+const deleteSchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid() });
+
+export async function deleteCategory(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = deleteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "No encontramos esa categoría." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_membership_category", { target_org: parsed.data.organizationId, target_id: parsed.data.id });
+  if (error) return { error: error.message?.includes("CATEGORY_IN_USE") ? "Esta categoría tiene socios. Desactivala, o pasá a los socios a otra categoría para poder borrarla." : "No pudimos borrar la categoría." };
+  revalidatePath("/app/socios/categorias");
+  return { success: "Categoría borrada." };
+}
+
+export async function deleteDivision(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = deleteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "No encontramos esa división." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_division", { target_org: parsed.data.organizationId, target_id: parsed.data.id });
+  if (error) return { error: error.message?.includes("DIVISION_IN_USE") ? "Esta división tiene socios inscriptos (o tuvo). Desactivala para que no aparezca." : "No pudimos borrar la división." };
+  revalidatePath("/app/socios/divisiones");
+  return { success: "División borrada." };
+}
+
 export async function toggleCategoryActive(formData: FormData) {
   const organizationId = String(formData.get("organizationId") ?? "");
   const id = String(formData.get("id") ?? "");

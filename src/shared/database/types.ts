@@ -714,6 +714,8 @@ export interface Database {
       set_club_profile: { Args: { target_org: string; target_cover_url: string | null; target_location: string | null; target_activity: string | null; target_focus_x?: number; target_focus_y?: number }; Returns: undefined };
       get_public_club_divisions: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number; category_id: string | null }[] };
       set_division_category: { Args: { target_division: string; target_category: string | null }; Returns: undefined };
+      delete_membership_category: { Args: { target_org: string; target_id: string }; Returns: undefined };
+      delete_division: { Args: { target_org: string; target_id: string }; Returns: undefined };
       get_public_clubs_discovery: { Args: Record<string, never>; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; category_count: number; cover_image_url: string | null; location_text: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_profile: { Args: { target_slug: string }; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; currency: string; cover_image_url: string | null; location_text: string | null; main_activity: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_categories: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number }[] };

@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Pencil, Plus, Shield, Users, X } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { toggleDivisionActive } from "../application/actions";
+import { deleteDivision, toggleDivisionActive } from "../application/actions";
+import { DeleteItemButton } from "./delete-item-button";
 import { DivisionForm } from "./division-form";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { DivisionRow } from "../domain/club";
@@ -28,6 +29,7 @@ export function DivisionsManager({ organizationId, divisions, categories, curren
             <input type="hidden" name="nextActive" value={String(!division.active)}/>
             <button className="btn btn-ghost" type="submit">{division.active ? "Desactivar" : "Activar"}</button>
           </form>
+          <DeleteItemButton action={deleteDivision} organizationId={organizationId} id={division.divisionId} name={division.name} kind="división"/>
         </div>
       </div>)}
     </div> : <EmptyState icon={Shield} title="Todavía no tenés divisiones" description="Creá una para empezar a anotar socios (ej. Fútbol, Básquet, Natación)." action={<button className="btn btn-primary" onClick={() => setCreating(true)}>Nueva división</button>}/>}</div>
