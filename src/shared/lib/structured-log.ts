@@ -78,7 +78,10 @@ export function promoterLog(event: PromoterLogEvent, fields: Record<string, Safe
 type CollaboratorLogEvent =
   | "event_collaborator.invite.created"
   | "event_collaborator.invite.email_sent"
-  | "event_collaborator.invite.email_failed";
+  | "event_collaborator.invite.email_failed"
+  | "club_staff.invite.created"
+  | "club_staff.invite.email_sent"
+  | "club_staff.invite.email_failed";
 
 export function collaboratorLog(event: CollaboratorLogEvent, fields: Record<string, SafeLogValue> = {}) {
   console.info(JSON.stringify({

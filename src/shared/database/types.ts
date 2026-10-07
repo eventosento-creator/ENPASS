@@ -707,9 +707,10 @@ export interface Database {
       can_manage_club: { Args: { target_org: string }; Returns: boolean };
       set_club_enabled: { Args: { target_org: string; target_enabled: boolean }; Returns: undefined };
       add_club_staff: { Args: { target_org: string; target_email: string }; Returns: string };
-      create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string }; Returns: string };
+      create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string; target_title?: string | null }; Returns: string };
       accept_club_staff_invitation: { Args: { raw_token_hash: string }; Returns: string | null };
-      list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string }[] };
+      list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string; title: string | null }[] };
+      set_club_staff_title: { Args: { target_org: string; target_user: string; target_title: string | null }; Returns: undefined };
       revoke_club_staff_invitation: { Args: { target_org: string; target_invitation: string }; Returns: undefined };
       remove_club_staff: { Args: { target_org: string; target_user: string }; Returns: undefined };
       upsert_membership_category: { Args: { target_org: string; target_id: string | null; target_name: string; target_monthly_fee_amount: number; target_active: boolean }; Returns: string };
