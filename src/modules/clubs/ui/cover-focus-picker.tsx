@@ -11,8 +11,15 @@ export function CoverFocusPicker({ initialUrl, initialX, initialY }: { initialUr
   const objectUrl = useRef<string | null>(null);
   useEffect(() => () => { if (objectUrl.current) URL.revokeObjectURL(objectUrl.current); }, []);
 
-  function onFile(file: File | undefined) {
-    if (!file) return;
+  async function onFile(original: File | undefined) {
+    if (!original) return;
+    // Las fotos de celular pesan varios MB: se reducen acá (máx. 2000 px) para que entren en el envío.
+    const file = await shrinkImage(original);
+    if (inputRef.current && file !== original) {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      inputRef.current.files = transfer.files;
+    }
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = URL.createObjectURL(file);
     setPreview(objectUrl.current);
@@ -53,6 +60,20 @@ export function CoverFocusPicker({ initialUrl, initialX, initialY }: { initialUr
       <label className="btn btn-secondary cursor-pointer"><span>{shown ? "Cambiar portada" : "Subir portada"}</span><input ref={inputRef} className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onFile(event.target.files?.[0])}/></label>
       {initialUrl && <label className="flex items-center gap-2 text-xs text-neutral-500"><input type="checkbox" name="removeCover" checked={removed} onChange={(event) => { setRemoved(event.target.checked); }}/>Quitar portada</label>}
     </div>
-    <p className="text-xs text-neutral-500">Se ve de fondo en el panel del club y en su página pública. Mejor horizontal, hasta 3 MB.</p>
+    <p className="text-xs text-neutral-500">Se ve de fondo en el panel del club y en su página pública. Mejor horizontal. Si la foto es pesada, se reduce sola.</p>
   </div>;
+}
+
+async function shrinkImage(file: File): Promise<File> {
+  if (file.size <= 900 * 1024) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+  } catch { return file; }
 }

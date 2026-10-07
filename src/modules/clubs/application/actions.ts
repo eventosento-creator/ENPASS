@@ -89,7 +89,7 @@ const brandingSchema = z.object({
 
 function validateLogo(file: File) {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return "Usá una imagen JPG, PNG o WebP.";
-  if (file.size > 2 * 1024 * 1024) return "El logo puede pesar hasta 2 MB.";
+  if (file.size > 1.5 * 1024 * 1024) return "El logo puede pesar hasta 1,5 MB.";
   return null;
 }
 
@@ -125,7 +125,7 @@ export async function updateClubBranding(_: ClubActionState, formData: FormData)
   const cover = formData.get("cover");
   if (cover instanceof File && cover.size > 0) {
     if (!["image/jpeg", "image/png", "image/webp"].includes(cover.type)) return { error: "La portada tiene que ser JPG, PNG o WebP." };
-    if (cover.size > 3 * 1024 * 1024) return { error: "La portada puede pesar hasta 3 MB." };
+    if (cover.size > 2.5 * 1024 * 1024) return { error: "La portada puede pesar hasta 2,5 MB." };
     const extension = cover.type === "image/png" ? "png" : cover.type === "image/webp" ? "webp" : "jpg";
     const path = `${parsed.data.organizationId}/cover-${crypto.randomUUID()}.${extension}`;
     const { error: coverError } = await supabase.storage.from("club-logos").upload(path, cover, { contentType: cover.type, cacheControl: "3600" });
