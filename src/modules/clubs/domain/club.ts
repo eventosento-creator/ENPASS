@@ -132,6 +132,7 @@ export type PublicClubProfile = {
 };
 
 export type PublicClubCategory = { id: string; name: string; monthlyFeeAmount: number };
+export type PublicClubDivision = { id: string; name: string; monthlyFeeAmount: number };
 
 export type MembershipRequestStatus = "pending" | "approved" | "rejected";
 

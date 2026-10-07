@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { ArrowRight, CalendarDays, MapPin, Trophy, Users2 } from "lucide-react";
 import { getMemberProfile } from "@/modules/clubs/application/member-portal";
 import { MemberHub } from "@/modules/clubs/ui/member-hub";
-import { getClubUpcomingEventIds, getPublicClubCategories, getPublicClubProfile } from "@/modules/clubs/application/public-queries";
+import { getClubUpcomingEventIds, getPublicClubCategories, getPublicClubDivisions, getPublicClubProfile } from "@/modules/clubs/application/public-queries";
 import { resolveClubBrand } from "@/modules/clubs/domain/brand";
 import { MembershipRequestForm } from "@/modules/clubs/ui/membership-request-form";
 import { getPublicDiscoveryEvents } from "@/modules/discovery/application/queries";
@@ -23,7 +23,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const club = await getPublicClubProfile(slug);
   if (!club) notFound();
-  const [categories, eventIds, allEvents] = await Promise.all([getPublicClubCategories(club.organizationId), getClubUpcomingEventIds(club.organizationId), getPublicDiscoveryEvents()]);
+  const [categories, divisions, eventIds, allEvents] = await Promise.all([getPublicClubCategories(club.organizationId), getPublicClubDivisions(club.organizationId), getClubUpcomingEventIds(club.organizationId), getPublicDiscoveryEvents()]);
   const memberProfile = await getMemberProfile(slug);
   const idSet = new Set(eventIds);
   const events = allEvents.filter((event) => idSet.has(event.id)).slice(0, 8);
@@ -71,6 +71,14 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
       <h2 className="text-2xl font-black tracking-[-.02em]">Categorías de socio</h2>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => <div key={category.id} className="card flex items-center justify-between gap-4 border-l-4 p-5" style={brand ? { borderLeftColor: brand.accent } : undefined}><span className="font-bold">{category.name}</span><span className="text-right"><span className="text-lg font-black">{formatMoney(category.monthlyFeeAmount, club.currency)}</span><span className="text-sm text-neutral-500">/mes</span></span></div>)}
+      </div>
+    </section>}
+
+    {divisions.length > 0 && <section className="mt-12">
+      <h2 className="text-2xl font-black tracking-[-.02em]">Divisiones</h2>
+      <p className="mt-1 text-sm text-neutral-500">Actividades y equipos del club. Algunas tienen una cuota propia, adicional a la de socio.</p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {divisions.map((division) => <div key={division.id} className="card flex items-center justify-between gap-4 border-l-4 p-5" style={brand ? { borderLeftColor: brand.accent } : undefined}><span className="font-bold">{division.name}</span>{division.monthlyFeeAmount > 0 && <span className="text-right"><span className="text-lg font-black">{formatMoney(division.monthlyFeeAmount, club.currency)}</span><span className="text-sm text-neutral-500">/mes</span></span>}</div>)}
       </div>
     </section>}
 
