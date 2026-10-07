@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
+import { createAdminClient } from "@/shared/database/admin";
 import { getAdminViewOrgId } from "../infrastructure/admin-view";
 import type { Organization } from "@/shared/database/types";
 
@@ -34,7 +35,15 @@ export const getCurrentOrganization = cache(async () => {
   }
 
   const { data: membership } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).limit(1).maybeSingle();
-  if (!membership) return null;
+  if (!membership) {
+    // Colaborador del club (staff): no es miembro de la organización, pero puede gestionar socios y cuotas.
+    // club_staff no se puede leer con su sesión (RLS), así que se verifica con el cliente de servicio por su user id.
+    const admin = createAdminClient();
+    const { data: staff } = await admin.from("club_staff").select("organization_id").eq("user_id", user.id).limit(1).maybeSingle();
+    if (!staff) return null;
+    const { data: staffOrganization } = await admin.from("organizations").select("*").eq("id", staff.organization_id).maybeSingle();
+    return staffOrganization ? { ...(staffOrganization as Organization), role: "staff" as const } : null;
+  }
   const organization = membership.organizations as unknown as Organization | null;
   return organization ? { ...organization, role: membership.role } : null;
 });

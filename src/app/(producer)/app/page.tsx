@@ -18,6 +18,7 @@ export default async function DashboardPage() {
     const collaboratorEventIds = await getCollaboratorEventIds();
     redirect(collaboratorEventIds.length > 0 ? `/app/events/${collaboratorEventIds[0]}` : "/app/onboarding");
   }
+  if (organization.role === "staff") redirect("/app/socios" as never);
   const supabase = await createClient();
   const now = new Date().toISOString();
   const [{ data: events }, { data: venues }, { data: holds }, { data: metricsData }] = await Promise.all([

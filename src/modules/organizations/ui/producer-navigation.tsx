@@ -15,12 +15,13 @@ const trailingItems = [
   { href: "/app/settings", label: "Ajustes", icon: Settings },
 ] as const;
 
-const mobileGridCols: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
+const mobileGridCols: Record<number, string> = { 1: "grid-cols-1", 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
 
-export function ProducerNavigation({ mobile = false, collaboratorOnly = false, clubEnabled = false }: { mobile?: boolean; collaboratorOnly?: boolean; clubEnabled?: boolean }) {
+export function ProducerNavigation({ mobile = false, collaboratorOnly = false, clubEnabled = false, clubStaffOnly = false }: { mobile?: boolean; collaboratorOnly?: boolean; clubEnabled?: boolean; clubStaffOnly?: boolean }) {
   const pathname = usePathname();
   if (collaboratorOnly) return null;
-  const items = [...baseItems, ...(clubEnabled ? [clubItem] : []), ...trailingItems];
+  // Colaborador del club: solo ve la sección Club.
+  const items = clubStaffOnly ? [clubItem] : [...baseItems, ...(clubEnabled ? [clubItem] : []), ...trailingItems];
   return <nav aria-label={mobile ? "Navegación móvil" : "Navegación del productor"} className={mobile ? `grid ${mobileGridCols[items.length] ?? "grid-cols-4"} gap-1` : "grid gap-1"}>
     {items.map(({ href, label, icon: Icon }) => {
       const active = href === "/app" ? pathname === href : pathname.startsWith(href);
