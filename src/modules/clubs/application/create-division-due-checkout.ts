@@ -4,6 +4,7 @@ import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { getPaymentAccountAccessToken } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
+import { applyBasisPoints } from "@/modules/payments/domain/fees";
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 
 // Mismo patrón que create-due-checkout.ts, pero para cuotas de división (tabla separada,
@@ -33,7 +34,7 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
     admin.from("memberships").select("*").eq("id", enrollment.membership_id).single(),
     admin.from("divisions").select("name").eq("id", enrollment.division_id).single(),
     admin.from("payment_accounts").select("id").eq("organization_id", due.organization_id).eq("provider", "mercado_pago").eq("status", "connected").maybeSingle(),
-    admin.from("organizations").select("name, default_currency").eq("id", due.organization_id).single(),
+    admin.from("organizations").select("name, default_currency, club_dues_fee_bps").eq("id", due.organization_id).single(),
   ]);
   if (!membership) throw new Error("MEMBERSHIP_NOT_FOUND");
   if (!account) throw new Error("PAYMENT_ACCOUNT_NOT_CONNECTED");
@@ -48,14 +49,17 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
   const currency = org?.default_currency ?? "ARS";
   const divisionName = division?.name ?? "división";
 
+  const serviceFee = applyBasisPoints(due.amount, org?.club_dues_fee_bps ?? 0);
+
   const checkout = await new MercadoPagoProvider().createCheckout({
     paymentPublicId: due.id,
     orderPublicId: due.id,
     eventName: `Cuota ${divisionName} ${periodLabel}`,
     items: [{ id: due.id, name: `Cuota ${divisionName} · ${org?.name ?? "socio"} · ${periodLabel}`, quantity: 1, unitAmount: due.amount }],
-    grossAmount: due.amount,
-    serviceFeeAmount: 0,
-    platformFeeAmount: 0,
+    // Cargo de servicio acordado con el club: lo paga la familia arriba de la cuota y va a ENPASS (marketplace_fee).
+    grossAmount: due.amount + serviceFee,
+    serviceFeeAmount: serviceFee,
+    platformFeeAmount: serviceFee,
     currency,
     expiresAt: new Date(Date.now() + 48 * 3_600_000).toISOString(),
     idempotencyKey: crypto.randomUUID(),
@@ -72,6 +76,8 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
     provider: "mercado_pago",
     provider_preference_id: checkout.providerPreferenceId,
     checkout_url: checkout.checkoutUrl,
+    service_fee_amount: serviceFee,
+    gross_amount: due.amount + serviceFee,
     status: "pending",
   });
 

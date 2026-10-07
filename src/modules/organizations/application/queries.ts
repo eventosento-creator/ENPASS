@@ -66,3 +66,10 @@ export const getCollaboratorEventIds = cache(async () => {
   const { data } = await supabase.from("event_collaborators").select("event_id").eq("user_id", user.id);
   return (data ?? []).map((row) => row.event_id);
 });
+
+/** Clubes con su cargo de servicio en cuotas y lo cobrado online (solo cuenta ENPASS). */
+export async function getAdminClubs() {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("admin_list_clubs");
+  return (data ?? []).map((row) => ({ organizationId: row.organization_id, name: row.name, slug: row.slug, feeBps: row.fee_bps, collected: row.collected_amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount }));
+}

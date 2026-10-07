@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createAdminClient } from "@/shared/database/admin";
 import { getMemberSessionHash } from "../infrastructure/member-session";
+import { applyBasisPoints } from "@/modules/payments/domain/fees";
 import type { MembershipDue } from "../domain/club";
 
 export type PortalClub = { organizationId: string; name: string; slug: string; logoUrl: string | null; brandName: string | null; accentColor: string | null };
@@ -33,12 +34,19 @@ export async function getMemberDues(slug: string): Promise<Array<{ concept: stri
   }));
 }
 
-export type MemberPendingDue = { dueId: string; kind: "club" | "division"; concept: string; period: string; amount: number; dueDate: string; overdue: boolean };
+export type MemberPendingDue = { dueId: string; kind: "club" | "division"; concept: string; period: string; amount: number; serviceFee: number; dueDate: string; overdue: boolean };
 
 /** Cuotas sin pagar del socio de la sesión (con su id real, para poder cobrarlas online). */
 export async function getMemberPendingDues(slug: string): Promise<MemberPendingDue[]> {
   const hash = await getMemberSessionHash(slug);
   if (!hash) return [];
-  const { data } = await createAdminClient().rpc("member_pending_dues", { target_session_hash: hash });
-  return (data ?? []).map((row) => ({ dueId: row.due_id, kind: row.kind as "club" | "division", concept: row.concept, period: row.period, amount: row.amount, dueDate: row.due_date, overdue: row.overdue }));
+  const admin = createAdminClient();
+  const club = await getPortalClub(slug);
+  const [{ data }, { data: org }] = await Promise.all([
+    admin.rpc("member_pending_dues", { target_session_hash: hash }),
+    club ? admin.from("organizations").select("club_dues_fee_bps").eq("id", club.organizationId).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const bps = org?.club_dues_fee_bps ?? 0;
+  // Cargo de servicio que se suma a cada cuota al pagar online (lo define ENPASS por club).
+  return (data ?? []).map((row) => ({ dueId: row.due_id, kind: row.kind as "club" | "division", concept: row.concept, period: row.period, amount: row.amount, serviceFee: applyBasisPoints(row.amount, bps), dueDate: row.due_date, overdue: row.overdue }));
 }

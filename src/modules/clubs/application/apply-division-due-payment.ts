@@ -18,16 +18,21 @@ export async function applyDivisionDuePayment(providerPayment: ProviderPayment) 
     : ["rejected", "cancelled", "charged_back"].includes(providerPayment.status) ? "rejected"
     : "pending";
 
+  // El pago aprobado tiene que cubrir lo que se cobró (cuota + cargo de servicio, si el club lo tiene).
+  if (mappedStatus === "approved" && providerPayment.grossAmount < (paymentRow?.gross_amount ?? due.amount)) throw new Error("DUE_PAYMENT_AMOUNT_MISMATCH");
+
   if (paymentRow) {
     await admin.from("division_due_payments").update({
       status: mappedStatus, provider_payment_id: providerPayment.providerPaymentId, updated_at: new Date().toISOString(),
+      // Lo que cobró Mercado Pago por este pago: ENPASS se lo reintegra al club (acuerdo de cuotas sin costo para el club).
+      ...(mappedStatus === "approved" ? { processor_fee_amount: providerPayment.processorFeeAmount, gross_amount: providerPayment.grossAmount } : {}),
     }).eq("id", paymentRow.id);
   }
 
   if (mappedStatus === "approved" && !due.paid_at) {
     await admin.from("division_dues").update({
       paid_at: providerPayment.approvedAt ?? new Date().toISOString(),
-      paid_amount: providerPayment.grossAmount,
+      paid_amount: due.amount,
       payment_method: "mercado_pago",
       payment_reference: providerPayment.providerPaymentId,
     }).eq("id", dueId);

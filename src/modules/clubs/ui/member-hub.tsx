@@ -36,7 +36,7 @@ export async function MemberHub({ slug }: { slug: string }) {
         <ul className="mt-3 grid gap-3">
           {pending.map((due) => <li key={`${due.kind}-${due.dueId}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4">
             <div><p className="font-bold">{due.concept} · <span className="inline-block first-letter:uppercase">{periodLabel(due.period)}</span></p><p className={`mt-0.5 text-xs font-semibold ${due.overdue ? "text-red-500" : "text-neutral-500"}`}>{due.overdue ? "Vencida" : "Vence"} el {new Date(`${due.dueDate}T00:00:00`).toLocaleDateString("es-AR", { day: "numeric", month: "long" })}</p></div>
-            <div className="flex items-center gap-4"><span className="text-lg font-black">{formatMoney(due.amount, "ARS")}</span><PayDueButton slug={slug} dueId={due.dueId}/></div>
+            <div className="flex items-center gap-4"><div className="text-right"><span className="text-lg font-black">{formatMoney(due.amount + due.serviceFee, "ARS")}</span>{due.serviceFee > 0 && <p className="text-[11px] text-neutral-500">Cuota {formatMoney(due.amount, "ARS")} + cargo de servicio {formatMoney(due.serviceFee, "ARS")}</p>}</div><PayDueButton slug={slug} dueId={due.dueId}/></div>
           </li>)}
         </ul>
         <p className="mt-3 text-xs text-neutral-500">Pagás con Mercado Pago y la cuota se marca sola como pagada.</p>

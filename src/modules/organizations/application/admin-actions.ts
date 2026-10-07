@@ -49,3 +49,13 @@ export async function reconcilePayment(_: ReconcileState, formData: FormData): P
     return { error: error instanceof Error ? error.message : "No pudimos reprocesar el pago." };
   }
 }
+
+/** Fija el cargo de servicio (en %) que se suma a las cuotas online de un club. 0 = sin cargo. */
+export async function setClubDuesFee(formData: FormData) {
+  const organizationId = formData.get("organizationId");
+  const percent = Number(String(formData.get("percent") ?? "").replace(",", "."));
+  if (typeof organizationId !== "string" || !Number.isFinite(percent) || percent < 0 || percent > 50) return;
+  const supabase = await createClient();
+  await supabase.rpc("set_club_dues_fee", { target_org: organizationId, target_bps: Math.round(percent * 100) });
+  revalidatePath("/app/admin/clubs");
+}

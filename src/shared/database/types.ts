@@ -5,6 +5,7 @@ export type Organization = {
   service_fee_bps: number; fee_payer: "buyer" | "producer" | "mixed";
   platform_fee_bps: number; table_service_fee_bps: number | null;
   courtesy_issue_cost_amount: number; courtesy_checkin_cost_amount: number;
+  club_dues_fee_bps: number;
 };
 export type Venue = {
   id: string; organization_id: string; name: string; address: string; city: string;
@@ -35,9 +36,9 @@ export type TicketType = {
 export type MembershipCategory = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
 export type MembershipRecord = { id: string; organization_id: string; customer_id: string; membership_category_id: string; member_number: string; status: "active" | "suspended" | "cancelled"; status_reason: string | null; status_changed_at: string | null; status_changed_by: string | null; starts_at: string; created_by: string; created_at: string; updated_at: string };
 export type MembershipDueRecord = { id: string; organization_id: string; membership_id: string; period: string; amount: number; due_date: string; paid_at: string | null; paid_amount: number | null; payment_method: "cash" | "transfer" | "other" | "mercado_pago" | null; payment_reference: string | null; registered_by: string | null; created_at: string };
-export type MembershipDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string };
+export type MembershipDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; service_fee_amount: number; gross_amount: number | null; processor_fee_amount: number | null; created_at: string; updated_at: string };
 export type DivisionRecord = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
-export type DivisionDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; created_at: string; updated_at: string };
+export type DivisionDuePayment = { id: string; organization_id: string; due_id: string; payment_account_id: string; provider: "mercado_pago"; provider_preference_id: string | null; provider_payment_id: string | null; status: "pending" | "approved" | "rejected" | "expired"; checkout_url: string | null; service_fee_amount: number; gross_amount: number | null; processor_fee_amount: number | null; created_at: string; updated_at: string };
 export type DueStatus = "paid" | "overdue" | "pending";
 
 export type ProductCategory = { id: string; organization_id: string; name: string; sort_order: number; active: boolean; created_at: string; updated_at: string };
@@ -564,8 +565,8 @@ export interface Database {
       membership_categories: { Row: MembershipCategory; Insert: never; Update: never; Relationships: [] };
       memberships: { Row: MembershipRecord; Insert: never; Update: never; Relationships: [] };
       membership_dues: { Row: MembershipDueRecord; Insert: never; Update: Partial<Pick<MembershipDueRecord, "paid_at" | "paid_amount" | "payment_method" | "payment_reference" | "registered_by">>; Relationships: [] };
-      membership_due_payments: { Row: MembershipDuePayment; Insert: Omit<MembershipDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null }; Update: Partial<MembershipDuePayment>; Relationships: [] };
-      division_due_payments: { Row: DivisionDuePayment; Insert: Omit<DivisionDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null }; Update: Partial<DivisionDuePayment>; Relationships: [] };
+      membership_due_payments: { Row: MembershipDuePayment; Insert: Omit<MembershipDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id" | "service_fee_amount" | "gross_amount" | "processor_fee_amount"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null; service_fee_amount?: number; gross_amount?: number | null; processor_fee_amount?: number | null }; Update: Partial<MembershipDuePayment>; Relationships: [] };
+      division_due_payments: { Row: DivisionDuePayment; Insert: Omit<DivisionDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id" | "service_fee_amount" | "gross_amount" | "processor_fee_amount"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null; service_fee_amount?: number; gross_amount?: number | null; processor_fee_amount?: number | null }; Update: Partial<DivisionDuePayment>; Relationships: [] };
       club_staff: { Row: { organization_id: string; user_id: string; role: "member_staff"; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       club_membership_requests: { Row: { id: string; organization_id: string; membership_category_id: string | null; first_name: string; last_name: string; email: string; phone: string | null; document: string | null; message: string | null; status: "pending" | "approved" | "rejected"; reviewed_at: string | null; reviewed_by: string | null; rejection_reason: string | null; created_membership_id: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       club_door_devices: { Row: { id: string; organization_id: string; name: string; code_expires_at: string; activation_count: number; activated_at: string | null; revoked_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
@@ -716,6 +717,8 @@ export interface Database {
       set_division_category: { Args: { target_division: string; target_category: string | null }; Returns: undefined };
       delete_membership_category: { Args: { target_org: string; target_id: string }; Returns: undefined };
       delete_division: { Args: { target_org: string; target_id: string }; Returns: undefined };
+      set_club_dues_fee: { Args: { target_org: string; target_bps: number }; Returns: undefined };
+      admin_list_clubs: { Args: Record<string, never>; Returns: { organization_id: string; name: string; slug: string; fee_bps: number; collected_amount: number; service_fee_amount: number; processor_fee_amount: number }[] };
       get_public_clubs_discovery: { Args: Record<string, never>; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; category_count: number; cover_image_url: string | null; location_text: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_profile: { Args: { target_slug: string }; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; currency: string; cover_image_url: string | null; location_text: string | null; main_activity: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_categories: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number }[] };
