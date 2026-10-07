@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getPaymentAccountAccessToken } from "@/modules/payments/application/account-credentials";
 import { getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
+import { getPlatformMercadoPago } from "@/modules/clubs/infrastructure/platform-collection";
 import { createAdminClient } from "@/shared/database/admin";
 import type { PaymentAccount, WebhookEvent } from "@/shared/database/types";
 import { applyDuePayment } from "@/modules/clubs/application/apply-due-payment";
@@ -74,17 +75,26 @@ export async function POST(request: NextRequest) {
     if (!claimed) return NextResponse.json({ received: true, processing: true });
 
     const providerAccountId = String(webhook.user_id);
-    const { data: accountData } = await admin.from("payment_accounts").select("*")
-      .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected").order("connected_at", { ascending: false }).limit(1).maybeSingle();
-    if (!accountData) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
-    const account = accountData as PaymentAccount;
-    const accessToken = await getPaymentAccountAccessToken(account.id);
+    // Pagos cobrados por ENPASS (modalidad "ENPASS cobra") llegan con el user_id de la cuenta de ENPASS.
+    const platform = getPlatformMercadoPago();
+    let accessToken: string;
+    let accountOrganizationId: string | null = null;
+    if (platform && providerAccountId === platform.userId) {
+      accessToken = platform.accessToken;
+    } else {
+      const { data: accountData } = await admin.from("payment_accounts").select("*")
+        .eq("provider", "mercado_pago").eq("provider_account_id", providerAccountId).eq("status", "connected").order("connected_at", { ascending: false }).limit(1).maybeSingle();
+      if (!accountData) throw new Error("PAYMENT_ACCOUNT_NOT_FOUND");
+      const account = accountData as PaymentAccount;
+      accessToken = await getPaymentAccountAccessToken(account.id);
+      accountOrganizationId = account.organization_id;
+    }
     const providerPayment = await new MercadoPagoProvider().getPayment(dataId, { accessToken });
 
     const { dueId, status } = await applyDuePayment(providerPayment);
 
     await admin.from("webhook_events").update({
-      organization_id: account.organization_id,
+      organization_id: accountOrganizationId,
       status: "processed",
       processed_at: new Date().toISOString(),
       error: null,

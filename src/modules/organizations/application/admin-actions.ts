@@ -59,3 +59,39 @@ export async function setClubDuesFee(formData: FormData) {
   await supabase.rpc("set_club_dues_fee", { target_org: organizationId, target_bps: Math.round(percent * 100) });
   revalidatePath("/app/admin/clubs");
 }
+
+/** Define quién cobra las cuotas del club: su propia cuenta de Mercado Pago o la cuenta de ENPASS. */
+export async function setClubCollectionMode(formData: FormData) {
+  const organizationId = formData.get("organizationId");
+  const mode = formData.get("mode");
+  if (typeof organizationId !== "string" || (mode !== "club_account" && mode !== "enpass")) return;
+  const supabase = await createClient();
+  await supabase.rpc("set_club_collection_mode", { target_org: organizationId, target_mode: mode });
+  revalidatePath("/app/admin/clubs");
+}
+
+/** Liquidación mensual: junta los pagos cobrados por ENPASS hasta hoy y arma lo que se le entrega al club. */
+export async function createClubPayout(formData: FormData) {
+  const organizationId = formData.get("organizationId");
+  if (typeof organizationId !== "string") return;
+  const supabase = await createClient();
+  await supabase.rpc("create_club_payout", { target_org: organizationId, target_up_to: new Date().toISOString() });
+  revalidatePath("/app/admin/clubs");
+}
+
+export async function markClubPayoutPaid(formData: FormData) {
+  const payoutId = formData.get("payoutId");
+  const reference = formData.get("reference");
+  if (typeof payoutId !== "string") return;
+  const supabase = await createClient();
+  await supabase.rpc("mark_club_payout_paid", { target_payout: payoutId, target_method: "manual", target_reference: typeof reference === "string" ? reference : null });
+  revalidatePath("/app/admin/clubs");
+}
+
+export async function cancelClubPayout(formData: FormData) {
+  const payoutId = formData.get("payoutId");
+  if (typeof payoutId !== "string") return;
+  const supabase = await createClient();
+  await supabase.rpc("cancel_club_payout", { target_payout: payoutId });
+  revalidatePath("/app/admin/clubs");
+}

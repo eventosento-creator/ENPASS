@@ -197,3 +197,17 @@ export async function getClubReport(organizationId: string, from: Date, to: Date
   const { data, error } = await supabase.rpc("get_club_report", { target_org: organizationId, p_from: from.toISOString(), p_to: to.toISOString() });
   return error || !data ? null : (data as ClubReport);
 }
+
+export const getClubPayoutDetails = cache(async (organizationId: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_settings").select("payout_holder, payout_cuit, payout_alias, payout_cbu").eq("organization_id", organizationId).maybeSingle();
+  return { holder: data?.payout_holder ?? "", cuit: data?.payout_cuit ?? "", alias: data?.payout_alias ?? "", cbu: data?.payout_cbu ?? "" };
+});
+
+export type ClubSettlements = { mode: "club_account" | "enpass"; pending_amount: number; pending_payments: number; payouts: Array<{ id: string; created_at: string; paid_at: string | null; status: "pending" | "paid" | "failed"; amount: number; payments: number; reference: string | null; method: string | null }> };
+
+export async function getClubSettlements(organizationId: string): Promise<ClubSettlements | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_club_settlements", { target_org: organizationId });
+  return error || !data ? null : (data as ClubSettlements);
+}

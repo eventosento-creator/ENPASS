@@ -45,6 +45,7 @@ export async function createDueCheckoutLink(_: DueCheckoutState, formData: FormD
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "Conectá Mercado Pago en Ajustes antes de cobrar cuotas online." };
+    if (code === "PLATFORM_ACCOUNT_NOT_CONFIGURED") return { error: "Falta cargar la cuenta de Mercado Pago de ENPASS (variables MERCADO_PAGO_PLATFORM_*)." };
     if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
     return { error: "No pudimos generar el link de pago." };
   }
@@ -59,6 +60,7 @@ export async function createDivisionDueCheckoutLink(_: DueCheckoutState, formDat
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "Conectá Mercado Pago en Ajustes antes de cobrar cuotas online." };
+    if (code === "PLATFORM_ACCOUNT_NOT_CONFIGURED") return { error: "Falta cargar la cuenta de Mercado Pago de ENPASS (variables MERCADO_PAGO_PLATFORM_*)." };
     if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
     return { error: "No pudimos generar el link de pago." };
   }
@@ -600,4 +602,30 @@ export async function importMembersCsv(_: ImportMembersState, formData: FormData
   revalidatePath("/app/socios");
   revalidatePath("/app/socios/divisiones");
   return { created, skipped: rows.length - created, problems };
+}
+
+const payoutSchema = z.object({
+  organizationId: z.string().uuid(),
+  holder: z.string().trim().max(120).optional(),
+  cuit: z.string().trim().optional(),
+  alias: z.string().trim().optional(),
+  cbu: z.string().trim().optional(),
+});
+
+/** Datos del club para recibir las liquidaciones de ENPASS (alias o CBU/CVU). */
+export async function updateClubPayoutDetails(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
+  const parsed = payoutSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Revisá los datos." };
+  const cuit = (parsed.data.cuit ?? "").replace(/\D/g, "");
+  const cbu = (parsed.data.cbu ?? "").replace(/\D/g, "");
+  const alias = parsed.data.alias ?? "";
+  if (cuit && cuit.length !== 11) return { error: "El CUIT tiene 11 números." };
+  if (cbu && cbu.length !== 22) return { error: "El CBU/CVU tiene 22 números." };
+  if (alias && !/^[A-Za-z0-9.-]{6,20}$/.test(alias)) return { error: "El alias tiene entre 6 y 20 caracteres (letras, números, punto o guion)." };
+  if (!alias && !cbu) return { error: "Cargá al menos el alias o el CBU/CVU." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_club_payout_details", { target_org: parsed.data.organizationId, target_holder: parsed.data.holder ?? null, target_cuit: cuit || null, target_alias: alias || null, target_cbu: cbu || null });
+  if (error) return { error: "No pudimos guardar los datos." };
+  revalidatePath("/app/socios/ajustes");
+  return { success: "Datos guardados." };
 }

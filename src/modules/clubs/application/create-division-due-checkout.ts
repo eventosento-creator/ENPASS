@@ -5,6 +5,7 @@ import { createAdminClient } from "@/shared/database/admin";
 import { getPaymentAccountAccessToken } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
 import { applyBasisPoints } from "@/modules/payments/domain/fees";
+import { getPlatformMercadoPago } from "../infrastructure/platform-collection";
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 
 // Mismo patrón que create-due-checkout.ts, pero para cuotas de división (tabla separada,
@@ -34,16 +35,25 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
     admin.from("memberships").select("*").eq("id", enrollment.membership_id).single(),
     admin.from("divisions").select("name").eq("id", enrollment.division_id).single(),
     admin.from("payment_accounts").select("id").eq("organization_id", due.organization_id).eq("provider", "mercado_pago").eq("status", "connected").maybeSingle(),
-    admin.from("organizations").select("name, default_currency, club_dues_fee_bps").eq("id", due.organization_id).single(),
+    admin.from("organizations").select("name, default_currency, club_dues_fee_bps, club_collection_mode").eq("id", due.organization_id).single(),
   ]);
   if (!membership) throw new Error("MEMBERSHIP_NOT_FOUND");
-  if (!account) throw new Error("PAYMENT_ACCOUNT_NOT_CONNECTED");
+  // Modalidad "ENPASS cobra": el pago entra a la cuenta de ENPASS; si no, a la cuenta de Mercado Pago del club.
+  const enpassCollects = org?.club_collection_mode === "enpass";
+  if (!enpassCollects && !account) throw new Error("PAYMENT_ACCOUNT_NOT_CONNECTED");
   const { data: customer } = await admin.from("customers").select("*").eq("id", membership.customer_id).single();
   if (!customer) throw new Error("CUSTOMER_NOT_FOUND");
 
   const config = getMercadoPagoRuntimeConfig();
   assertPublicHttpsUrl(config.appUrl, "APP_URL");
-  const accessToken = await getPaymentAccountAccessToken(account.id);
+  let accessToken: string;
+  if (enpassCollects) {
+    const platform = getPlatformMercadoPago();
+    if (!platform) throw new Error("PLATFORM_ACCOUNT_NOT_CONFIGURED");
+    accessToken = platform.accessToken;
+  } else {
+    accessToken = await getPaymentAccountAccessToken(account!.id);
+  }
 
   const periodLabel = new Date(`${due.period}T00:00:00`).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
   const currency = org?.default_currency ?? "ARS";
@@ -59,7 +69,8 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
     // Cargo de servicio acordado con el club: lo paga la familia arriba de la cuota y va a ENPASS (marketplace_fee).
     grossAmount: due.amount + serviceFee,
     serviceFeeAmount: serviceFee,
-    platformFeeAmount: serviceFee,
+    // Cobrando en la cuenta del club, el cargo se separa con marketplace_fee; cobrando ENPASS no hay nada que separar.
+    platformFeeAmount: enpassCollects ? 0 : serviceFee,
     currency,
     expiresAt: new Date(Date.now() + 48 * 3_600_000).toISOString(),
     idempotencyKey: crypto.randomUUID(),
@@ -72,7 +83,8 @@ export async function createDivisionDueCheckout(dueId: string, options: { verifi
   await admin.from("division_due_payments").insert({
     organization_id: due.organization_id,
     due_id: due.id,
-    payment_account_id: account.id,
+    payment_account_id: enpassCollects ? null : account!.id,
+    collected_by: enpassCollects ? "enpass" : "club",
     provider: "mercado_pago",
     provider_preference_id: checkout.providerPreferenceId,
     checkout_url: checkout.checkoutUrl,

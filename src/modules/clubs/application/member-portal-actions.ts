@@ -117,6 +117,7 @@ export async function payMemberDue(_: MemberPortalState, formData: FormData): Pr
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "PAYMENT_ACCOUNT_NOT_CONNECTED") return { error: "El club todavía no habilitó el pago online. Pagá en el club." };
+    if (code === "PLATFORM_ACCOUNT_NOT_CONFIGURED") return { error: "El pago online no está disponible por el momento. Pagá en el club." };
     if (code === "DUE_ALREADY_PAID") return { error: "Esa cuota ya está pagada." };
     return { error: "No pudimos abrir Mercado Pago. Probá de nuevo en unos segundos." };
   }

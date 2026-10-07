@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
-import { getClubReport, isClubEnabled } from "@/modules/clubs/application/queries";
+import { getClubReport, getClubSettlements, isClubEnabled } from "@/modules/clubs/application/queries";
 import { clubPeriodLabels, clubPeriods, hasClubReportData, parseClubPeriod, paymentMethodLabels, resolveClubPeriod, shortMonthLabel } from "@/modules/clubs/domain/report";
 import { ClubBanner } from "@/modules/clubs/ui/club-banner";
 import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
@@ -18,7 +18,7 @@ export default async function ClubReportsPage({ searchParams }: { searchParams: 
   if (!(await isClubEnabled(org.id))) redirect("/app");
   const period = parseClubPeriod((await searchParams).period);
   const range = resolveClubPeriod(period);
-  const report = await getClubReport(org.id, range.from, range.to);
+  const [report, settlements] = await Promise.all([getClubReport(org.id, range.from, range.to), getClubSettlements(org.id)]);
   const money = (amount: number) => formatMoney(amount, org.default_currency);
 
   return <>
@@ -54,6 +54,12 @@ export default async function ClubReportsPage({ searchParams }: { searchParams: 
           {report.divisions.length ? <div className="overflow-x-auto"><table className="w-full min-w-[28rem] text-sm"><thead><tr className="text-left text-xs text-[var(--muted)]"><th className="pb-2 font-semibold">División</th><th className="pb-2 text-right font-semibold">Inscriptos</th><th className="pb-2 text-right font-semibold">Cobrado</th><th className="pb-2 text-right font-semibold">Vencido</th></tr></thead><tbody>{report.divisions.map((division) => <tr key={division.name} className="border-t border-[var(--border)]"><td className="py-2.5"><span className="font-semibold">{division.name}</span>{division.category && <span className="block text-xs text-[var(--muted)]">{division.category}</span>}</td><td className="py-2.5 text-right tabular-nums">{division.enrolled}</td><td className="py-2.5 text-right tabular-nums">{money(division.collected)}</td><td className={`py-2.5 text-right tabular-nums ${division.overdue > 0 ? "font-bold text-red-500" : "text-[var(--muted)]"}`}>{division.overdue > 0 ? money(division.overdue) : "—"}</td></tr>)}</tbody></table></div> : <CardEmpty text="Todavía no hay divisiones."/>}
         </ReportCard>
       </div>
+
+      {settlements?.mode === "enpass" && <ReportCard title="Liquidaciones de ENPASS">
+        <p className="text-sm text-[var(--muted)]">ENPASS cobra las cuotas online y te entrega la cuota completa a fin de mes.</p>
+        <p className="mt-3 text-sm">Pendiente de liquidar: <b className="text-base">{money(settlements.pending_amount)}</b> <span className="text-[var(--muted)]">({plural(settlements.pending_payments, "pago", "pagos")})</span></p>
+        {settlements.payouts.length > 0 ? <ul className="mt-3 grid gap-1">{settlements.payouts.map((payout) => <li key={payout.id} className="flex items-center justify-between gap-3 border-t border-[var(--border)] py-2.5 text-sm"><span className="min-w-0"><span className="block font-semibold">{new Date(payout.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}</span><span className="text-xs text-[var(--muted)]">{plural(payout.payments, "pago", "pagos")}{payout.reference ? ` · ${payout.reference}` : ""}</span></span><span className="shrink-0 text-right"><b>{money(payout.amount)}</b><span className={`block text-xs font-bold ${payout.status === "paid" ? "text-emerald-500" : "text-amber-500"}`}>{payout.status === "paid" ? "Transferida" : "En proceso"}</span></span></li>)}</ul> : <p className="mt-3 text-sm text-[var(--muted)]">Todavía no hubo liquidaciones.</p>}
+      </ReportCard>}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <ReportCard title="Mayores deudores" className="lg:col-span-2">

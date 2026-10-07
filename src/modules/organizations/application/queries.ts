@@ -82,3 +82,21 @@ export async function getAdminClubs() {
   const { data } = await supabase.rpc("admin_list_clubs");
   return (data ?? []).map((row) => ({ organizationId: row.organization_id, name: row.name, slug: row.slug, feeBps: row.fee_bps, collected: row.collected_amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount }));
 }
+
+export type ClubSettlementRow = { organizationId: string; name: string; mode: "club_account" | "enpass"; feeBps: number; payments: number; owed: number; serviceFee: number; processorFee: number; hasPayoutDetails: boolean };
+
+/** Por club: modalidad de cobro y lo cobrado por ENPASS que todavía no se liquidó. */
+export async function getClubSettlementSummary(): Promise<ClubSettlementRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("admin_club_settlement_summary");
+  return (data ?? []).map((row) => ({ organizationId: row.organization_id, name: row.name, mode: row.collection_mode as "club_account" | "enpass", feeBps: row.fee_bps, payments: row.payments_count, owed: row.owed_amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount, hasPayoutDetails: row.has_payout_details }));
+}
+
+export async function getRecentClubPayouts() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("club_payouts").select("*, organizations(name)").order("created_at", { ascending: false }).limit(40);
+  return (data ?? []).map((row) => ({
+    id: row.id, club: (row.organizations as unknown as { name: string } | null)?.name ?? "", createdAt: row.created_at, paidAt: row.paid_at, status: row.status,
+    amount: row.amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount, payments: row.payments_count, reference: row.reference, destination: row.destination_snapshot,
+  }));
+}
