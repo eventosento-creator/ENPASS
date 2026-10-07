@@ -6,6 +6,7 @@ const items = [
   { href: "/app/socios/categorias", label: "Categorías", key: "categorias" },
   { href: "/app/socios/divisiones", label: "Divisiones", key: "divisiones" },
   { href: "/app/socios/solicitudes", label: "Solicitudes", key: "solicitudes" },
+  { href: "/app/socios/reportes", label: "Reportes", key: "reportes" },
   { href: "/app/socios/acceso", label: "Acceso", key: "acceso" },
   { href: "/app/socios/equipo", label: "Equipo", key: "equipo" },
   { href: "/app/socios/ajustes", label: "Ajustes", key: "ajustes" },
@@ -14,7 +15,7 @@ const items = [
 // Los colaboradores del club (staff) solo ven la gestión de socios; acceso, equipo y ajustes son del dueño/admin.
 const ownerOnly = new Set(["acceso", "equipo", "ajustes"]);
 
-export async function ClubSectionNav({ active }: { active: "socios" | "categorias" | "divisiones" | "solicitudes" | "acceso" | "equipo" | "ajustes" }) {
+export async function ClubSectionNav({ active }: { active: "socios" | "categorias" | "divisiones" | "solicitudes" | "reportes" | "acceso" | "equipo" | "ajustes" }) {
   const organization = await getCurrentOrganization();
   const visible = items.filter((item) => organization?.role !== "staff" || !ownerOnly.has(item.key));
   return <nav aria-label="Secciones del club" className="mt-7 flex gap-1 overflow-x-auto border-b border-white/[.07]">

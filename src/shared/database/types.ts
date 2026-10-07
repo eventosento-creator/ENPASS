@@ -723,6 +723,7 @@ export interface Database {
       delete_division: { Args: { target_org: string; target_id: string }; Returns: undefined };
       set_club_dues_fee: { Args: { target_org: string; target_bps: number }; Returns: undefined };
       admin_list_clubs: { Args: Record<string, never>; Returns: { organization_id: string; name: string; slug: string; fee_bps: number; collected_amount: number; service_fee_amount: number; processor_fee_amount: number }[] };
+      get_club_report: { Args: { target_org: string; p_from: string; p_to: string }; Returns: unknown };
       get_public_clubs_discovery: { Args: Record<string, never>; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; category_count: number; cover_image_url: string | null; location_text: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_profile: { Args: { target_slug: string }; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; currency: string; cover_image_url: string | null; location_text: string | null; main_activity: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_categories: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number }[] };

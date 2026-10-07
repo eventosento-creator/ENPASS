@@ -9,7 +9,7 @@ export async function ClubBanner({ organizationId }: { organizationId: string })
   const brand = resolveClubBrand(club.accentColor);
   const stats = [
     { icon: Users2, value: String(club.activeMembers), label: club.activeMembers === 1 ? "Socio activo" : "Socios activos" },
-    ...(club.nextDueDate ? [{ icon: CalendarDays, value: new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${club.nextDueDate}T00:00:00Z`)).replace(".", ""), label: "Próximo vencimiento" }] : []),
+    ...(club.nextDueDate ? [{ icon: CalendarDays, value: new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${club.nextDueDate}T00:00:00Z`)).replace(".", ""), label: "Próximo vencimiento" }] : []),
     ...(club.feeFrom !== null ? [{ icon: CreditCard, value: formatMoney(club.feeFrom, club.currency), label: club.feeIsSingle ? "Cuota mensual" : "Cuota desde" }] : []),
     ...(club.activity ? [{ icon: Trophy, value: club.activity, label: "Actividad principal" }] : []),
   ];

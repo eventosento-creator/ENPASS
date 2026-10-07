@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
+import type { ClubReport } from "../domain/report";
 import type { ClubListingSettings, DivisionEnrollmentRow, DivisionRow, MemberRow, MembershipDetail, MembershipDivisionRow, MembershipDue, MembershipRequestRow } from "../domain/club";
 
 export const isClubEnabled = cache(async (organizationId: string) => {
@@ -189,3 +190,10 @@ export const getClubBannerData = cache(async (organizationId: string) => {
     feeIsSingle: fees.length === 1 || (fees.length > 1 && fees[0] === fees[fees.length - 1]),
   };
 });
+
+/** Reporte del club para el período (null si no se pudo calcular o no hay permiso). */
+export async function getClubReport(organizationId: string, from: Date, to: Date): Promise<ClubReport | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_club_report", { target_org: organizationId, p_from: from.toISOString(), p_to: to.toISOString() });
+  return error || !data ? null : (data as ClubReport);
+}
