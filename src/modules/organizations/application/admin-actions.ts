@@ -95,3 +95,13 @@ export async function cancelClubPayout(formData: FormData) {
   await supabase.rpc("cancel_club_payout", { target_payout: payoutId });
   revalidatePath("/app/admin/clubs");
 }
+
+/** Estimación (en % del total cobrado) de la comisión de Mercado Pago que ENPASS absorbe restándola de su cargo en las cuotas. */
+export async function setClubDuesMpFee(formData: FormData) {
+  const organizationId = formData.get("organizationId");
+  const percent = Number(String(formData.get("percent") ?? "").replace(",", "."));
+  if (typeof organizationId !== "string" || !Number.isFinite(percent) || percent < 0 || percent > 20) return;
+  const supabase = await createClient();
+  await supabase.rpc("set_club_dues_mp_fee", { target_org: organizationId, target_bps: Math.round(percent * 100) });
+  revalidatePath("/app/admin/clubs");
+}

@@ -100,7 +100,7 @@ export const getCollaboratorEventIds = cache(async () => {
 export async function getAdminClubs() {
   const supabase = await createClient();
   const { data } = await supabase.rpc("admin_list_clubs");
-  return (data ?? []).map((row) => ({ organizationId: row.organization_id, name: row.name, slug: row.slug, feeBps: row.fee_bps, collected: row.collected_amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount }));
+  return (data ?? []).map((row) => ({ organizationId: row.organization_id, name: row.name, slug: row.slug, feeBps: row.fee_bps, mpAbsorbBps: row.mp_absorb_bps, collected: row.collected_amount, serviceFee: row.service_fee_amount, processorFee: row.processor_fee_amount, absorbed: row.absorbed_fee_amount }));
 }
 
 export type ClubSettlementRow = { organizationId: string; name: string; mode: "club_account" | "enpass"; feeBps: number; payments: number; owed: number; serviceFee: number; processorFee: number; hasPayoutDetails: boolean };

@@ -4,7 +4,7 @@ import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { getPaymentAccountAccessToken } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
-import { applyBasisPoints } from "@/modules/payments/domain/fees";
+import { computeDuesCharge } from "../domain/dues-fee";
 import { getPlatformMercadoPago } from "../infrastructure/platform-collection";
 import { MercadoPagoProvider } from "@/modules/payments/infrastructure/mercado-pago-provider";
 
@@ -30,7 +30,7 @@ export async function createDueCheckout(dueId: string, options: { verifiedDueAcc
   const [{ data: membership }, { data: account }, { data: org }] = await Promise.all([
     admin.from("memberships").select("*").eq("id", due.membership_id).single(),
     admin.from("payment_accounts").select("id").eq("organization_id", due.organization_id).eq("provider", "mercado_pago").eq("status", "connected").maybeSingle(),
-    admin.from("organizations").select("name, default_currency, club_dues_fee_bps, club_collection_mode").eq("id", due.organization_id).single(),
+    admin.from("organizations").select("name, default_currency, club_dues_fee_bps, club_dues_mp_fee_bps, club_collection_mode").eq("id", due.organization_id).single(),
   ]);
   if (!membership) throw new Error("MEMBERSHIP_NOT_FOUND");
   // Modalidad "ENPASS cobra": el pago entra a la cuenta de ENPASS; si no, a la cuenta de Mercado Pago del club.
@@ -53,7 +53,8 @@ export async function createDueCheckout(dueId: string, options: { verifiedDueAcc
   const periodLabel = new Date(`${due.period}T00:00:00`).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
   const currency = org?.default_currency ?? "ARS";
 
-  const serviceFee = applyBasisPoints(due.amount, org?.club_dues_fee_bps ?? 0);
+  const charge = computeDuesCharge({ amount: due.amount, feeBps: org?.club_dues_fee_bps ?? 0, mpAbsorbBps: org?.club_dues_mp_fee_bps ?? 0, enpassCollects });
+  const serviceFee = charge.serviceFee;
 
   const checkout = await new MercadoPagoProvider().createCheckout({
     paymentPublicId: due.id,
@@ -61,10 +62,10 @@ export async function createDueCheckout(dueId: string, options: { verifiedDueAcc
     eventName: `Cuota ${periodLabel}`,
     items: [{ id: due.id, name: `Cuota ${org?.name ?? "socio"} · ${periodLabel}`, quantity: 1, unitAmount: due.amount }],
     // Cargo de servicio acordado con el club: lo paga la familia arriba de la cuota y va a ENPASS (marketplace_fee).
-    grossAmount: due.amount + serviceFee,
+    grossAmount: charge.total,
     serviceFeeAmount: serviceFee,
-    // Cobrando en la cuenta del club, el cargo se separa con marketplace_fee; cobrando ENPASS no hay nada que separar.
-    platformFeeAmount: enpassCollects ? 0 : serviceFee,
+    // Cobrando en la cuenta del club: ENPASS separa su cargo menos la comisión de Mercado Pago que absorbe (así el club recibe ≈ la cuota completa).
+    platformFeeAmount: charge.marketplaceFee,
     currency,
     expiresAt: new Date(Date.now() + 48 * 3_600_000).toISOString(),
     idempotencyKey: crypto.randomUUID(),
@@ -83,7 +84,8 @@ export async function createDueCheckout(dueId: string, options: { verifiedDueAcc
     provider_preference_id: checkout.providerPreferenceId,
     checkout_url: checkout.checkoutUrl,
     service_fee_amount: serviceFee,
-    gross_amount: due.amount + serviceFee,
+    gross_amount: charge.total,
+    absorbed_fee_amount: charge.absorbed,
     status: "pending",
   });
 

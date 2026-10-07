@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { getAdminClubs, getClubSettlementSummary, getPendingClubListings, getRecentClubPayouts, isPlatformAdmin } from "@/modules/organizations/application/queries";
-import { cancelClubPayout, createClubPayout, markClubPayoutPaid, reviewClubListing, setClubCollectionMode, setClubDuesFee } from "@/modules/organizations/application/admin-actions";
+import { cancelClubPayout, createClubPayout, markClubPayoutPaid, reviewClubListing, setClubCollectionMode, setClubDuesFee, setClubDuesMpFee } from "@/modules/organizations/application/admin-actions";
 import { formatMoney } from "@/shared/lib/format";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
@@ -36,24 +36,34 @@ export default async function AdminClubsPage() {
     </div>
 
     <h2 className="mt-12 text-xl font-black">Cargo de servicio en cuotas</h2>
-    <p className="mt-2 max-w-2xl text-sm text-neutral-500">Porcentaje que paga la familia arriba de cada cuota online. El club recibe su cuota completa; ENPASS cubre el costo de Mercado Pago. 0 = sin cargo.</p>
+    <p className="mt-2 max-w-2xl text-sm text-neutral-500">Porcentaje que paga la familia arriba de cada cuota online (0 = sin cargo). Cuando <b>cobra el club</b> con su Mercado Pago, la cuota va directo a su cuenta y tu cargo se separa solo; <b>la comisión de Mercado Pago que cubrís vos</b> se resta de tu cargo para que el club reciba ≈ la cuota completa.</p>
     <div className="mt-6 grid gap-3">
-      {clubs.map((club) => <div key={club.organizationId} className="card grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div>
-          <p className="font-bold">{club.name} <span className="text-xs font-normal text-neutral-500">/clubes/{club.slug}</span></p>
-          <p className="mt-1 text-xs text-neutral-500">Cobrado online: {formatMoney(club.collected)} · Cargo de servicio: {formatMoney(club.serviceFee)} · <b className="text-neutral-300">Comisión de Mercado Pago a reintegrar al club: {formatMoney(club.processorFee)}</b></p>
-        </div>
-        <form action={setClubDuesFee} className="flex items-end gap-2">
-          <input type="hidden" name="organizationId" value={club.organizationId}/>
-          <label className="label">Cargo (%)<input className="field w-24" name="percent" inputMode="decimal" defaultValue={String(club.feeBps / 100).replace(".", ",")} required/></label>
-          <SubmitButton className="btn btn-secondary">Guardar</SubmitButton>
-        </form>
-        <form action={setClubCollectionMode} className="flex items-end gap-2 sm:col-span-2 sm:justify-end">
-          <input type="hidden" name="organizationId" value={club.organizationId}/>
-          <label className="label">Quién cobra las cuotas<select className="field" name="mode" defaultValue={modeByOrg.get(club.organizationId)?.mode ?? "club_account"}><option value="club_account">El club (su Mercado Pago)</option><option value="enpass">ENPASS (liquidación mensual)</option></select></label>
-          <SubmitButton className="btn btn-secondary">Guardar</SubmitButton>
-        </form>
-      </div>)}
+      {clubs.map((club) => {
+        const mode = modeByOrg.get(club.organizationId)?.mode ?? "club_account";
+        // Si Mercado Pago cobró más de lo estimado, el club recibió menos que la cuota: ENPASS le debe la diferencia (y al revés).
+        const adjustment = club.processorFee - club.absorbed;
+        return <div key={club.organizationId} className="card grid gap-4 p-4 sm:grid-cols-2 sm:items-end">
+          <div className="sm:col-span-2">
+            <p className="font-bold">{club.name} <span className="text-xs font-normal text-neutral-500">/clubes/{club.slug}</span></p>
+            {mode === "club_account" && club.collected > 0 && <p className="mt-1 text-xs text-neutral-500">Cobrado por el club: {formatMoney(club.collected)} · Cargo de servicio: {formatMoney(club.serviceFee)} · Comisión real de Mercado Pago: {formatMoney(club.processorFee)} · Absorbida por ENPASS: {formatMoney(club.absorbed)} · <b className="text-neutral-300">{adjustment > 0 ? `A reintegrar al club: ${formatMoney(adjustment)}` : adjustment < 0 ? `A favor de ENPASS: ${formatMoney(-adjustment)}` : "Sin diferencia"}</b></p>}
+          </div>
+          <form action={setClubDuesFee} className="flex items-end gap-2">
+            <input type="hidden" name="organizationId" value={club.organizationId}/>
+            <label className="label">Cargo a la familia (%)<input className="field w-28" name="percent" inputMode="decimal" defaultValue={String(club.feeBps / 100).replace(".", ",")} required/></label>
+            <SubmitButton className="btn btn-secondary">Guardar</SubmitButton>
+          </form>
+          <form action={setClubDuesMpFee} className="flex items-end gap-2">
+            <input type="hidden" name="organizationId" value={club.organizationId}/>
+            <label className="label">Comisión de MP que cubrís (%)<input className="field w-28" name="percent" inputMode="decimal" defaultValue={String(club.mpAbsorbBps / 100).replace(".", ",")} required/></label>
+            <SubmitButton className="btn btn-secondary">Guardar</SubmitButton>
+          </form>
+          <form action={setClubCollectionMode} className="flex items-end gap-2 sm:col-span-2">
+            <input type="hidden" name="organizationId" value={club.organizationId}/>
+            <label className="label">Quién cobra las cuotas<select className="field" name="mode" defaultValue={mode}><option value="club_account">El club (su Mercado Pago)</option><option value="enpass">ENPASS (liquidación mensual)</option></select></label>
+            <SubmitButton className="btn btn-secondary">Guardar</SubmitButton>
+          </form>
+        </div>;
+      })}
       {!clubs.length && <p className="text-sm text-neutral-500">Todavía no hay clubes habilitados.</p>}
     </div>
 
