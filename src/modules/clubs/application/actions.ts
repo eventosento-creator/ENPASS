@@ -187,6 +187,7 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
     if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
     if (error.message?.includes("DOCUMENT_TAKEN")) return { error: "Ya hay otro socio con ese DNI." };
+    console.error("club.create_membership.failed", { code: error.code, message: error.message });
     return { error: "No pudimos crear el socio." };
   }
   const result = data?.[0];
