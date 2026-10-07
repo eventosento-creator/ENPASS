@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { getAdminViewOrgId } from "../infrastructure/admin-view";
+import { getPreferredWorkspaceId } from "../infrastructure/workspace";
 import type { Organization } from "@/shared/database/types";
 
 // auth.getUser() is a real network round-trip to Supabase Auth. Several queries on this
@@ -23,6 +24,28 @@ export const isPlatformAdmin = cache(async () => {
   return data === true;
 });
 
+export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff" };
+
+/** Todos los espacios a los que la persona tiene acceso: donde es dueña/admin y donde es colaboradora del club. */
+export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
+  const user = await getAuthUser();
+  if (!user) return [];
+  const supabase = await createClient();
+  const { data: memberships } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).order("created_at");
+  const own: Workspace[] = (memberships ?? []).flatMap((membership) => {
+    const organization = membership.organizations as unknown as Organization | null;
+    return organization ? [{ organization, role: membership.role }] : [];
+  });
+  // Colaborador del club (staff): no es miembro de la organización, pero puede gestionar socios y cuotas.
+  // club_staff no se puede leer con su sesión (RLS), así que se verifica con el cliente de servicio por su user id.
+  const admin = createAdminClient();
+  const { data: staffRows } = await admin.from("club_staff").select("organization_id").eq("user_id", user.id);
+  const staffIds = (staffRows ?? []).map((row) => row.organization_id).filter((id) => !own.some((workspace) => workspace.organization.id === id));
+  if (!staffIds.length) return own;
+  const { data: staffOrganizations } = await admin.from("organizations").select("*").in("id", staffIds);
+  return [...own, ...((staffOrganizations ?? []) as Organization[]).map((organization) => ({ organization, role: "staff" as const }))];
+});
+
 export const getCurrentOrganization = cache(async () => {
   const user = await getAuthUser();
   if (!user) return null;
@@ -34,18 +57,12 @@ export const getCurrentOrganization = cache(async () => {
     if (organization) return { ...organization, role: "owner" as const };
   }
 
-  const { data: membership } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).limit(1).maybeSingle();
-  if (!membership) {
-    // Colaborador del club (staff): no es miembro de la organización, pero puede gestionar socios y cuotas.
-    // club_staff no se puede leer con su sesión (RLS), así que se verifica con el cliente de servicio por su user id.
-    const admin = createAdminClient();
-    const { data: staff } = await admin.from("club_staff").select("organization_id").eq("user_id", user.id).limit(1).maybeSingle();
-    if (!staff) return null;
-    const { data: staffOrganization } = await admin.from("organizations").select("*").eq("id", staff.organization_id).maybeSingle();
-    return staffOrganization ? { ...(staffOrganization as Organization), role: "staff" as const } : null;
-  }
-  const organization = membership.organizations as unknown as Organization | null;
-  return organization ? { ...organization, role: membership.role } : null;
+  const workspaces = await getWorkspaces();
+  if (!workspaces.length) return null;
+  // Si tiene más de un espacio, usa el que eligió (cookie); si no, el primero (su propio espacio).
+  const preferred = await getPreferredWorkspaceId();
+  const current = workspaces.find((workspace) => workspace.organization.id === preferred) ?? workspaces[0]!;
+  return { ...current.organization, role: current.role };
 });
 
 export async function getAllOrganizationsForAdmin() {

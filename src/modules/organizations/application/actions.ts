@@ -7,6 +7,8 @@ import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { safeProducerPath } from "@/shared/lib/navigation";
+import { getWorkspaces } from "./queries";
+import { setPreferredWorkspaceId } from "../infrastructure/workspace";
 
 const organizationSchema = z.object({ name: z.string().trim().min(2).max(100), intent: z.enum(["event", "club"]).optional() });
 const venueSchema = z.object({
@@ -101,4 +103,15 @@ export async function updateOrganizationSlug(_: ActionState, formData: FormData)
   revalidatePath("/app", "layout");
   revalidatePath("/clubes");
   return { success: `Listo: tu link ahora es enpass.com.ar/clubes/${slug}` };
+}
+
+/** Cambia el espacio que se está viendo (cuando la persona tiene acceso a más de uno). */
+export async function switchWorkspace(formData: FormData) {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const workspaces = await getWorkspaces();
+  const target = workspaces.find((workspace) => workspace.organization.id === organizationId);
+  if (!target) return;
+  await setPreferredWorkspaceId(target.organization.id);
+  revalidatePath("/app", "layout");
+  redirect(target.role === "staff" ? "/app/socios" : "/app");
 }

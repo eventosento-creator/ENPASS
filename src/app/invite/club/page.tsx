@@ -11,5 +11,5 @@ export default async function AcceptClubInvitePage({ searchParams }: { searchPar
 
   const organizationId = await acceptClubStaffInvitation(token);
   if (!organizationId) return <main className="grid min-h-dvh place-items-center px-4"><div className="card max-w-md p-8 text-center"><h1 className="text-xl font-black">Invitación no válida</h1><p className="mt-3 text-sm text-neutral-500">El enlace venció, ya fue usado o estás ingresando con otro email distinto al invitado ({user.email}). Pedile al club que te invite de nuevo.</p></div></main>;
-  redirect("/app/socios");
+  redirect(`/invite/club/listo?org=${organizationId}` as never);
 }
