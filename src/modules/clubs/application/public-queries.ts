@@ -40,5 +40,5 @@ export const getClubUpcomingEventIds = cache(async (organizationId: string): Pro
 export const getPublicClubDivisions = cache(async (organizationId: string): Promise<PublicClubDivision[]> => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_public_club_divisions", { target_org: organizationId });
-  return (data ?? []).map((row) => ({ id: row.id, name: row.name, monthlyFeeAmount: row.monthly_fee_amount }));
+  return (data ?? []).map((row) => ({ id: row.id, name: row.name, monthlyFeeAmount: row.monthly_fee_amount, categoryId: row.category_id }));
 });

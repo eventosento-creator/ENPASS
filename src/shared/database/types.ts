@@ -712,7 +712,8 @@ export interface Database {
       review_club_public_listing: { Args: { target_org: string; target_approve: boolean; target_rejection_reason: string | null }; Returns: undefined };
       member_pending_dues: { Args: { target_session_hash: string }; Returns: { due_id: string; kind: string; concept: string; period: string; amount: number; due_date: string; overdue: boolean }[] };
       set_club_profile: { Args: { target_org: string; target_cover_url: string | null; target_location: string | null; target_activity: string | null; target_focus_x?: number; target_focus_y?: number }; Returns: undefined };
-      get_public_club_divisions: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number }[] };
+      get_public_club_divisions: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number; category_id: string | null }[] };
+      set_division_category: { Args: { target_division: string; target_category: string | null }; Returns: undefined };
       get_public_clubs_discovery: { Args: Record<string, never>; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; category_count: number; cover_image_url: string | null; location_text: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_profile: { Args: { target_slug: string }; Returns: { organization_id: string; slug: string; name: string; description: string | null; logo_url: string | null; accent_color: string | null; currency: string; cover_image_url: string | null; location_text: string | null; main_activity: string | null; cover_focus_x: number; cover_focus_y: number }[] };
       get_public_club_categories: { Args: { target_org: string }; Returns: { id: string; name: string; monthly_fee_amount: number }[] };
@@ -751,7 +752,7 @@ export interface Database {
       get_division_due_public_status: { Args: { target_due: string }; Returns: { organization_name: string; member_first_name: string; division_name: string; period: string; amount: number; currency: string; status: "paid" | "pending" }[] };
       set_club_branding: { Args: { target_org: string; target_logo_url: string | null; target_name: string | null; target_accent_color: string | null }; Returns: undefined };
       upsert_division: { Args: { target_org: string; target_id: string | null; target_name: string; target_monthly_fee_amount: number; target_active: boolean }; Returns: string };
-      list_divisions: { Args: { target_org: string }; Returns: { division_id: string; name: string; monthly_fee_amount: number; active: boolean; enrolled_count: number }[] };
+      list_divisions: { Args: { target_org: string }; Returns: { division_id: string; name: string; monthly_fee_amount: number; active: boolean; enrolled_count: number; category_id: string | null }[] };
       get_division_detail: { Args: { target_division: string }; Returns: { division_id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean }[] };
       enroll_membership_in_division: { Args: { target_membership: string; target_division: string }; Returns: { enrollment_id: string; due_id: string; customer_email: string; customer_first_name: string; organization_name: string; division_name: string; due_period: string; due_amount: number; due_date: string; brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }[] };
       remove_membership_from_division: { Args: { target_enrollment: string }; Returns: undefined };

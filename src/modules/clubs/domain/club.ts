@@ -58,7 +58,7 @@ export type CustomerCandidate = {
   alreadyMember: boolean;
 };
 
-export type DivisionRow = { divisionId: string; name: string; monthlyFeeAmount: number; active: boolean; enrolledCount: number };
+export type DivisionRow = { divisionId: string; name: string; monthlyFeeAmount: number; active: boolean; enrolledCount: number; categoryId: string | null };
 
 export type MembershipDivisionRow = {
   enrollmentId: string;
@@ -132,7 +132,7 @@ export type PublicClubProfile = {
 };
 
 export type PublicClubCategory = { id: string; name: string; monthlyFeeAmount: number };
-export type PublicClubDivision = { id: string; name: string; monthlyFeeAmount: number };
+export type PublicClubDivision = { id: string; name: string; monthlyFeeAmount: number; categoryId: string | null };
 
 export type MembershipRequestStatus = "pending" | "approved" | "rejected";
 

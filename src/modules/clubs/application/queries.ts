@@ -108,7 +108,7 @@ export async function listDivisions(organizationId: string): Promise<DivisionRow
   if (error || !data) return [];
   return data.map((row) => ({
     divisionId: row.division_id, name: row.name, monthlyFeeAmount: row.monthly_fee_amount,
-    active: row.active, enrolledCount: row.enrolled_count,
+    active: row.active, enrolledCount: row.enrolled_count, categoryId: row.category_id,
   }));
 }
 

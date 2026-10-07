@@ -306,17 +306,21 @@ export async function recordManualDuePayment(_: ClubActionState, formData: FormD
 // Divisiones
 // ---------------------------------------------------------------------------------------------
 
-const divisionSchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0), active: z.string().optional() });
+const divisionSchema = z.object({ organizationId: z.string().uuid(), id: z.string().uuid().optional(), name: z.string().min(1).max(60), monthlyFeeAmount: z.coerce.number().min(0), active: z.string().optional(), categoryId: z.string().optional() });
 
 export async function upsertDivision(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
   const parsed = divisionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá el nombre y el monto de la cuota." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("upsert_division", {
+  const { data: divisionId, error } = await supabase.rpc("upsert_division", {
     target_org: parsed.data.organizationId, target_id: parsed.data.id ?? null,
     target_name: parsed.data.name, target_monthly_fee_amount: Math.round(parsed.data.monthlyFeeAmount * 100), target_active: parsed.data.active === "true",
   });
   if (error) return { error: error.message?.includes("DIVISION_NAME_TAKEN") ? "Ya existe una división con ese nombre." : "No pudimos guardar la división." };
+  // La categoría es opcional ("" = sin categoría).
+  const categoryId = z.string().uuid().safeParse(parsed.data.categoryId).data ?? null;
+  const { error: categoryError } = await supabase.rpc("set_division_category", { target_division: divisionId as string, target_category: categoryId });
+  if (categoryError) return { error: "Guardamos la división, pero no pudimos asignarle la categoría." };
   revalidatePath("/app/socios/divisiones");
   return { success: "División guardada." };
 }
