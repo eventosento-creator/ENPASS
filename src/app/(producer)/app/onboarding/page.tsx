@@ -3,10 +3,11 @@ import { OnboardingIntentPicker } from "@/modules/organizations/ui/onboarding-in
 import { OrganizationForm, VenueForm } from "@/modules/organizations/ui/forms";
 import { safeProducerPath } from "@/shared/lib/navigation";
 
-export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ organization?: string; next?: string; intent?: string }> }) {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ organization?: string; next?: string; intent?: string; nuevo?: string }> }) {
   const query = await searchParams;
   const current = await getCurrentOrganization();
-  const organizationId = query.organization ?? current?.id;
+  // "nuevo=1": crear otra organización (ej. un segundo club) aunque ya tenga una.
+  const organizationId = query.organization ?? (query.nuevo === "1" ? undefined : current?.id);
   const nextPath = safeProducerPath(query.next);
   const intent = query.intent === "club" ? "club" : query.intent === "event" ? "event" : undefined;
 

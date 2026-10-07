@@ -24,7 +24,7 @@ export const isPlatformAdmin = cache(async () => {
   return data === true;
 });
 
-export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff" };
+export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff"; logoUrl: string | null };
 
 /** Todos los espacios a los que la persona tiene acceso: donde es dueña/admin y donde es colaboradora del club. */
 export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
@@ -32,7 +32,7 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   if (!user) return [];
   const supabase = await createClient();
   const { data: memberships } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).order("created_at");
-  const own: Workspace[] = (memberships ?? []).flatMap((membership) => {
+  const own: Array<Omit<Workspace, "logoUrl">> = (memberships ?? []).flatMap((membership) => {
     const organization = membership.organizations as unknown as Organization | null;
     return organization ? [{ organization, role: membership.role }] : [];
   });
@@ -41,9 +41,12 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   const admin = createAdminClient();
   const { data: staffRows } = await admin.from("club_staff").select("organization_id").eq("user_id", user.id);
   const staffIds = (staffRows ?? []).map((row) => row.organization_id).filter((id) => !own.some((workspace) => workspace.organization.id === id));
-  if (!staffIds.length) return own;
-  const { data: staffOrganizations } = await admin.from("organizations").select("*").in("id", staffIds);
-  return [...own, ...((staffOrganizations ?? []) as Organization[]).map((organization) => ({ organization, role: "staff" as const }))];
+  const staffOrganizations = staffIds.length ? ((await admin.from("organizations").select("*").in("id", staffIds)).data ?? []) as Organization[] : [];
+  const all: Array<Omit<Workspace, "logoUrl">> = [...own, ...staffOrganizations.map((organization) => ({ organization, role: "staff" as const }))];
+  // Logo del club (si lo cargó) para mostrarlo en el selector de espacios.
+  const { data: logos } = all.length ? await admin.from("club_settings").select("organization_id, brand_logo_url").in("organization_id", all.map((workspace) => workspace.organization.id)) : { data: [] };
+  const logoByOrg = new Map((logos ?? []).map((row) => [row.organization_id, row.brand_logo_url]));
+  return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null }));
 });
 
 export const getCurrentOrganization = cache(async () => {

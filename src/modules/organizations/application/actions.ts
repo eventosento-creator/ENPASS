@@ -23,6 +23,8 @@ export async function createOrganization(_: ActionState, formData: FormData): Pr
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_organization", { org_name: parsed.data.name, org_slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}` });
   if (error || !data) return { error: "No pudimos crear la organización." };
+  // El espacio recién creado pasa a ser el que se está viendo.
+  await setPreferredWorkspaceId(data);
   if (parsed.data.intent === "club") {
     // El club no necesita el paso de "lugar" del onboarding de eventos — va directo a
     // activar el módulo y cargar su primera categoría.
