@@ -83,3 +83,22 @@ export async function renameOrganization(_: ActionState, formData: FormData): Pr
   revalidatePath("/app", "layout");
   return { success: "Nombre actualizado." };
 }
+
+const slugSchema = z.object({ organizationId: z.uuid(), slug: z.string().trim().min(3, "El link necesita al menos 3 caracteres.").max(60, "El link puede tener hasta 60 caracteres.") });
+
+/** Cambia el link público del club (/clubes/<link>). El anterior deja de funcionar. */
+export async function updateOrganizationSlug(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = slugSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá el link." };
+  const slug = slugify(parsed.data.slug);
+  if (slug.length < 3) return { error: "Usá letras o números (al menos 3)." };
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("organizations").select("slug").eq("id", parsed.data.organizationId).maybeSingle();
+  if (current?.slug === slug) return { success: "Ese ya es el link de tu club." };
+  const { data, error } = await supabase.from("organizations").update({ slug }).eq("id", parsed.data.organizationId).select("id");
+  if (error?.code === "23505") return { error: "Ese link ya lo usa otro club. Probá con otro." };
+  if (error || !data?.length) return { error: "No pudimos cambiar el link. Solo el dueño o un admin puede hacerlo." };
+  revalidatePath("/app", "layout");
+  revalidatePath("/clubes");
+  return { success: `Listo: tu link ahora es enpass.com.ar/clubes/${slug}` };
+}
