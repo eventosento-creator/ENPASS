@@ -140,6 +140,7 @@ export type MembershipRequestRow = {
   id: string;
   categoryId: string | null;
   categoryName: string | null;
+  divisionName: string | null;
   firstName: string;
   lastName: string;
   email: string;

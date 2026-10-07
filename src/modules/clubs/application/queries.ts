@@ -66,12 +66,13 @@ export const getClubListingSettings = cache(async (organizationId: string): Prom
 export async function getMembershipRequests(organizationId: string): Promise<MembershipRequestRow[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("club_membership_requests")
-    .select("id, first_name, last_name, email, phone, document, message, status, created_at, membership_categories(id, name)")
+    .select("id, first_name, last_name, email, phone, document, message, status, created_at, membership_categories(id, name), divisions(id, name)")
     .eq("organization_id", organizationId).order("created_at", { ascending: false });
   return (data ?? []).map((row) => {
     const category = row.membership_categories as unknown as { id: string; name: string } | null;
+    const division = (row as unknown as { divisions?: { id: string; name: string } | null }).divisions ?? null;
     return {
-      id: row.id, categoryId: category?.id ?? null, categoryName: category?.name ?? null,
+      id: row.id, categoryId: category?.id ?? null, categoryName: category?.name ?? null, divisionName: division?.name ?? null,
       firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone,
       document: row.document, message: row.message, status: row.status, createdAt: row.created_at,
     };

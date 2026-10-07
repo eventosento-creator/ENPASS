@@ -8,6 +8,7 @@ import { MemberHub } from "@/modules/clubs/ui/member-hub";
 import { getClubUpcomingEventIds, getPublicClubCategories, getPublicClubDivisions, getPublicClubProfile } from "@/modules/clubs/application/public-queries";
 import { resolveClubBrand } from "@/modules/clubs/domain/brand";
 import { MembershipRequestForm } from "@/modules/clubs/ui/membership-request-form";
+import { SelectableFeeRow } from "@/modules/clubs/ui/selectable-fee-row";
 import { getPublicDiscoveryEvents } from "@/modules/discovery/application/queries";
 import { PublicEventCard } from "@/modules/discovery/ui/public-event-card";
 import { formatMoney } from "@/shared/lib/format";
@@ -73,24 +74,24 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
 
     {(categories.length > 0 || looseDivisions.length > 0) && <section id="cuotas" className="mt-12 scroll-mt-24">
       <h2 className="text-2xl font-black tracking-[-.02em]">Categorías y cuotas</h2>
-      <p className="mt-1 text-sm text-neutral-500">Estas son las modalidades del club y lo que cuesta cada una por mes.</p>
+      <p className="mt-1 text-sm text-neutral-500">{memberProfile ? "Estas son las modalidades del club y lo que cuesta cada una por mes." : "Tocá una modalidad para anotarte: lo que elijas queda completo en el formulario."}</p>
       <div className="mt-6 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => {
           const own = divisions.filter((division) => division.categoryId === category.id);
           const rows = [
-            ...(category.monthlyFeeAmount > 0 ? [{ key: "base", label: own.length ? "Cuota de socio" : "Cuota mensual", fee: category.monthlyFeeAmount }] : []),
-            ...own.map((division) => ({ key: division.id, label: division.name, fee: division.monthlyFeeAmount })),
+            ...(category.monthlyFeeAmount > 0 ? [{ key: "base", label: own.length ? "Cuota de socio" : "Cuota mensual", fee: category.monthlyFeeAmount, selection: { categoryId: category.id, divisionId: null, label: category.name, fee: category.monthlyFeeAmount } }] : []),
+            ...own.map((division) => ({ key: division.id, label: division.name, fee: division.monthlyFeeAmount, selection: { categoryId: category.id, divisionId: division.id, label: `${category.name} · ${division.name}`, fee: division.monthlyFeeAmount } })),
           ];
           return <article key={category.id} className="card overflow-hidden pt-5">
             <h3 className="flex items-center gap-3 px-5 text-lg font-black tracking-[-.02em]"><span aria-hidden className="h-6 w-1.5 rounded-full" style={{ background: brand?.accent ?? "var(--accent)" }}/>{category.name}</h3>
-            {rows.length > 0 ? <ul className="mt-3 divide-y divide-[var(--border)] px-5">{rows.map((row) => <FeeRow key={row.key} label={row.label} fee={row.fee} currency={club.currency}/>)}</ul> : <p className="px-5 pb-5 pt-3 text-sm text-neutral-500">Consultá con el club el valor de la cuota.</p>}
+            {rows.length > 0 ? <ul className="mt-3 divide-y divide-[var(--border)] px-5">{rows.map((row) => <SelectableFeeRow key={row.key} label={row.label} fee={row.fee} currency={club.currency} selection={row.selection} selectable={!memberProfile}/>)}</ul> : <p className="px-5 pb-5 pt-3 text-sm text-neutral-500">Consultá con el club el valor de la cuota.</p>}
             {own.length > 0 && category.monthlyFeeAmount > 0 && <p className="px-5 pb-4 pt-2 text-xs text-neutral-500">Cada cuota se cobra por separado.</p>}
             {rows.length > 0 && !(own.length > 0 && category.monthlyFeeAmount > 0) && <div className="h-3"/>}
           </article>;
         })}
         {looseDivisions.length > 0 && <article className="card overflow-hidden pt-5">
           <h3 className="flex items-center gap-3 px-5 text-lg font-black tracking-[-.02em]"><span aria-hidden className="h-6 w-1.5 rounded-full" style={{ background: brand?.accent ?? "var(--accent)" }}/>{categories.length > 0 ? "Otras actividades" : "Actividades"}</h3>
-          <ul className="mt-3 divide-y divide-[var(--border)] px-5 pb-3">{looseDivisions.map((division) => <FeeRow key={division.id} label={division.name} fee={division.monthlyFeeAmount} currency={club.currency}/>)}</ul>
+          <ul className="mt-3 divide-y divide-[var(--border)] px-5 pb-3">{looseDivisions.map((division) => <SelectableFeeRow key={division.id} label={division.name} fee={division.monthlyFeeAmount} currency={club.currency} selection={{ categoryId: null, divisionId: division.id, label: division.name, fee: division.monthlyFeeAmount }} selectable={!memberProfile}/>)}</ul>
         </article>}
       </div>
     </section>}
@@ -98,14 +99,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
     {!memberProfile && <section id="asociarme" className="card mt-12 max-w-xl scroll-mt-24 p-5 sm:p-7">
       <h2 className="text-xl font-black">Quiero ser socio</h2>
       <p className="mt-1 text-sm text-neutral-500">Completá tus datos. {club.name} revisa tu solicitud y te contacta.</p>
-      {categories.length > 0 ? <MembershipRequestForm organizationId={club.organizationId} categories={categories}/> : <p className="mt-4 text-sm text-neutral-500">Este club todavía no tiene categorías abiertas.</p>}
+      {categories.length > 0 ? <MembershipRequestForm organizationId={club.organizationId} categories={categories} divisions={divisions} currency={club.currency}/> : <p className="mt-4 text-sm text-neutral-500">Este club todavía no tiene categorías abiertas.</p>}
     </section>}
   </main>;
-}
-
-function FeeRow({ label, fee, currency }: { label: string; fee: number; currency: string }) {
-  return <li className="flex items-center justify-between gap-4 py-3.5">
-    <span className="font-semibold">{label}</span>
-    {fee > 0 ? <span className="shrink-0 text-lg font-black tracking-[-.01em]">{formatMoney(fee, currency)}<span className="text-sm font-normal text-neutral-500">/mes</span></span> : <span className="shrink-0 text-sm font-semibold text-neutral-500">Sin cuota adicional</span>}
-  </li>;
 }

@@ -18,7 +18,7 @@ function RequestCard({ request, suggestedNumber }: { request: MembershipRequestR
       <div>
         <p className="font-bold">{request.firstName} {request.lastName}</p>
         <p className="mt-0.5 text-xs text-neutral-500">{request.email}{request.phone ? ` · ${request.phone}` : ""}</p>
-        <p className="mt-1 text-xs text-neutral-500">Categoría: {request.categoryName ?? "—"} · {new Date(request.createdAt).toLocaleDateString("es-AR")}</p>
+        <p className="mt-1 text-xs text-neutral-500">Categoría: {request.categoryName ?? "—"}{request.divisionName ? ` · División: ${request.divisionName}` : ""} · {new Date(request.createdAt).toLocaleDateString("es-AR")}</p>
         {request.message && <p className="mt-2 text-sm text-neutral-300">&ldquo;{request.message}&rdquo;</p>}
       </div>
       <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone[request.status]}`}>{membershipRequestStatusLabels[request.status]}</span>

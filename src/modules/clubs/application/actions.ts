@@ -489,6 +489,8 @@ export async function approveMembershipRequest(_: ClubActionState, formData: For
   const memberNumber = String(formData.get("memberNumber") ?? "").trim();
   if (!requestId || !memberNumber) return { error: "Falta el número de socio." };
   const supabase = await createClient();
+  // División que pidió la persona al anotarse (si eligió una).
+  const { data: requested } = await supabase.from("club_membership_requests").select("division_id").eq("id", requestId).maybeSingle();
   const { data, error } = await supabase.rpc("approve_club_membership_request", { target_request: requestId, target_member_number: memberNumber });
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
@@ -498,6 +500,17 @@ export async function approveMembershipRequest(_: ClubActionState, formData: For
     return { error: "No pudimos aprobar la solicitud." };
   }
   const result = data?.[0];
+  if (result?.membership_id && requested?.division_id) {
+    // Se la anota en la división elegida. Si falla, el socio igual queda dado de alta y se puede anotar a mano.
+    const { data: enrollment } = await supabase.rpc("enroll_membership_in_division", { target_membership: result.membership_id, target_division: requested.division_id });
+    const enrolled = enrollment?.[0];
+    if (enrolled?.customer_email && enrolled.due_id) {
+      await sendDivisionDueGeneratedEmail({
+        dueId: enrolled.due_id, to: enrolled.customer_email, firstName: enrolled.customer_first_name, organizationName: enrolled.organization_name,
+        divisionName: enrolled.division_name, period: enrolled.due_period, amount: enrolled.due_amount, dueDate: enrolled.due_date, brand: brandFrom(enrolled),
+      });
+    }
+  }
   if (result?.customer_email) {
     await sendMembershipWelcomeEmail({
       to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,

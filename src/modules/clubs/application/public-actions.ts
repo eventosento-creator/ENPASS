@@ -8,6 +8,7 @@ export type MembershipRequestState = { error?: string; success?: boolean };
 const requestSchema = z.object({
   organizationId: z.string().uuid(),
   categoryId: z.string().uuid(),
+  divisionId: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
   firstName: z.string().min(1).max(80),
   lastName: z.string().min(1).max(80),
   email: z.email(),
@@ -29,10 +30,11 @@ export async function submitMembershipRequest(_: MembershipRequestState, formDat
     target_phone: parsed.data.phone ?? null,
     target_document: parsed.data.document ?? null,
     target_message: parsed.data.message ?? null,
+    target_division: parsed.data.divisionId ?? null,
   });
   if (error) {
     if (error.message?.includes("DUPLICATE_REQUEST")) return { error: "Ya tenés una solicitud pendiente con ese email. Esperá a que el club la revise." };
-    if (error.message?.includes("CLUB_NOT_PUBLIC") || error.message?.includes("CATEGORY_NOT_FOUND")) return { error: "No pudimos enviar tu solicitud." };
+    if (error.message?.includes("CLUB_NOT_PUBLIC") || error.message?.includes("CATEGORY_NOT_FOUND") || error.message?.includes("DIVISION_NOT_FOUND")) return { error: "No pudimos enviar tu solicitud." };
     return { error: "No pudimos enviar tu solicitud." };
   }
   return { success: true };
