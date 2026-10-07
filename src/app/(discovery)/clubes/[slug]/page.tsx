@@ -31,7 +31,8 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
   const idSet = new Set(eventIds);
   const events = allEvents.filter((event) => idSet.has(event.id)).slice(0, 8);
   const brand = resolveClubBrand(club.accentColor);
-  const cheapest = categories.length ? Math.min(...categories.map((category) => category.monthlyFeeAmount)) : null;
+  const fees = [...categories.map((category) => category.monthlyFeeAmount), ...divisions.map((division) => division.monthlyFeeAmount)].filter((fee) => fee > 0);
+  const cheapest = fees.length ? Math.min(...fees) : null;
   // El color del club pisa el acento solo dentro de esta página (botones y detalles); el resto del sitio no cambia.
   const heroText = club.coverUrl ? "#ffffff" : brand?.onAccent;
   const brandVars = brand ? { "--accent": brand.accent, "--on-accent": brand.onAccent } as CSSProperties : undefined;
@@ -72,17 +73,17 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
 
     {categories.length > 0 && <section className="mt-12">
       <h2 className="text-2xl font-black tracking-[-.02em]">Categorías de socio</h2>
-      <p className="mt-1 text-sm text-neutral-500">Tocá una categoría para ver sus divisiones.</p>
+      <p className="mt-1 text-sm text-neutral-500">Tocá una categoría para ver sus divisiones y la cuota de cada una.</p>
       <div className="mt-5 grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => {
           const own = divisions.filter((division) => division.categoryId === category.id);
-          const head = <><span className="font-bold">{category.name}</span><span className="flex items-center gap-3 text-right"><span><span className="text-lg font-black">{formatMoney(category.monthlyFeeAmount, club.currency)}</span><span className="text-sm text-neutral-500">/mes</span></span>{own.length > 0 && <ChevronDown aria-hidden size={18} className="shrink-0 text-neutral-500 transition group-open:rotate-180"/>}</span></>;
+          const head = <><span className="font-bold">{category.name}</span><span className="flex items-center gap-3 text-right">{category.monthlyFeeAmount > 0 && <span><span className="text-lg font-black">{formatMoney(category.monthlyFeeAmount, club.currency)}</span><span className="text-sm text-neutral-500">/mes</span></span>}{own.length > 0 && <ChevronDown aria-hidden size={18} className="shrink-0 text-neutral-500 transition group-open:rotate-180"/>}</span></>;
           if (own.length === 0) return <div key={category.id} className="card flex items-center justify-between gap-4 border-l-4 p-5" style={brand ? { borderLeftColor: brand.accent } : undefined}>{head}</div>;
           return <details key={category.id} className="card group overflow-hidden border-l-4" style={brand ? { borderLeftColor: brand.accent } : undefined}>
             <summary className="flex min-h-[4.5rem] cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">{head}</summary>
             <div className="border-t border-[var(--border)] px-5 pb-4 pt-3">
               <p className="mb-2 text-[11px] font-black uppercase tracking-[.12em] text-neutral-500">Divisiones · {own.length}</p>
-              <ul className="grid gap-1.5">{own.map((division) => <li key={division.id} className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold">{division.name}</span>{division.monthlyFeeAmount > 0 && <span className="text-neutral-500">+ {formatMoney(division.monthlyFeeAmount, club.currency)}/mes</span>}</li>)}</ul>
+              <ul className="grid gap-1.5">{own.map((division) => <li key={division.id} className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold">{division.name}</span>{division.monthlyFeeAmount > 0 && <span className="font-black">{formatMoney(division.monthlyFeeAmount, club.currency)}<span className="font-normal text-neutral-500">/mes</span></span>}</li>)}</ul>
             </div>
           </details>;
         })}
@@ -91,7 +92,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ sl
 
     {looseDivisions.length > 0 && <section className="mt-12">
       <h2 className="text-2xl font-black tracking-[-.02em]">{categories.length > 0 ? "Otras divisiones" : "Divisiones"}</h2>
-      <p className="mt-1 text-sm text-neutral-500">Actividades y equipos del club. Algunas tienen una cuota propia, adicional a la de socio.</p>
+      <p className="mt-1 text-sm text-neutral-500">Actividades y equipos del club, cada uno con su propia cuota.</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {looseDivisions.map((division) => <div key={division.id} className="card flex items-center justify-between gap-4 border-l-4 p-5" style={brand ? { borderLeftColor: brand.accent } : undefined}><span className="font-bold">{division.name}</span>{division.monthlyFeeAmount > 0 && <span className="text-right"><span className="text-lg font-black">{formatMoney(division.monthlyFeeAmount, club.currency)}</span><span className="text-sm text-neutral-500">/mes</span></span>}</div>)}
       </div>

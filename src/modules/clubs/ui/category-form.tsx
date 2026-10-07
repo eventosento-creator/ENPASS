@@ -16,6 +16,7 @@ export function CategoryForm({ organizationId, category, onSaved }: { organizati
       <label className="label">Nombre<input className="field" name="name" placeholder="Socio activo" defaultValue={category?.name} required/></label>
       <label className="label">Cuota mensual<input className="field" name="monthlyFeeAmount" type="number" min="0" step="0.01" placeholder="5000" defaultValue={category ? category.monthly_fee_amount / 100 : undefined} required/></label>
     </div>
+    <p className="-mt-2 text-xs text-neutral-500">Dejá la cuota en 0 si esta categoría es solo un grupo (ej. Futsal) y el precio lo tiene cada división.</p>
     <label className="flex items-center gap-2 text-sm font-semibold text-neutral-300"><input type="checkbox" name="active" value="true" defaultChecked={category?.active ?? true} className="size-4"/>Activa (visible al dar de alta socios)</label>
     <ActionMessage message={state.error}/><ActionMessage message={state.success} tone="success"/>
     <SubmitButton className="btn btn-primary w-fit">{category ? "Guardar cambios" : "Crear categoría"}</SubmitButton>

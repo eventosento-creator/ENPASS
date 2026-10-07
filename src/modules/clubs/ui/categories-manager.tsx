@@ -16,7 +16,7 @@ export function CategoriesManager({ organizationId, categories, currency }: { or
     <div className="mt-6 flex items-center justify-between"><p className="text-sm text-neutral-500">Cada categoría define la cuota mensual de sus socios.</p><button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={18}/>Nueva categoría</button></div>
     <div className="mt-6">{categories.length ? <div className="grid gap-3">
       {categories.map((category) => <div key={category.id} className="card flex items-center justify-between gap-4 p-4">
-        <div><p className="font-bold">{category.name}</p><p className="mt-1 text-sm text-neutral-500">{formatMoney(category.monthly_fee_amount, currency)} / mes</p></div>
+        <div><p className="font-bold">{category.name}</p><p className="mt-1 text-sm text-neutral-500">{category.monthly_fee_amount > 0 ? `${formatMoney(category.monthly_fee_amount, currency)} / mes` : "Sin cuota propia · el precio lo tienen sus divisiones"}</p></div>
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${category.active ? "status-success" : "text-neutral-500"}`}>{category.active ? "Activa" : "Inactiva"}</span>
           <button className="btn btn-secondary" onClick={() => setEditing(category)}><Pencil size={15}/></button>

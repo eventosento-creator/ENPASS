@@ -163,14 +163,16 @@ export async function getDivisionDues(enrollmentId: string): Promise<MembershipD
 export const getClubBannerData = cache(async (organizationId: string) => {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data: settings }, { data: organization }, { count: activeMembers }, { data: nextDue }, { data: categories }] = await Promise.all([
+  const [{ data: settings }, { data: organization }, { count: activeMembers }, { data: nextDue }, { data: categories }, { data: divisionFees }] = await Promise.all([
     supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, cover_focus_x, cover_focus_y, location_text, main_activity, public_description").eq("organization_id", organizationId).maybeSingle(),
     supabase.from("organizations").select("name, default_currency").eq("id", organizationId).maybeSingle(),
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "active"),
     supabase.from("membership_dues").select("due_date").eq("organization_id", organizationId).is("paid_at", null).gte("due_date", today).order("due_date").limit(1).maybeSingle(),
     supabase.from("membership_categories").select("monthly_fee_amount").eq("organization_id", organizationId).eq("active", true).order("monthly_fee_amount"),
+    supabase.from("divisions").select("monthly_fee_amount").eq("organization_id", organizationId).eq("active", true),
   ]);
-  const fees = (categories ?? []).map((category) => category.monthly_fee_amount).filter((fee) => fee > 0);
+  // El precio puede estar en la categoría o en sus divisiones (cada una con su cuota, no se suman).
+  const fees = [...(categories ?? []), ...(divisionFees ?? [])].map((row) => row.monthly_fee_amount).filter((fee) => fee > 0).sort((a, b) => a - b);
   return {
     name: settings?.brand_name || organization?.name || "Tu club",
     logoUrl: settings?.brand_logo_url ?? null,

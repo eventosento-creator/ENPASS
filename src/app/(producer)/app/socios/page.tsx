@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus, UserRoundCheck } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
-import { isClubEnabled, searchMembers, getMembershipCategories } from "@/modules/clubs/application/queries";
+import { isClubEnabled, listDivisions, searchMembers, getMembershipCategories } from "@/modules/clubs/application/queries";
 import { generateDuesForPeriod } from "@/modules/clubs/application/actions";
 import { MemberSearch } from "@/modules/clubs/ui/member-search";
 import { MembersImport } from "@/modules/clubs/ui/members-import";
@@ -18,10 +18,12 @@ export default async function MembersPage() {
   const enabled = await isClubEnabled(org.id);
   if (!enabled) redirect("/app");
 
-  const [members, categories] = await Promise.all([searchMembers(org.id), getMembershipCategories(org.id)]);
+  const [members, categories, divisions] = await Promise.all([searchMembers(org.id), getMembershipCategories(org.id), listDivisions(org.id)]);
   const activeCount = members.filter((m) => m.membershipStatus === "active").length;
   const overdueCount = members.filter((m) => m.dueStatus === "overdue").length;
-  const monthlyExpected = categories.reduce((sum, category) => sum + category.monthly_fee_amount * members.filter((m) => m.categoryName === category.name && m.membershipStatus === "active").length, 0);
+  // Cuota de categoría (si tiene) + cuota de cada división por sus inscriptos: son cuotas separadas.
+  const monthlyExpected = categories.reduce((sum, category) => sum + category.monthly_fee_amount * members.filter((m) => m.categoryName === category.name && m.membershipStatus === "active").length, 0)
+    + divisions.filter((division) => division.active).reduce((sum, division) => sum + division.monthlyFeeAmount * division.enrolledCount, 0);
   const currentPeriod = defaultCurrentPeriod();
 
   return <>
