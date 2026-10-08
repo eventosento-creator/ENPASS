@@ -23,7 +23,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const accountEmail = connected && !account?.provider_account_email ? await ensurePaymentAccountEmail(organization.id) : (account?.provider_account_email ?? null);
 
   return <div className="mx-auto max-w-4xl">
-    <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Configuración</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Administrá los lugares y cómo recibís el dinero de tus ventas.</p>
+    <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Ajustes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Administrá los lugares y cómo recibís el dinero de tus ventas.</p>
     {notice && <Notice code={notice} detail={detail}/>}
     {["owner", "admin"].includes(organization.role) && <section className="card mt-8 p-5 sm:p-7"><h2 className="mb-4 text-lg font-black">Nombre del espacio</h2><RenameOrganizationForm organizationId={organization.id} name={organization.name}/></section>}
     <section className="card mt-4 overflow-hidden">
