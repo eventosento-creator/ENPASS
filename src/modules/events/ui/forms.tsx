@@ -46,7 +46,7 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
     <input type="hidden" name="seatmapEnabled" value={String(capabilities.seatmap)}/>
     <input type="hidden" name="accessEnabled" value={String(capabilities.access)}/>
     <input type="hidden" name="posEnabled" value={String(capabilities.pos)}/>
-    <label className="group relative mx-auto aspect-[4/3] w-full max-w-sm cursor-pointer overflow-hidden rounded-[1.4rem] border border-dashed border-white/15 bg-[var(--surface)] md:sticky md:top-6 md:aspect-[4/5]">
+    <label className="group relative mx-auto aspect-[16/9] w-full max-w-sm cursor-pointer overflow-hidden rounded-[1.4rem] border border-dashed border-white/15 bg-[var(--surface)] md:sticky md:top-6 md:aspect-[4/5]">
       {preview ? <div role="img" aria-label="Vista previa del flyer" className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url("${preview}")` }}/> : <div className="grid h-full place-items-center p-6 text-center"><div><span className="text-3xl">✦</span><p className="mt-3 font-bold">Subí el flyer</p><p className="mt-1 text-xs text-neutral-500">JPG, PNG o WebP · hasta 5 MB</p></div></div>}
       <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-xs font-bold backdrop-blur">{preview ? "Cambiar imagen" : "Elegir imagen"}</span>
       <input className="sr-only" name="cover" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => previewFile(event.target.files?.[0])}/>
@@ -54,16 +54,16 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
     <div className="surface grid gap-5 p-5 sm:p-7">
       <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[.07] p-4"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-600">Tipo de evento</span><p className="mt-1 font-black">{getEventProfileLabel(profile)}</p></div><button className="btn btn-ghost min-h-10 px-3 text-xs" type="button" onClick={() => setProfile(null)}>Cambiar</button></div>
       {profile === "other" && <div><p className="label">¿Qué necesitás gestionar?</p><div className="mt-3 grid grid-cols-2 gap-2">{visibleCapabilities.map((capability) => <CapabilityButton key={capability} capability={capability} active={capabilities[capability]} onToggle={() => setCapabilities((current) => ({ ...current, [capability]: !current[capability] }))}/>)}</div></div>}
-      <label className="label">Categoría<select className="field" name="discoveryCategory" value={discoveryCategory} onChange={(change) => setDiscoveryCategory(change.target.value as EventDiscoveryCategory)}>{EVENT_DISCOVERY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="text-xs font-normal text-neutral-600">Así lo van a encontrar en los filtros de /eventos.</span></label>
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" placeholder="Noche 2000" required autoFocus/></label>
       <label className="label">Lugar<select className="field" name="venueId" required defaultValue=""><option value="" disabled>Elegí un lugar</option>{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
-      <div className="grid gap-5">
+      <div className="grid gap-5 2xl:grid-cols-2">
         <label className="label">Inicio<input className="field" name="startsAt" type="datetime-local" required/></label>
         <label className="label">Fin <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local"/></label>
       </div>
+      <label className="label">Categoría<select className="field" name="discoveryCategory" value={discoveryCategory} onChange={(change) => setDiscoveryCategory(change.target.value as EventDiscoveryCategory)}>{EVENT_DISCOVERY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="text-xs font-normal text-neutral-600">Así lo van a encontrar en los filtros de /eventos.</span></label>
       <details className="rounded-xl border border-white/[.07] p-4"><summary className="cursor-pointer text-sm font-bold text-neutral-400">Opciones del evento</summary><div className="mt-4 grid gap-4"><label className="label">Capacidad personalizada <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="capacity" type="number" min="1" placeholder="Usar capacidad del lugar"/></label><label className="label">Descripción <span className="font-normal text-neutral-600">(opcional)</span><textarea className="field min-h-24 resize-y" name="description" placeholder="Contá en pocas palabras qué hace especial esta fecha."/></label><label className="flex items-center gap-3 text-sm text-neutral-400"><input type="checkbox" name="requireDocument" value="true"/> Solicitar DNI en el checkout</label></div></details>
     </div>
-    <div className="md:col-start-2"><ActionMessage message={state.error}/></div><SubmitButton className="btn btn-primary min-h-14 md:col-start-2">Continuar a entradas</SubmitButton>
+    <div className="md:col-start-2"><ActionMessage message={state.error}/></div><SubmitButton className="btn btn-primary min-h-14 md:col-start-2">{capabilities.tickets ? "Continuar a entradas" : "Continuar"}</SubmitButton>
   </form>;
 }
 
