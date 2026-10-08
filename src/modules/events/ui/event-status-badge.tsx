@@ -3,10 +3,10 @@ import type { Event } from "@/shared/database/types";
 
 const labels: Record<Event["status"], string> = { draft: "Borrador", published: "Publicado", sold_out: "Agotado", finished: "Finalizado", cancelled: "Cancelado" };
 const styles: Record<Event["status"], string> = {
-  draft: "border-white/12 bg-black/55 text-white/75",
+  draft: "border-white/12 bg-black/55 text-[var(--text)]",
   published: "border-lime-300/25 bg-lime-300/12 text-lime-200",
   sold_out: "border-red-300/25 bg-red-300/12 text-red-200",
-  finished: "border-white/10 bg-white/8 text-white/50",
+  finished: "border-white/10 bg-white/8 text-[var(--muted)]",
   cancelled: "border-orange-300/25 bg-orange-300/12 text-orange-200",
 };
 
