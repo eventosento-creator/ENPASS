@@ -45,7 +45,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const currency = organization.default_currency;
   const buckets = fillSeries(report.series, range, group).map((bucket) => ({ key: bucket.key, time: bucket.date.getTime(), revenue: bucket.revenue, units: bucket.units, ops: bucket.ops, buyers: bucket.buyers }));
 
-  return <div className="grid gap-5">
+  return <div className="grid gap-5 [&>*]:min-w-0">
     <div>{header}</div>
     <KpiCards report={report} currency={currency}/>
     <div className="grid gap-5 lg:grid-cols-3">
