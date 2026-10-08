@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { AnalyticsGate } from "@/shared/ui/analytics-gate";
 import "./globals.css";
 
 // Google Analytics 4: solo en producción y solo si hay ID cargado (NEXT_PUBLIC_GA_ID).
@@ -16,5 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning><head><Script id="enpass-theme" strategy="beforeInteractive">{`try{const saved=localStorage.getItem('enpass-theme');const theme=saved==='dark'?'dark':'light';document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch{document.documentElement.dataset.theme='light'}`}</Script></head><body>{children}{gaId && <GoogleAnalytics gaId={gaId}/>}</body></html>;
+  return <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning><head><Script id="enpass-theme" strategy="beforeInteractive">{`try{const saved=localStorage.getItem('enpass-theme');const theme=saved==='dark'?'dark':'light';document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch{document.documentElement.dataset.theme='light'}`}</Script></head><body>{children}{gaId && <><AnalyticsGate gaId={gaId}/><GoogleAnalytics gaId={gaId}/></>}</body></html>;
 }
