@@ -1,3 +1,4 @@
+import { ClubPermissionArea } from "@/modules/clubs/ui/club-permission-area";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { getMembershipCategories, isClubEnabled, listDivisions } from "@/modules/clubs/application/queries";
@@ -16,6 +17,6 @@ export default async function DivisionsPage() {
     <ClubBanner organizationId={org.id}/>
     <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Divisiones</h1><p className="mt-3 text-neutral-500">Fútbol, básquet, natación — cada una con su propia cuota.</p></div>
     <ClubSectionNav active="divisiones"/>
-    <DivisionsManager organizationId={org.id} divisions={divisions} categories={categories.map((category) => ({ id: category.id, name: category.name }))} currency={org.default_currency}/>
+    <ClubPermissionArea role={org.clubRole} permission="structure"><DivisionsManager organizationId={org.id} divisions={divisions} categories={categories.map((category) => ({ id: category.id, name: category.name }))} currency={org.default_currency}/></ClubPermissionArea>
   </>;
 }

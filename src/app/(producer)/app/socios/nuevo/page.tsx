@@ -1,3 +1,4 @@
+import { ClubPermissionArea } from "@/modules/clubs/ui/club-permission-area";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -19,6 +20,6 @@ export default async function NewMemberPage() {
     <p className="eyebrow mt-7">Tu club</p><h1 className="page-title mt-2">Nuevo socio</h1>
     <p className="mt-3 text-neutral-500">Si la persona ya compró una entrada antes, reutilizamos sus datos automáticamente por DNI o email.</p>
     {categories.length === 0 && <p className="status-warning mt-6 rounded-xl p-4 text-sm">Todavía no tenés categorías activas. <Link href={"/app/socios/categorias" as never} className="font-bold underline">Creá una en Categorías</Link> antes de dar de alta socios.</p>}
-    <MemberForm organizationId={org.id} categories={categories.map((c) => ({ id: c.id, name: c.name }))} plans={allPlans.filter((plan) => plan.active).map((plan) => ({ id: plan.id, name: plan.name, description: describePlan(plan, org.default_currency) }))} suggestedNumber={suggestedNumber}/>
+    <ClubPermissionArea role={org.clubRole} permission="members"><MemberForm organizationId={org.id} categories={categories.map((c) => ({ id: c.id, name: c.name }))} plans={allPlans.filter((plan) => plan.active).map((plan) => ({ id: plan.id, name: plan.name, description: describePlan(plan, org.default_currency) }))} suggestedNumber={suggestedNumber}/></ClubPermissionArea>
   </>;
 }

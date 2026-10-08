@@ -4,13 +4,13 @@ import { changeEventProfile, getDefaultCapabilitiesForProfile } from "./event-pr
 describe("event profiles", () => {
   it("enables the full existing journey for nightlife", () => {
     expect(getDefaultCapabilitiesForProfile("nightlife")).toEqual({
-      tickets: true, promoters: true, tables: true, access: true, pos: true, inventory: false,
+      tickets: true, promoters: true, tables: true, seatmap: false, access: true, pos: true, inventory: false,
     });
   });
 
   it("keeps conference focused on tickets and access", () => {
     expect(getDefaultCapabilitiesForProfile("conference")).toEqual({
-      tickets: true, promoters: false, tables: false, access: true, pos: false, inventory: false,
+      tickets: true, promoters: false, tables: false, seatmap: true, access: true, pos: false, inventory: false,
     });
   });
 

@@ -1,3 +1,4 @@
+import { ClubPermissionArea } from "@/modules/clubs/ui/club-permission-area";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { getMembershipRequests, getNextMemberNumber, isClubEnabled } from "@/modules/clubs/application/queries";
@@ -18,6 +19,6 @@ export default async function MembershipRequestsPage() {
     <ClubBanner organizationId={org.id}/>
     <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Solicitudes</h1><p className="mt-3 text-neutral-500">Gente que pidió ser socia desde la página pública del club. Vos decidís quién entra.</p></div>
     <ClubSectionNav active="solicitudes"/>
-    <MembershipRequestsManager pending={pending} reviewed={reviewed} suggestedNumber={suggestedNumber}/>
+    <ClubPermissionArea role={org.clubRole} permission="members"><MembershipRequestsManager pending={pending} reviewed={reviewed} suggestedNumber={suggestedNumber}/></ClubPermissionArea>
   </>;
 }

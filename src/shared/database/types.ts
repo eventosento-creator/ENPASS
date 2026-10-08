@@ -569,7 +569,7 @@ export interface Database {
       division_due_payments: { Row: DivisionDuePayment; Insert: Omit<DivisionDuePayment, "id" | "created_at" | "updated_at" | "provider_payment_id" | "service_fee_amount" | "gross_amount" | "processor_fee_amount" | "collected_by" | "payout_id" | "absorbed_fee_amount"> & { id?: string; created_at?: string; updated_at?: string; provider_payment_id?: string | null; service_fee_amount?: number; gross_amount?: number | null; processor_fee_amount?: number | null; collected_by?: "club" | "enpass"; payout_id?: string | null; absorbed_fee_amount?: number }; Update: Partial<DivisionDuePayment>; Relationships: [] };
       club_payouts: { Row: { id: string; organization_id: string; period_to: string; payments_count: number; amount: number; service_fee_amount: number; processor_fee_amount: number; status: "pending" | "paid" | "failed"; method: "manual" | "bind" | null; reference: string | null; provider_transfer_id: string | null; destination_snapshot: Record<string, string | null>; created_by: string | null; created_at: string; paid_at: string | null }; Insert: never; Update: never; Relationships: [] };
       membership_plans: { Row: { id: string; organization_id: string; name: string; kind: "standard" | "family" | "scholarship"; pricing_mode: "none" | "percent" | "fixed"; discount_bps: number; fixed_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
-      club_staff: { Row: { organization_id: string; user_id: string; role: "member_staff"; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
+      club_staff: { Row: { organization_id: string; user_id: string; role: "admin" | "treasurer" | "coordinator" | "viewer"; title: string | null; created_by: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
       club_membership_requests: { Row: { id: string; organization_id: string; membership_category_id: string | null; division_id: string | null; first_name: string; last_name: string; email: string; phone: string | null; document: string | null; message: string | null; status: "pending" | "approved" | "rejected"; reviewed_at: string | null; reviewed_by: string | null; rejection_reason: string | null; created_membership_id: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       club_door_devices: { Row: { id: string; organization_id: string; name: string; code_expires_at: string; activation_count: number; activated_at: string | null; revoked_at: string | null; created_at: string }; Insert: never; Update: never; Relationships: [] };
       divisions: { Row: DivisionRecord; Insert: never; Update: never; Relationships: [] };
@@ -708,9 +708,10 @@ export interface Database {
       can_manage_club: { Args: { target_org: string }; Returns: boolean };
       set_club_enabled: { Args: { target_org: string; target_enabled: boolean }; Returns: undefined };
       add_club_staff: { Args: { target_org: string; target_email: string }; Returns: string };
-      create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string; target_title?: string | null }; Returns: string };
+      create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string; target_title?: string | null; target_role?: string }; Returns: string };
       accept_club_staff_invitation: { Args: { raw_token_hash: string }; Returns: string | null };
-      list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string; title: string | null }[] };
+      list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string; title: string | null; role: string }[] };
+      set_club_staff_role: { Args: { target_org: string; target_user: string; target_role: string }; Returns: undefined };
       set_club_staff_title: { Args: { target_org: string; target_user: string; target_title: string | null }; Returns: undefined };
       revoke_club_staff_invitation: { Args: { target_org: string; target_invitation: string }; Returns: undefined };
       remove_club_staff: { Args: { target_org: string; target_user: string }; Returns: undefined };

@@ -41,6 +41,7 @@ export type ClubStaffInviteEmail = {
   clubName: string;
   inviterName: string;
   acceptUrl: string;
+  roleLabel?: string;
 };
 
 export type EventReminderEmail = {

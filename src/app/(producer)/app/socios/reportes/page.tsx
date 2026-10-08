@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { getClubReport, getClubSettlements, isClubEnabled } from "@/modules/clubs/application/queries";
 import { clubPeriodLabels, clubPeriods, hasClubReportData, parseClubPeriod, paymentMethodLabels, resolveClubPeriod, shortMonthLabel } from "@/modules/clubs/domain/report";
+import { clubCan } from "@/modules/clubs/domain/club-roles";
 import { ClubBanner } from "@/modules/clubs/ui/club-banner";
 import { ClubSectionNav } from "@/modules/clubs/ui/club-section-nav";
 import { DonutChart, DonutLegend } from "@/modules/reports/ui/donut-chart";
@@ -16,6 +17,7 @@ export default async function ClubReportsPage({ searchParams }: { searchParams: 
   const org = await getCurrentOrganization();
   if (!org) redirect("/app/onboarding");
   if (!(await isClubEnabled(org.id))) redirect("/app");
+  if (!clubCan(org.clubRole, "reports")) redirect("/app/socios" as never);
   const period = parseClubPeriod((await searchParams).period);
   const range = resolveClubPeriod(period);
   const [report, settlements] = await Promise.all([getClubReport(org.id, range.from, range.to), getClubSettlements(org.id)]);

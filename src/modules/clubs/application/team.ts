@@ -3,15 +3,16 @@ import "server-only";
 import { createClient } from "@/shared/database/server";
 import { generateOpaqueToken, hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { collaboratorLog } from "@/shared/lib/structured-log";
+import { CLUB_ROLES, isClubRole, type ClubRole } from "../domain/club-roles";
 import { SmtpEmailProvider } from "@/modules/ticketing/infrastructure/smtp-email-provider";
 
-export type ClubTeamEntry = { kind: "member" | "invitation"; id: string; email: string; createdAt: string; title: string | null };
+export type ClubTeamEntry = { kind: "member" | "invitation"; id: string; email: string; createdAt: string; title: string | null; role: ClubRole };
 
 export async function getClubTeam(organizationId: string): Promise<ClubTeamEntry[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_club_team", { target_org: organizationId });
   if (error || !data) return [];
-  return data.map((row) => ({ kind: row.kind as "member" | "invitation", id: row.ref_id, email: row.email, createdAt: row.created_at, title: row.title }));
+  return data.map((row) => ({ kind: row.kind as "member" | "invitation", id: row.ref_id, email: row.email, createdAt: row.created_at, title: row.title, role: isClubRole(row.role) ? row.role : "viewer" }));
 }
 
 function appUrl() {
@@ -20,7 +21,7 @@ function appUrl() {
   return value;
 }
 
-export async function inviteClubStaff(organizationId: string, email: string, title?: string) {
+export async function inviteClubStaff(organizationId: string, email: string, role: ClubRole, title?: string) {
   const supabase = await createClient();
   const [{ data: organization }, { data: { user } }] = await Promise.all([
     supabase.from("organizations").select("name").eq("id", organizationId).single(),
@@ -29,14 +30,14 @@ export async function inviteClubStaff(organizationId: string, email: string, tit
   if (!organization) throw new Error("CLUB_NOT_ALLOWED");
   const inviterName = typeof user?.user_metadata.full_name === "string" && user.user_metadata.full_name.trim() ? user.user_metadata.full_name.trim() : (user?.email ?? "El club");
   const rawToken = generateOpaqueToken();
-  const { error } = await supabase.rpc("create_club_staff_invitation", { target_org: organizationId, target_email: email, target_token_hash: hashOpaqueToken(rawToken), target_title: title?.trim() || null });
+  const { error } = await supabase.rpc("create_club_staff_invitation", { target_org: organizationId, target_email: email, target_token_hash: hashOpaqueToken(rawToken), target_title: title?.trim() || null, target_role: role });
   if (error) { collaboratorLog("club_staff.invite.created", { failed: true, code: error.code ?? "", message: error.message }); throw new Error("CLUB_INVITE_FAILED"); }
   collaboratorLog("club_staff.invite.created", { organizationId });
   const acceptUrl = new URL("/invite/club", appUrl());
   acceptUrl.searchParams.set("token", rawToken);
   let emailSent = false;
   try {
-    await new SmtpEmailProvider().sendClubStaffInvite({ to: email, clubName: organization.name, inviterName, acceptUrl: acceptUrl.toString() });
+    await new SmtpEmailProvider().sendClubStaffInvite({ to: email, clubName: organization.name, inviterName, acceptUrl: acceptUrl.toString(), roleLabel: CLUB_ROLES[role].label });
     emailSent = true;
     collaboratorLog("club_staff.invite.email_sent", { organizationId });
   } catch (sendError) {

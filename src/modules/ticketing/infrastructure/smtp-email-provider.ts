@@ -106,11 +106,11 @@ export class SmtpEmailProvider implements EmailProvider {
       from: this.from,
       to: message.to,
       subject: `Te invitaron a colaborar en ${message.clubName}`,
-      text: `${message.inviterName} te invitó a colaborar en ${message.clubName} (socios y cuotas). Aceptá la invitación: ${message.acceptUrl}`,
+      text: `${message.inviterName} te invitó a colaborar en ${message.clubName}${message.roleLabel ? ` como ${message.roleLabel}` : ""}. Aceptá la invitación: ${message.acceptUrl}`,
       html: emailFrame(`
         ${heroBanner()}
         <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Te invitaron a colaborar</h1>
-        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${escapeHtml(message.inviterName)} te sumó al equipo de <strong>${escapeHtml(message.clubName)}</strong> en ENPASS para ayudar con los socios y las cuotas.</p>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${escapeHtml(message.inviterName)} te sumó al equipo de <strong>${escapeHtml(message.clubName)}</strong> en ENPASS${message.roleLabel ? ` como <strong>${escapeHtml(message.roleLabel)}</strong>` : ""} para ayudar con la gestión del club.</p>
         ${accessButton(message.acceptUrl, "Aceptar invitación")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Ingresá con este mismo email. El enlace es personal y expira en 7 días.</p>
       `),

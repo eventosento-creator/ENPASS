@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/shared/database/server";
+import { createAdminClient } from "@/shared/database/admin";
 import type { ClubReport } from "../domain/report";
 import type { MembershipPlan } from "../domain/plans";
 import type { ClubListingSettings, DivisionEnrollmentRow, DivisionRow, MemberRow, MembershipDetail, MembershipDivisionRow, MembershipDue, MembershipRequestRow } from "../domain/club";
@@ -174,10 +175,15 @@ export const getClubBannerData = cache(async (organizationId: string) => {
     supabase.from("membership_categories").select("monthly_fee_amount").eq("organization_id", organizationId).eq("active", true).order("monthly_fee_amount"),
     supabase.from("divisions").select("monthly_fee_amount").eq("organization_id", organizationId).eq("active", true),
   ]);
+  // Un colaborador del club no puede leer la fila de la organización (RLS): si es del equipo, se lee el nombre con el cliente de servicio.
+  let organizationRow = organization;
+  if (!organizationRow && (await supabase.rpc("can_manage_club", { target_org: organizationId })).data) {
+    organizationRow = (await createAdminClient().from("organizations").select("name, default_currency").eq("id", organizationId).maybeSingle()).data;
+  }
   // El precio puede estar en la categoría o en sus divisiones (cada una con su cuota, no se suman).
   const fees = [...(categories ?? []), ...(divisionFees ?? [])].map((row) => row.monthly_fee_amount).filter((fee) => fee > 0).sort((a, b) => a - b);
   return {
-    name: settings?.brand_name || organization?.name || "Tu club",
+    name: settings?.brand_name || organizationRow?.name || "Tu club",
     logoUrl: settings?.brand_logo_url ?? null,
     accentColor: settings?.brand_accent_color ?? null,
     coverUrl: settings?.cover_image_url ?? null,
@@ -185,7 +191,7 @@ export const getClubBannerData = cache(async (organizationId: string) => {
     location: settings?.location_text ?? null,
     activity: settings?.main_activity ?? null,
     description: settings?.public_description ?? null,
-    currency: organization?.default_currency ?? "ARS",
+    currency: organizationRow?.default_currency ?? "ARS",
     activeMembers: activeMembers ?? 0,
     nextDueDate: nextDue?.due_date ?? null,
     feeFrom: fees.length ? fees[0]! : null,

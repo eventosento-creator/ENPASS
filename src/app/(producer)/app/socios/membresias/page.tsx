@@ -1,3 +1,4 @@
+import { ClubPermissionArea } from "@/modules/clubs/ui/club-permission-area";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { isClubEnabled, listMembershipPlans } from "@/modules/clubs/application/queries";
@@ -14,6 +15,6 @@ export default async function MembershipPlansPage() {
     <ClubBanner organizationId={org.id}/>
     <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Membresías</h1><p className="mt-3 text-neutral-500">Planes de cobro: cuota estándar, planes familiares y becados.</p></div>
     <ClubSectionNav active="membresias"/>
-    <PlansManager organizationId={org.id} plans={plans} currency={org.default_currency}/>
+    <ClubPermissionArea role={org.clubRole} permission="dues"><PlansManager organizationId={org.id} plans={plans} currency={org.default_currency}/></ClubPermissionArea>
   </>;
 }

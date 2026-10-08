@@ -1,3 +1,4 @@
+import { ClubPermissionArea } from "@/modules/clubs/ui/club-permission-area";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { isClubEnabled, getMembershipCategories } from "@/modules/clubs/application/queries";
@@ -16,6 +17,6 @@ export default async function CategoriesPage() {
     <ClubBanner organizationId={org.id}/>
     <div><p className="eyebrow">Tu club</p><h1 className="page-title mt-2">Categorías</h1><p className="mt-3 text-neutral-500">Los distintos tipos de socio y su cuota mensual.</p></div>
     <ClubSectionNav active="categorias"/>
-    <CategoriesManager organizationId={org.id} categories={categories} currency={org.default_currency}/>
+    <ClubPermissionArea role={org.clubRole} permission="structure"><CategoriesManager organizationId={org.id} categories={categories} currency={org.default_currency}/></ClubPermissionArea>
   </>;
 }
