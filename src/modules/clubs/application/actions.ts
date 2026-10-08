@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createDueCheckout } from "./create-due-checkout";
+import { notifyClubListingRequested } from "./listing-notice";
 import { createDivisionDueCheckout } from "./create-division-due-checkout";
 import { sendDivisionDueGeneratedEmail, sendDivisionDuePaidEmail, sendDueGeneratedEmail, sendDuePaidEmail, sendMembershipWelcomeEmail } from "./membership-emails";
 import type { CustomerCandidate, MemberRow, MembershipDue } from "../domain/club";
@@ -477,6 +479,8 @@ export async function updateClubPublicListing(_: ClubActionState, formData: Form
   const parsed = listingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá los datos." };
   const supabase = await createClient();
+  // Solo se avisa a ENPASS cuando el pedido es nuevo (no al re-guardar la descripción de uno ya pendiente o aprobado).
+  const { data: current } = await supabase.from("club_settings").select("public_listing_status").eq("organization_id", parsed.data.organizationId).maybeSingle();
   const { error } = await supabase.rpc("set_club_public_listing", {
     target_org: parsed.data.organizationId,
     target_want_public: parsed.data.wantPublic === "true",
@@ -484,6 +488,7 @@ export async function updateClubPublicListing(_: ClubActionState, formData: Form
   });
   if (error) return { error: "No pudimos guardar. Probá de nuevo en unos segundos." };
   revalidatePath("/app/socios/ajustes");
+  if (parsed.data.wantPublic === "true" && current?.public_listing_status !== "pending" && current?.public_listing_status !== "approved") after(() => notifyClubListingRequested(parsed.data.organizationId, parsed.data.description ?? null));
   return { success: parsed.data.wantPublic === "true" ? "Enviado a revisión de ENPASS." : "Club dado de baja del listado público." };
 }
 

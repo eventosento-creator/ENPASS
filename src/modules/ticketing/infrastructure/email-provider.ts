@@ -145,12 +145,21 @@ export type MembershipDuePaidEmail = {
   brand?: ClubBrand;
 };
 
+export type ClubListingRequestEmail = {
+  to: string;
+  clubName: string;
+  ownerEmail: string | null;
+  description: string | null;
+  reviewUrl: string;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
   sendPromoterInvite(message: PromoterInviteEmail): Promise<void>;
   sendCollaboratorInvite(message: CollaboratorInviteEmail): Promise<void>;
   sendClubStaffInvite(message: ClubStaffInviteEmail): Promise<void>;
+  sendClubListingRequest(message: ClubListingRequestEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
   sendSaleNotification(message: SaleNotificationEmail): Promise<void>;

@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, ClubListingRequestEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
 
@@ -113,6 +113,23 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">${escapeHtml(message.inviterName)} te sumó al equipo de <strong>${escapeHtml(message.clubName)}</strong> en ENPASS${message.roleLabel ? ` como <strong>${escapeHtml(message.roleLabel)}</strong>` : ""} para ayudar con la gestión del club.</p>
         ${accessButton(message.acceptUrl, "Aceptar invitación")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Ingresá con este mismo email. El enlace es personal y expira en 7 días.</p>
+      `),
+    });
+  }
+
+  async sendClubListingRequest(message: ClubListingRequestEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Un club pidió publicarse: ${message.clubName}`,
+      text: `${message.clubName} pidió aparecer en el listado público de clubes.${message.ownerEmail ? `\nContacto: ${message.ownerEmail}` : ""}${message.description ? `\n\n${message.description}` : ""}\n\nRevisalo y aprobalo acá: ${message.reviewUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Un club pidió publicarse</h1>
+        <p style="margin:0 auto;max-width:400px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center"><strong>${escapeHtml(message.clubName)}</strong> quiere aparecer en el listado público de clubes de ENPASS.${message.ownerEmail ? ` Contacto: ${escapeHtml(message.ownerEmail)}.` : ""}</p>
+        ${message.description ? `<p style="margin:16px auto 0;max-width:400px;font-size:13px;line-height:1.6;color:#3a3a40;text-align:center;font-style:italic">“${escapeHtml(message.description)}”</p>` : ""}
+        ${accessButton(message.reviewUrl, "Revisar solicitud")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Tenés que estar con tu cuenta de administrador de ENPASS para aprobarlo.</p>
       `),
     });
   }
