@@ -711,6 +711,7 @@ export interface Database {
       create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string; target_title?: string | null; target_role?: string }; Returns: string };
       accept_club_staff_invitation: { Args: { raw_token_hash: string }; Returns: string | null };
       list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string; title: string | null; role: string }[] };
+      check_rate_limit: { Args: { target_scope: string; target_key: string; max_hits: number; window_seconds: number }; Returns: boolean };
       set_club_staff_role: { Args: { target_org: string; target_user: string; target_role: string }; Returns: undefined };
       set_club_staff_title: { Args: { target_org: string; target_user: string; target_title: string | null }; Returns: undefined };
       revoke_club_staff_invitation: { Args: { target_org: string; target_invitation: string }; Returns: undefined };

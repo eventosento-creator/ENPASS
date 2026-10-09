@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/shared/database/server";
+import { createAdminClient } from "@/shared/database/admin";
+import { allowRequest, getClientIp, RATE_LIMIT_MESSAGE } from "@/shared/lib/rate-limit";
 
 export type MembershipRequestState = { error?: string; success?: boolean };
 
@@ -18,10 +19,17 @@ const requestSchema = z.object({
 });
 
 export async function submitMembershipRequest(_: MembershipRequestState, formData: FormData): Promise<MembershipRequestState> {
+  // Campo trampa: las personas no lo ven ni lo completan; los bots que llenan todo, sí. Se responde "ok" sin guardar nada.
+  if (String(formData.get("website") ?? "").trim() !== "") return { success: true };
   const parsed = requestSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá los datos: falta algo o el email no es válido." };
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_club_membership_request", {
+  const ip = await getClientIp();
+  const email = parsed.data.email.toLowerCase();
+  const within = (await allowRequest("club_request_ip", ip, 6, 3600))
+    && (await allowRequest("club_request_email", email, 3, 3600))
+    && (await allowRequest("club_request_org", parsed.data.organizationId, 80, 3600));
+  if (!within) return { error: RATE_LIMIT_MESSAGE };
+  const { error } = await createAdminClient().rpc("submit_club_membership_request", {
     target_org: parsed.data.organizationId,
     target_category: parsed.data.categoryId,
     target_first_name: parsed.data.firstName,

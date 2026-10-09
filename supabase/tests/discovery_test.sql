@@ -1,4 +1,11 @@
 begin;
+-- Estas funciones ya no se pueden ejecutar desde afuera (solo el servidor). Para probarlas con roles de cliente,
+-- se devuelve el permiso dentro de esta transacción; el rollback final lo deshace.
+grant execute on function public.create_guest_checkout(uuid, text, text, text, text, text, jsonb) to anon, authenticated;
+grant execute on function public.create_guest_checkout(uuid, text, text, text, text, text, jsonb, uuid, uuid) to anon, authenticated;
+grant execute on function public.create_guest_checkout_attributed(uuid, text, text, text, text, text, jsonb, text) to anon, authenticated;
+grant execute on function public.create_guest_checkout_attributed(uuid, text, text, text, text, text, jsonb, text, uuid, uuid) to anon, authenticated;
+
 create extension if not exists pgtap with schema extensions;
 select plan(9);
 

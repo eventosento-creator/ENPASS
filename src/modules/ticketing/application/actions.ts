@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
+import { allowRequest, getClientIp } from "@/shared/lib/rate-limit";
 import { deliverTicketsForPaidOrder } from "./deliver-tickets";
 import { BUYER_ACCESS_RESPONSE, BUYER_SESSION_COOKIE, requestBuyerAccess, revokeBuyerSession } from "./buyer-access";
 
@@ -17,6 +18,8 @@ export async function requestBuyerAccessAction(
   const email = String(formData.get("email") ?? "");
   const next = String(formData.get("next") ?? "");
   try {
+    // Tope por IP para que no se use el formulario para llenar de mails a otras personas (la respuesta es la misma, no revela nada).
+    if (!(await allowRequest("buyer_access_ip", await getClientIp(), 15, 3600))) return { message: BUYER_ACCESS_RESPONSE };
     return await requestBuyerAccess(email, next);
   } catch {
     return { message: BUYER_ACCESS_RESPONSE };

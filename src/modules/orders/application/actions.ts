@@ -10,6 +10,7 @@ import type { ActionState } from "@/modules/identity/application/actions";
 import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
 import { cookies } from "next/headers";
+import { allowRequest, getClientIp, RATE_LIMIT_MESSAGE } from "@/shared/lib/rate-limit";
 import { BUYER_SESSION_COOKIE, getBuyerSessionEmail } from "@/modules/ticketing/application/buyer-access";
 
 export async function createCheckout(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -18,6 +19,8 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
   if (!accountEmail) return { error: "Tu sesión venció. Volvé a ingresar para comprar." };
   const parsed = checkoutSchema.safeParse({ ...Object.fromEntries(formData), email: accountEmail });
   if (!parsed.success) return { error: "Revisá tus datos y seleccioná al menos una opción." };
+  // Tope de reservas por cuenta y por IP: cada reserva retiene cupos unos minutos, así que repetirla en masa bloquearía entradas.
+  if (!(await allowRequest("checkout_account", accountEmail, 10, 3600)) || !(await allowRequest("checkout_ip", await getClientIp(), 40, 3600))) return { error: RATE_LIMIT_MESSAGE };
   const attributionSessionHash = await getPromoterAttributionSessionHash();
   const { data, error } = await createAdminClient().rpc("create_guest_checkout_attributed", {
     target_event: parsed.data.eventId, buyer_first_name: parsed.data.firstName, buyer_last_name: parsed.data.lastName,
