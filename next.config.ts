@@ -6,15 +6,16 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // Política de contenido. Next inyecta scripts y estilos en línea para hidratar la página (sin nonces), por eso 'unsafe-inline';
 // igual limita de dónde se cargan scripts/imágenes/conexiones, impide que embeban la web y fija la base de las URLs.
-// Google Analytics (etiqueta + envío de eventos) y las imágenes del storage de Supabase son los únicos orígenes externos.
+// Google Analytics (etiqueta + envío de eventos), el Pixel de Meta y las imágenes del storage de Supabase son los únicos orígenes externos.
+const metaPixelHosts = ["https://connect.facebook.net", "https://www.facebook.com"];
 const analyticsHosts = ["https://www.googletagmanager.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://*.g.doubleclick.net"];
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"} https://www.googletagmanager.com`,
+  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"} https://www.googletagmanager.com https://connect.facebook.net`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${[storageUrl?.origin, ...analyticsHosts].filter(Boolean).join(" ")}`,
+  `img-src 'self' data: blob: ${[storageUrl?.origin, ...analyticsHosts, ...metaPixelHosts].filter(Boolean).join(" ")}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${analyticsHosts.join(" ")}${isProduction ? "" : " ws: wss:"}`,
+  `connect-src 'self' ${[...analyticsHosts, ...metaPixelHosts].join(" ")}${isProduction ? "" : " ws: wss:"}`,
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
