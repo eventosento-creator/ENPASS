@@ -6,6 +6,7 @@ import { fromZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
+import { queueMetaConversion } from "@/shared/lib/meta-conversions";
 import { eventConfigurationSchema, eventInputSchema, eventUpdateSchema, pesosToMinorUnits, ticketTypeInputSchema, ticketTypeUpdateSchema } from "../domain/event";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { sendEventReminders } from "@/modules/ticketing/application/send-event-reminders";
@@ -267,6 +268,7 @@ export async function publishEvent(formData: FormData) {
     redirect(`/app/events/${eventId}?error=${encodeURIComponent(message)}`);
   }
   revalidatePath(`/app/events/${eventId}`);
+  await queueMetaConversion("evento_publicado");
   redirect(`/app/events/${eventId}?published=1`);
 }
 

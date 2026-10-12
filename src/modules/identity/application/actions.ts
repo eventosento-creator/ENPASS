@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/shared/database/admin";
 import { createClient } from "@/shared/database/server";
 import { safeProducerPath } from "@/shared/lib/navigation";
+import { queueMetaConversion } from "@/shared/lib/meta-conversions";
 import { z } from "zod";
 
 export type ActionState = { error?: string; success?: string; /** El email no tiene cuenta: la pantalla ofrece pasar a "Crear cuenta". */ suggestRegister?: boolean };
@@ -60,6 +61,7 @@ export async function register(_: ActionState, formData: FormData): Promise<Acti
   const { data, error } = await supabase.auth.signUp({ ...parsed.data, options: { emailRedirectTo: authCallback("/app") } });
   if (error) return { error: "No pudimos crear la cuenta. Es posible que ese email ya exista." };
   if (!data.session) return { success: "Te enviamos un email para confirmar la cuenta. Abrilo para continuar." };
+  await queueMetaConversion("registro");
   redirect(safeProducerPath(formData.get("next")));
 }
 
