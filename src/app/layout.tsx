@@ -18,8 +18,9 @@ export const metadata: Metadata = {
   description: "Descubrí eventos, comprá entradas u organizá tu próxima fecha con ENPASS.",
   openGraph: { type: "website", locale: "es_AR", siteName: "ENPASS", title: "ENPASS — Eventos y entradas", description: "Eventos y entradas, sin vueltas." },
   twitter: { card: "summary_large_image", title: "ENPASS — Eventos y entradas", description: "Eventos y entradas, sin vueltas." },
-  // Verificación del dominio enpass.com.ar en el Business Manager de Meta (tiene que estar en el HTML del servidor, no por JS).
-  other: { "facebook-domain-verification": "26otbnnkip3f9jze9x000d6xdu8myl" },
+  // Verificación del dominio en el Business Manager de Meta (tiene que estar en el HTML del servidor, no por JS):
+  // enpass.com.ar y www.enpass.com.ar.
+  other: { "facebook-domain-verification": ["2mcpqnu9mz7aezrrjxif0eiesy37rn", "26otbnnkip3f9jze9x000d6xdu8myl"] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
