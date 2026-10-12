@@ -6,6 +6,7 @@ import type { Customer, Event, Order, OrderItem, Payment } from "@/shared/databa
 import { getPaymentAccountAccessToken } from "./account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "../infrastructure/config";
 import { MercadoPagoProvider } from "../infrastructure/mercado-pago-provider";
+import { buildPaymentItems } from "../domain/payment-items";
 
 export async function createPaymentCheckout(orderPublicId: string) {
   const config = getMercadoPagoRuntimeConfig();
@@ -53,12 +54,8 @@ export async function createPaymentCheckout(orderPublicId: string) {
       paymentPublicId: payment.public_id,
       orderPublicId: order.public_id,
       eventName: event.name,
-      items: items.map((item) => ({
-        id: item.ticket_type_id ?? item.event_table_id ?? item.id,
-        name: `${event.name} · ${item.item_name}`,
-        quantity: item.quantity,
-        unitAmount: item.unit_price_amount,
-      })),
+      // Con cupón, cada línea se cobra con su descuento: la suma de ítems + cargo tiene que ser igual al total de la orden.
+      items: buildPaymentItems(items, event.name),
       grossAmount: payment.gross_amount,
       serviceFeeAmount: payment.service_fee_amount,
       platformFeeAmount: payment.platform_fee_amount,

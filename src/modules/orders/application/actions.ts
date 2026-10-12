@@ -11,6 +11,7 @@ import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/applic
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
 import { cookies } from "next/headers";
 import { allowRequest, getClientIp, RATE_LIMIT_MESSAGE } from "@/shared/lib/rate-limit";
+import { promotionCodeFromError, promotionErrorMessage } from "@/modules/promotions/domain/promotions";
 import { BUYER_SESSION_COOKIE, getBuyerSessionEmail } from "@/modules/ticketing/application/buyer-access";
 
 export async function createCheckout(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -22,13 +23,22 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
   // Tope de reservas por cuenta y por IP: cada reserva retiene cupos unos minutos, así que repetirla en masa bloquearía entradas.
   if (!(await allowRequest("checkout_account", accountEmail, 10, 3600)) || !(await allowRequest("checkout_ip", await getClientIp(), 40, 3600))) return { error: RATE_LIMIT_MESSAGE };
   const attributionSessionHash = await getPromoterAttributionSessionHash();
-  const { data, error } = await createAdminClient().rpc("create_guest_checkout_attributed", {
+  const checkoutArgs = {
     target_event: parsed.data.eventId, buyer_first_name: parsed.data.firstName, buyer_last_name: parsed.data.lastName,
     buyer_email: parsed.data.email, buyer_phone: parsed.data.phone, buyer_document: parsed.data.document,
     selections: parsed.data.selections, target_attribution_session_hash: attributionSessionHash,
     accepted_terms_document_id: parsed.data.acceptedTermsDocumentId,
     accepted_refund_policy_document_id: parsed.data.acceptedRefundPolicyDocumentId,
-  });
+  };
+  // Con código: la base valida el cupón, reserva el uso y aplica el descuento en la misma transacción que crea la orden (el precio nunca lo manda el navegador).
+  const promotionCode = parsed.data.promotionCode;
+  const { data, error } = promotionCode
+    ? await createAdminClient().rpc("create_guest_checkout_promoted", { ...checkoutArgs, target_promotion_code: promotionCode })
+    : await createAdminClient().rpc("create_guest_checkout_attributed", checkoutArgs);
+  if (error && promotionCode) {
+    const code = promotionCodeFromError(error.message);
+    if (code) return { error: promotionErrorMessage(code) };
+  }
   const order = data?.[0];
   if (error || !order) return { error: "No pudimos completar la reserva. Es posible que esa disponibilidad ya haya cambiado." };
   const admin = createAdminClient();

@@ -16,6 +16,7 @@ export const checkoutSchema = z.object({
   }),
   acceptedTermsDocumentId: z.uuid(),
   acceptedRefundPolicyDocumentId: z.uuid(),
+  promotionCode: z.string().trim().max(40).optional(),
   acceptedTerms: z.literal("on", { error: "Debés aceptar los Términos y la Política de Reembolsos" }),
 });
 

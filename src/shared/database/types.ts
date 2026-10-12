@@ -144,6 +144,9 @@ export type Order = {
   pos_idempotency_key: string | null;
   created_by: string | null;
   is_courtesy: boolean;
+  promotion_id: string | null;
+  list_subtotal_amount: number | null;
+  discount_amount: number;
   created_at: string;
   updated_at: string;
 };
@@ -162,8 +165,23 @@ export type OrderItem = {
   quantity: number;
   unit_price_amount: number;
   line_total_amount: number;
+  discount_amount: number;
   currency: string;
   created_at: string;
+};
+
+export type PromotionKind = "percent" | "fixed" | "free" | "two_for_one" | "special_price";
+export type PromotionRedemptionStatus = "reserved" | "confirmed" | "released" | "refunded";
+export type Promotion = {
+  id: string; organization_id: string; name: string; code: string; description: string | null; kind: PromotionKind;
+  percent_bps: number | null; fixed_amount: number | null; special_price_amount: number | null; active: boolean; all_events: boolean;
+  starts_at: string | null; ends_at: string | null; max_total_uses: number | null; max_uses_per_buyer: number | null;
+  max_tickets_benefited: number | null; min_tickets: number; max_discount_amount: number | null; channels: string[];
+  stackable: boolean; promoter_id: string | null; campaign: string | null; created_by: string | null; created_at: string; updated_at: string;
+};
+export type PromotionStatus = "active" | "inactive" | "expired" | "scheduled" | "exhausted";
+export type PromotionOverviewRow = Omit<Promotion, "organization_id" | "description" | "channels" | "stackable" | "promoter_id" | "campaign" | "created_by" | "updated_at"> & {
+  status: PromotionStatus; uses_confirmed: number; uses_pending: number; uses_refunded: number; tickets_benefited: number; discount_amount: number; sales_amount: number; buyers: number;
 };
 
 export type PromoterStatus = "active" | "inactive";
@@ -527,6 +545,10 @@ export interface Database {
       customers: { Row: Customer; Insert: Omit<Customer, "id" | "created_at"> & { id?: string; created_at?: string }; Update: Partial<Customer>; Relationships: [] };
       orders: { Row: Order; Insert: never; Update: never; Relationships: [] };
       order_items: { Row: OrderItem; Insert: never; Update: never; Relationships: [] };
+      promotions: { Row: Promotion; Insert: never; Update: never; Relationships: [] };
+      promotion_events: { Row: { promotion_id: string; event_id: string }; Insert: never; Update: never; Relationships: [] };
+      promotion_ticket_types: { Row: { promotion_id: string; ticket_type_id: string }; Insert: never; Update: never; Relationships: [] };
+      promotion_redemptions: { Row: { id: string; promotion_id: string; organization_id: string; event_id: string; order_id: string; buyer_email: string; status: PromotionRedemptionStatus; tickets_benefited: number; list_subtotal_amount: number; discount_amount: number; created_at: string; confirmed_at: string | null; released_at: string | null; refunded_at: string | null; release_reason: string | null }; Insert: never; Update: never; Relationships: [] };
       promoters: { Row: Promoter; Insert: never; Update: never; Relationships: [] };
       event_promoters: { Row: EventPromoter; Insert: never; Update: never; Relationships: [] };
       promoter_commission_rules: { Row: PromoterCommissionRule; Insert: never; Update: never; Relationships: [] };
@@ -711,6 +733,15 @@ export interface Database {
       create_club_staff_invitation: { Args: { target_org: string; target_email: string; target_token_hash: string; target_title?: string | null; target_role?: string }; Returns: string };
       accept_club_staff_invitation: { Args: { raw_token_hash: string }; Returns: string | null };
       list_club_team: { Args: { target_org: string }; Returns: { kind: string; ref_id: string; email: string; created_at: string; title: string | null; role: string }[] };
+      preview_promotion: { Args: { target_event: string; target_code: string; selections: unknown; buyer_email: string }; Returns: unknown };
+      create_guest_checkout_promoted: { Args: { target_event: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; buyer_phone: string; buyer_document: string; selections: unknown; target_attribution_session_hash: string | null; accepted_terms_document_id: string; accepted_refund_policy_document_id: string; target_promotion_code: string }; Returns: { order_public_id: string; expires_at: string }[] };
+      upsert_promotion: { Args: { target_org: string; target_id: string | null; target_name: string; target_code: string; target_description: string | null; target_kind: string; target_percent_bps: number | null; target_fixed_amount: number | null; target_special_price_amount: number | null; target_active: boolean; target_all_events: boolean; target_event_ids: string[]; target_ticket_type_ids: string[]; target_starts_at: string | null; target_ends_at: string | null; target_max_total_uses: number | null; target_max_uses_per_buyer: number | null; target_max_tickets_benefited: number | null; target_min_tickets: number; target_max_discount_amount: number | null }; Returns: string };
+      set_promotion_active: { Args: { target_org: string; target_id: string; target_active: boolean }; Returns: undefined };
+      duplicate_promotion: { Args: { target_org: string; target_id: string }; Returns: string };
+      get_promotions_overview: { Args: { target_org: string; target_event?: string | null; target_from?: string | null; target_to?: string | null }; Returns: PromotionOverviewRow[] };
+      get_promotions_summary: { Args: { target_org: string; target_event?: string | null; target_from?: string | null; target_to?: string | null }; Returns: { active_promotions: number; uses_confirmed: number; tickets_benefited: number; discount_amount: number; sales_amount: number; buyers: number }[] };
+      get_promotion_timeline: { Args: { target_org: string; target_promotion: string }; Returns: { day: string; uses: number; discount_amount: number }[] };
+      list_promotion_redemptions: { Args: { target_org: string; target_promotion?: string | null; target_status?: string | null; target_limit?: number }; Returns: { redemption_id: string; created_at: string; status: PromotionRedemptionStatus; code: string; order_public_id: string; event_name: string; buyer_email: string; buyer_name: string; tickets_benefited: number; list_subtotal_amount: number; discount_amount: number; order_total_amount: number; payment_reference: string | null }[] };
       check_rate_limit: { Args: { target_scope: string; target_key: string; max_hits: number; window_seconds: number }; Returns: boolean };
       set_club_staff_role: { Args: { target_org: string; target_user: string; target_role: string }; Returns: undefined };
       set_club_staff_title: { Args: { target_org: string; target_user: string; target_title: string | null }; Returns: undefined };
