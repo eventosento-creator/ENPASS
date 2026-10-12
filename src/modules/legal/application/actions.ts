@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/shared/database/admin";
+import { allowRequest, getClientIp } from "@/shared/lib/rate-limit";
 import { generateOpaqueToken, hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { SmtpEmailProvider } from "@/modules/ticketing/infrastructure/smtp-email-provider";
 import { legalLog } from "@/shared/lib/structured-log";
@@ -14,6 +15,8 @@ export async function startArrepentimiento(_: ActionState, formData: FormData): 
   const provider = new SmtpEmailProvider();
   const parsed = startArrepentimientoSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá el email y el código de tu compra." };
+  // Tope por IP: la respuesta es la misma exista o no la compra, así que no se revela nada al cortar.
+  if (!(await allowRequest("arrepentimiento_ip", await getClientIp(), 10, 3600))) return { success: GENERIC_SUCCESS };
 
   const rawToken = generateOpaqueToken();
   const tokenHash = hashOpaqueToken(rawToken);

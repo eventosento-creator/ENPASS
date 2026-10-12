@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/shared/database/admin";
+import { allowRequest, getClientIp, RATE_LIMIT_MESSAGE } from "@/shared/lib/rate-limit";
 import { hashOpaqueToken } from "@/modules/ticketing/domain/credentials";
 import { SmtpEmailProvider } from "@/modules/ticketing/infrastructure/smtp-email-provider";
 import { createMemberQrPayload } from "../infrastructure/member-qr";
@@ -21,6 +22,8 @@ export async function loginMember(_: MemberPortalState, formData: FormData): Pro
   const identifier = String(formData.get("identifier") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!slug.success || !identifier || !password) return { error: "Completá tu DNI o mail y tu contraseña." };
+  // Tope por IP además del bloqueo por cuenta (5 fallos): frena probar contraseñas contra muchos socios desde un mismo lugar.
+  if (!(await allowRequest("member_login_ip", await getClientIp(), 30, 600))) return { error: RATE_LIMIT_MESSAGE };
   const club = await getPortalClub(slug.data);
   if (!club) return { error: "No encontramos ese club." };
   const credential = createMemberSessionCredential();
@@ -42,6 +45,8 @@ export async function requestMemberPassword(_: MemberPortalState, formData: Form
   const slug = slugSchema.safeParse(formData.get("slug"));
   const identifier = String(formData.get("identifier") ?? "").trim();
   if (!slug.success || !identifier) return { error: "Ingresá tu DNI o tu mail." };
+  // Tope por IP: evita usar el formulario para llenar de mails a otras personas. La respuesta no revela nada.
+  if (!(await allowRequest("member_password_ip", await getClientIp(), 10, 3600))) return { success: GENERIC_ACCESS_MESSAGE };
   const club = await getPortalClub(slug.data);
   if (!club) return { error: "No encontramos ese club." };
   const raw = randomBytes(32).toString("base64url");

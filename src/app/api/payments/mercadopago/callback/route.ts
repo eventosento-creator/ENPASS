@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     paymentLog("oauth.connect.failed", { organizationId, errorMessage });
-    return clearOAuthCookies(NextResponse.redirect(destination("connection-error", errorMessage)));
+    // El detalle (puede traer la respuesta cruda de Mercado Pago) queda solo en los logs; en pantalla se muestra únicamente fuera de producción.
+    return clearOAuthCookies(NextResponse.redirect(destination("connection-error", process.env.NODE_ENV === "production" ? undefined : errorMessage)));
   }
 }
 
