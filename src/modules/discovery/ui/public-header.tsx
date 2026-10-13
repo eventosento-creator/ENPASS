@@ -24,7 +24,7 @@ export function PublicHeader({ isAuthenticated = false }: { isAuthenticated?: bo
       <div className="flex items-center justify-self-end gap-1.5">
         {isAuthenticated
           ? <Link aria-label="Ir a mi panel" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-strong)] px-3 text-[13px] font-bold transition hover:border-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)]" href="/app"><LayoutDashboard aria-hidden size={15}/><span className="hidden md:inline">Ir al panel</span></Link>
-          : <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-strong)] px-3 text-[13px] font-bold transition hover:border-[var(--accent)]" href="/login"><LogIn aria-hidden size={15}/><span className="hidden md:inline">Ingresar</span></Link>}
+          : <Link aria-label="Ingresar a mi cuenta" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-strong)] px-3 text-[13px] font-bold transition hover:border-[var(--accent)]" href={"/ingresar" as never}><LogIn aria-hidden size={15}/><span className="hidden md:inline">Ingresar</span></Link>}
         <ThemeToggle className="rounded-full"/>
       </div>
     </div>
