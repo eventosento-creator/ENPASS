@@ -1,4 +1,5 @@
-import { CheckCircle2, LogOut, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { BadgeCheck, CheckCircle2, LogOut, ShieldAlert } from "lucide-react";
 import { getMemberDues, getMemberPendingDues, getMemberProfile } from "../application/member-portal";
 import { logoutMember, refreshMemberQr } from "../application/member-portal-actions";
 import { MemberQrCard } from "./member-qr-card";
@@ -43,6 +44,7 @@ export async function MemberHub({ slug }: { slug: string }) {
       </div>}
     </div>
 
+    <Link href={`/mi-club/${slug}/carnet` as never} className="btn btn-primary mt-6 w-full"><BadgeCheck size={18}/>Ver mi carnet digital</Link>
     {qr && <div className="mt-6"><MemberQrCard slug={slug} initialPayload={qr} blocked={blocked}/></div>}
     <PaymentHistory entries={dues} currency="ARS" description="Tus pagos: cuota del club y divisiones."/>
   </section>;
