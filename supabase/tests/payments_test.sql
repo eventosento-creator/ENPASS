@@ -10,7 +10,7 @@ create extension if not exists pgtap with schema extensions;
 select plan(28);
 
 update public.ticket_holds set expires_at = now() - interval '1 second' where status = 'active';
-update public.organizations set platform_fee_bps = 300 where id = '22222222-2222-4222-8222-222222222222';
+update public.organizations set platform_fee_bps = 300, service_fee_bps = 300 where id = '22222222-2222-4222-8222-222222222222';
 
 insert into public.payment_accounts (
   id, organization_id, provider, provider_account_id, access_token_encrypted,
