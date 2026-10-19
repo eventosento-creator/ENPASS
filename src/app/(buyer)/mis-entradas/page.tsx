@@ -36,7 +36,7 @@ export default async function MyTicketsPage({ searchParams }: { searchParams: Pr
     {groups.length > 0 ? <div className="grid gap-10">
       {upcomingGroups.length > 0 && <section><h2 className="mb-4 text-sm font-black uppercase tracking-[.12em] text-neutral-500">Próximos</h2><div className="grid gap-3">{upcomingGroups.map((group) => <EventGroupCard key={group.eventSlug} group={group}/>)}</div></section>}
       {pastGroups.length > 0 && <section><h2 className="mb-4 text-sm font-black uppercase tracking-[.12em] text-neutral-500">Pasados</h2><div className="grid gap-3">{pastGroups.map((group) => <EventGroupCard key={group.eventSlug} group={group}/>)}</div></section>}
-    </div> : <div className="card p-8 text-center"><Ticket className="mx-auto text-neutral-600" size={32}/><h2 className="mt-4 text-xl font-black">Todavía no hay accesos emitidos</h2><p className="mt-2 text-sm text-neutral-500">Si tu pago ya fue confirmado, volvé a intentar en unos instantes.</p></div>}
+    </div> : <div className="card p-8 text-center"><Ticket className="mx-auto text-neutral-600" size={32}/><h2 className="mt-4 text-xl font-black">Todavía no tenés entradas</h2><p className="mt-2 text-sm text-neutral-500">Ingresaste como <b>{accountEmail}</b>. Acá aparecen las entradas compradas con este email. Si recién pagaste, volvé a intentar en unos instantes.</p><Link href="/eventos" className="btn btn-primary mt-6 w-full">Ver eventos y comprar</Link></div>}
   </section></main>;
 }
 

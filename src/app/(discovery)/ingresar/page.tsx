@@ -15,7 +15,7 @@ export default function EnterPage() {
     <div className="mt-8 grid max-w-2xl gap-3">
       <Link href={"/mis-entradas" as never} className={optionClass}>
         <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--surface-strong)]"><Ticket size={22}/></span>
-        <span className="min-w-0 flex-1"><b className="block text-lg font-black">Compré entradas</b><span className="text-sm text-neutral-500">Mirá tus entradas y mostrá el QR en la puerta.</span></span>
+        <span className="min-w-0 flex-1"><b className="block text-lg font-black">Ya compré entradas</b><span className="text-sm text-neutral-500">Mirá tus entradas y mostrá el QR en la puerta.</span></span>
         <ArrowRight size={18} className="shrink-0 text-neutral-500"/>
       </Link>
       <Link href={"/ingresar/socio" as never} className={optionClass}>
@@ -29,6 +29,6 @@ export default function EnterPage() {
         <ArrowRight size={18} className="shrink-0 text-neutral-500"/>
       </Link>
     </div>
-
+    <p className="mt-6 max-w-2xl text-sm text-neutral-500">¿Querés comprar entradas? <Link href="/eventos" className="font-bold underline">Elegí un evento</Link>: te pedimos el email recién al comprar.</p>
   </main>;
 }
