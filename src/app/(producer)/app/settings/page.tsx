@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CreditCard, ExternalLink, MapPin, Package, ShieldCheck, UserRoundCheck, Unplug } from "lucide-react";
+import { CreditCard, ExternalLink, Landmark, MapPin, Package, ShieldCheck, UserRoundCheck, Unplug } from "lucide-react";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { disconnectMercadoPago } from "@/modules/payments/application/actions";
 import { ensurePaymentAccountEmail } from "@/modules/payments/application/account-credentials";
@@ -16,6 +16,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const organization = await getCurrentOrganization();
   if (!organization) redirect("/app/onboarding");
   const [{ payment: notice, detail }, supabase, clubEnabled] = await Promise.all([searchParams, createClient(), isClubEnabled(organization.id)]);
+  const { data: transferOrg } = await supabase.from("organizations").select("ticket_transfer_enabled").eq("id", organization.id).maybeSingle();
   const { data } = await supabase.rpc("get_payment_account_status", { target_organization: organization.id });
   const account = data?.[0];
   const environment = paymentEnvironment();
@@ -37,6 +38,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <section className="card mt-4 overflow-hidden">
       <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={UserRoundCheck} tone="violet" size={11}/><div><h2 className="font-bold">Club</h2><p className="mt-1 text-sm text-neutral-500">Socios, categorías y cobro de cuotas — pensado para clubes.{clubEnabled && <> El nombre, la identidad y la publicación se editan en <Link className="font-bold underline" href={"/app/socios/ajustes" as never}>Club → Ajustes → Datos del club</Link>.</>}</p></div></div><form action={toggleClubEnabled}><input type="hidden" name="organizationId" value={organization.id}/><input type="hidden" name="enabled" value={clubEnabled ? "false" : "true"}/><SubmitButton className={`btn w-full sm:w-auto ${clubEnabled ? "btn-ghost" : "btn-secondary"}`}>{clubEnabled ? "Desactivar módulo" : "Activar módulo"}</SubmitButton></form></div>
     </section>
+    {transferOrg?.ticket_transfer_enabled && ["owner", "admin"].includes(organization.role) && <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={Landmark} tone="blue" size={11}/><div><h2 className="font-bold">Liquidaciones</h2><p className="mt-1 text-sm text-neutral-500">Lo cobrado por transferencia, lo que ENPASS te debe y a dónde te lo enviamos.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href={"/app/settings/liquidaciones" as never}>Ver liquidaciones</Link></section>}
     {["owner", "admin"].includes(organization.role) && <section className="card mt-4 p-5 sm:p-7"><h2 className="mb-4 text-lg font-black">Nombre del espacio</h2><RenameOrganizationForm organizationId={organization.id} name={organization.name}/></section>}
   </div>;
 }

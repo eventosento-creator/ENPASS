@@ -56,3 +56,36 @@ export async function setTicketTransfer(formData: FormData) {
   await supabase.rpc("set_ticket_transfer_enabled", { target_org: organizationId.data, target_enabled: formData.get("enabled") === "true" });
   revalidatePath("/app/admin/transferencias");
 }
+
+const payoutDone = (code: string) => redirect(`/app/admin/liquidaciones?r=${code}` as never);
+
+/** ENPASS arma la liquidación de un productor con lo cobrado por transferencia. */
+export async function createTransferPayout(formData: FormData) {
+  const organizationId = z.string().uuid().safeParse(formData.get("organizationId"));
+  if (!organizationId.success) return payoutDone("invalid");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_transfer_payout", { target_org: organizationId.data, target_include_upcoming: formData.get("includeUpcoming") === "on" });
+  revalidatePath("/app/admin/liquidaciones");
+  if (!error) return payoutDone("created");
+  return payoutDone(error.message.includes("PAYOUT_DETAILS_REQUIRED") ? "no_details" : error.message.includes("NOTHING_TO_SETTLE") ? "nothing" : "error");
+}
+
+/** ENPASS hizo la transferencia al productor: se registra con el comprobante. */
+export async function markTransferPayoutPaid(formData: FormData) {
+  const payoutId = z.string().uuid().safeParse(formData.get("payoutId"));
+  if (!payoutId.success) return payoutDone("invalid");
+  const reference = String(formData.get("reference") ?? "").trim().slice(0, 200) || null;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_transfer_payout_paid", { target_payout: payoutId.data, target_reference: reference });
+  revalidatePath("/app/admin/liquidaciones");
+  return payoutDone(error ? "error" : "paid");
+}
+
+export async function cancelTransferPayout(formData: FormData) {
+  const payoutId = z.string().uuid().safeParse(formData.get("payoutId"));
+  if (!payoutId.success) return payoutDone("invalid");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_transfer_payout", { target_payout: payoutId.data });
+  revalidatePath("/app/admin/liquidaciones");
+  return payoutDone(error ? "error" : "cancelled");
+}
