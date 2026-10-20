@@ -5,7 +5,7 @@ export type Organization = {
   service_fee_bps: number; fee_payer: "buyer" | "producer" | "mixed";
   platform_fee_bps: number; table_service_fee_bps: number | null;
   courtesy_issue_cost_amount: number; courtesy_checkin_cost_amount: number;
-  club_dues_fee_bps: number; club_dues_mp_fee_bps: number; club_collection_mode: "club_account" | "enpass";
+  club_dues_fee_bps: number; club_dues_mp_fee_bps: number; club_collection_mode: "club_account" | "enpass"; ticket_transfer_enabled: boolean;
 };
 export type Venue = {
   id: string; organization_id: string; name: string; address: string; city: string;
@@ -324,6 +324,10 @@ export type Payment = {
   order_id: string;
   payment_account_id: string | null;
   provider: "mercado_pago" | "manual";
+  transfer_proof_path: string | null;
+  transfer_proof_uploaded_at: string | null;
+  transfer_reviewed_at: string | null;
+  transfer_rejection_reason: string | null;
   provider_preference_id: string | null;
   provider_payment_id: string | null;
   idempotency_key: string;
@@ -763,6 +767,14 @@ export interface Database {
       get_club_report: { Args: { target_org: string; p_from: string; p_to: string }; Returns: unknown };
       set_club_payout_details: { Args: { target_org: string; target_holder: string | null; target_cuit: string | null; target_alias: string | null; target_cbu: string | null }; Returns: undefined };
       set_club_collection_mode: { Args: { target_org: string; target_mode: string }; Returns: undefined };
+      set_platform_transfer_details: { Args: { target_alias: string; target_cbu: string; target_holder: string; target_cuit: string; target_bank: string }; Returns: undefined };
+      get_platform_transfer_details: { Args: Record<string, never>; Returns: { transfer_alias: string | null; transfer_cbu: string | null; transfer_holder: string | null; transfer_cuit: string | null; transfer_bank: string | null }[] };
+      set_ticket_transfer_enabled: { Args: { target_org: string; target_enabled: boolean }; Returns: undefined };
+      start_transfer_payment: { Args: { target_order_public_id: string }; Returns: { payment_public_id: string; payment_status: PaymentStatus; total_amount: number; currency: string; expires_at: string }[] };
+      get_transfer_instructions: { Args: { target_order_public_id: string }; Returns: { available: boolean; payment_public_id: string | null; payment_status: PaymentStatus | null; proof_uploaded: boolean; rejection_reason: string | null; transfer_alias: string | null; transfer_cbu: string | null; transfer_holder: string | null; transfer_cuit: string | null; transfer_bank: string | null }[] };
+      submit_transfer_proof: { Args: { target_order_public_id: string; target_proof_path: string }; Returns: undefined };
+      review_transfer_payment: { Args: { target_payment_public_id: string; target_approve: boolean; target_reason?: string | null }; Returns: string };
+      list_transfer_payments: { Args: { target_status?: string; target_limit?: number }; Returns: { payment_public_id: string; order_public_id: string; status: PaymentStatus; event_name: string; organization_name: string; buyer_name: string | null; buyer_email: string | null; buyer_document: string | null; total_amount: number; service_fee_amount: number; currency: string; proof_path: string | null; proof_uploaded_at: string | null; created_at: string; reviewed_at: string | null; rejection_reason: string | null; order_status: OrderStatus }[] };
       admin_club_settlement_summary: { Args: Record<string, never>; Returns: { organization_id: string; name: string; collection_mode: string; fee_bps: number; payments_count: number; owed_amount: number; service_fee_amount: number; processor_fee_amount: number; has_payout_details: boolean }[] };
       create_club_payout: { Args: { target_org: string; target_up_to: string }; Returns: string };
       mark_club_payout_paid: { Args: { target_payout: string; target_method: string; target_reference: string | null }; Returns: undefined };

@@ -153,6 +153,22 @@ export type ClubListingRequestEmail = {
   reviewUrl: string;
 };
 
+export type TransferReviewRequestEmail = {
+  to: string;
+  eventName: string;
+  buyerName: string;
+  buyerEmail: string;
+  amountLabel: string;
+  reviewUrl: string;
+};
+
+export type TransferRejectedEmail = {
+  to: string;
+  eventName: string;
+  reason: string | null;
+  orderUrl: string;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
@@ -160,6 +176,8 @@ export interface EmailProvider {
   sendCollaboratorInvite(message: CollaboratorInviteEmail): Promise<void>;
   sendClubStaffInvite(message: ClubStaffInviteEmail): Promise<void>;
   sendClubListingRequest(message: ClubListingRequestEmail): Promise<void>;
+  sendTransferReviewRequest(message: TransferReviewRequestEmail): Promise<void>;
+  sendTransferRejected(message: TransferRejectedEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
   sendSaleNotification(message: SaleNotificationEmail): Promise<void>;

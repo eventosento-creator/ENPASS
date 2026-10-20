@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, ClubListingRequestEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, ClubListingRequestEmail, TransferRejectedEmail, TransferReviewRequestEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
 
@@ -130,6 +130,39 @@ export class SmtpEmailProvider implements EmailProvider {
         ${message.description ? `<p style="margin:16px auto 0;max-width:400px;font-size:13px;line-height:1.6;color:#3a3a40;text-align:center;font-style:italic">“${escapeHtml(message.description)}”</p>` : ""}
         ${accessButton(message.reviewUrl, "Revisar solicitud")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Tenés que estar con tu cuenta de administrador de ENPASS para aprobarlo.</p>
+      `),
+    });
+  }
+
+  async sendTransferReviewRequest(message: TransferReviewRequestEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `Transferencia para revisar: ${message.eventName}`,
+      text: `${message.buyerName} (${message.buyerEmail}) subió el comprobante de una transferencia de ${message.amountLabel} por ${message.eventName}.\n\nRevisala acá: ${message.reviewUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Transferencia para revisar</h1>
+        <p style="margin:0 auto;max-width:400px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center"><strong>${escapeHtml(message.buyerName)}</strong> (${escapeHtml(message.buyerEmail)}) subió el comprobante de <strong>${escapeHtml(message.amountLabel)}</strong> por <strong>${escapeHtml(message.eventName)}</strong>.</p>
+        ${accessButton(message.reviewUrl, "Revisar transferencia")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Compará el comprobante con el extracto del banco antes de aprobar.</p>
+      `),
+    });
+  }
+
+  async sendTransferRejected(message: TransferRejectedEmail) {
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: "No pudimos confirmar tu transferencia",
+      text: `No pudimos confirmar tu transferencia por ${message.eventName}.${message.reason ? `\nMotivo: ${message.reason}` : ""}\n\nPodés volver a intentarlo mientras tu reserva siga activa: ${message.orderUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">No pudimos confirmar tu transferencia</h1>
+        <p style="margin:0 auto;max-width:400px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Revisamos el comprobante de tu compra para <strong>${escapeHtml(message.eventName)}</strong> y no pudimos confirmar el pago.</p>
+        ${message.reason ? `<p style="margin:16px auto 0;max-width:400px;font-size:13px;line-height:1.6;color:#3a3a40;text-align:center">Motivo: ${escapeHtml(message.reason)}</p>` : ""}
+        ${accessButton(message.orderUrl, "Volver a intentarlo")}
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Tu reserva sigue activa por un rato. Si ya pagaste, escribinos a enpass.gf@gmail.com con tu comprobante.</p>
       `),
     });
   }
