@@ -27,7 +27,7 @@ export async function notifyTransferReviewRequested(orderPublicId: string) {
       buyerName: customer ? `${customer.first_name} ${customer.last_name}`.trim() : "Un comprador",
       buyerEmail: customer?.email ?? "",
       amountLabel: formatMoney(order.total_amount, order.currency),
-      reviewUrl: new URL("/app/admin/transferencias", appUrl()).toString(),
+      reviewUrl: new URL("/admin/transferencias", appUrl()).toString(),
     });
   } catch (error) {
     paymentLog("transfer.review_notice.failed", { orderId: orderPublicId, message: error instanceof Error ? error.message : String(error) });

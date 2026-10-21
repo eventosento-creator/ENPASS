@@ -14,7 +14,7 @@ import { OnboardingChecklist, type OnboardingStep } from "@/modules/organization
 export default async function DashboardPage() {
   const organization = await getCurrentOrganization();
   if (!organization) {
-    if (await isPlatformAdmin()) redirect("/app/admin/organizations" as never);
+    if (await isPlatformAdmin()) redirect("/admin" as never);
     const collaboratorEventIds = await getCollaboratorEventIds();
     redirect(collaboratorEventIds.length > 0 ? `/app/events/${collaboratorEventIds[0]}` : "/app/onboarding");
   }

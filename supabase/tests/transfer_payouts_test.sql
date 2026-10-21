@@ -6,6 +6,7 @@ select plan(25);
 update public.ticket_holds set expires_at = now() - interval '1 second' where status = 'active';
 update public.ticket_types set quantity = 5000 where event_id = '44444444-4444-4444-8444-444444444444';
 update public.events set capacity = 5000 where id = '44444444-4444-4444-8444-444444444444';
+update public.events set doors_open_at = null, starts_at = now() + interval '10 days', ends_at = null where id = '44444444-4444-4444-8444-444444444444';
 update public.ticket_types set sale_phase_id = null, sort_order = 0 where event_id = '44444444-4444-4444-8444-444444444444';
 update public.organizations set service_fee_bps = 1000, ticket_transfer_enabled = true where id = '22222222-2222-4222-8222-222222222222';
 update public.platform_settings set transfer_alias = 'enpass.cobros', transfer_cbu = '0070310730004033310755' where id;

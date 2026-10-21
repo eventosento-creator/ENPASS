@@ -21,7 +21,7 @@ export async function notifyClubListingRequested(organizationId: string, descrip
       clubName: organization?.name ?? "Un club",
       ownerEmail,
       description: description?.trim() || null,
-      reviewUrl: new URL("/app/admin/clubs", appUrl).toString(),
+      reviewUrl: new URL("/admin/clubes/gestion", appUrl).toString(),
     });
     collaboratorLog("club_listing.request.email_sent", { organizationId });
   } catch (error) {

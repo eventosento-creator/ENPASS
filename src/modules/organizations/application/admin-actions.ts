@@ -17,7 +17,7 @@ export async function viewOrganizationAsAdmin(formData: FormData) {
 
 export async function exitAdminView() {
   await clearAdminViewOrgId();
-  redirect("/app/admin/organizations" as never);
+  redirect("/admin/productores" as never);
 }
 
 export async function reviewClubListing(formData: FormData) {
@@ -30,7 +30,7 @@ export async function reviewClubListing(formData: FormData) {
     target_org: organizationId, target_approve: approve,
     target_rejection_reason: typeof rejectionReason === "string" ? rejectionReason || null : null,
   });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 export type ReconcileState = { error?: string; success?: string };
@@ -57,7 +57,7 @@ export async function setClubDuesFee(formData: FormData) {
   if (typeof organizationId !== "string" || !Number.isFinite(percent) || percent < 0 || percent > 50) return;
   const supabase = await createClient();
   await supabase.rpc("set_club_dues_fee", { target_org: organizationId, target_bps: Math.round(percent * 100) });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 /** Define quién cobra las cuotas del club: su propia cuenta de Mercado Pago o la cuenta de ENPASS. */
@@ -67,7 +67,7 @@ export async function setClubCollectionMode(formData: FormData) {
   if (typeof organizationId !== "string" || (mode !== "club_account" && mode !== "enpass")) return;
   const supabase = await createClient();
   await supabase.rpc("set_club_collection_mode", { target_org: organizationId, target_mode: mode });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 /** Liquidación mensual: junta los pagos cobrados por ENPASS hasta hoy y arma lo que se le entrega al club. */
@@ -76,7 +76,7 @@ export async function createClubPayout(formData: FormData) {
   if (typeof organizationId !== "string") return;
   const supabase = await createClient();
   await supabase.rpc("create_club_payout", { target_org: organizationId, target_up_to: new Date().toISOString() });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 export async function markClubPayoutPaid(formData: FormData) {
@@ -85,7 +85,7 @@ export async function markClubPayoutPaid(formData: FormData) {
   if (typeof payoutId !== "string") return;
   const supabase = await createClient();
   await supabase.rpc("mark_club_payout_paid", { target_payout: payoutId, target_method: "manual", target_reference: typeof reference === "string" ? reference : null });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 export async function cancelClubPayout(formData: FormData) {
@@ -93,7 +93,7 @@ export async function cancelClubPayout(formData: FormData) {
   if (typeof payoutId !== "string") return;
   const supabase = await createClient();
   await supabase.rpc("cancel_club_payout", { target_payout: payoutId });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
 
 /** Estimación (en % del total cobrado) de la comisión de Mercado Pago que ENPASS absorbe restándola de su cargo en las cuotas. */
@@ -103,5 +103,5 @@ export async function setClubDuesMpFee(formData: FormData) {
   if (typeof organizationId !== "string" || !Number.isFinite(percent) || percent < 0 || percent > 20) return;
   const supabase = await createClient();
   await supabase.rpc("set_club_dues_mp_fee", { target_org: organizationId, target_bps: Math.round(percent * 100) });
-  revalidatePath("/app/admin/clubs");
+  revalidatePath("/admin/clubes/gestion");
 }
