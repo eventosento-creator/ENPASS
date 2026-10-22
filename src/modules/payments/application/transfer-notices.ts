@@ -55,3 +55,26 @@ export async function notifyTransferRejected(orderPublicId: string, reason: stri
     paymentLog("transfer.rejected_notice.failed", { orderId: orderPublicId, message: error instanceof Error ? error.message : String(error) });
   }
 }
+
+// Le avisa al productor (dueños y administradores de la cuenta) que ENPASS le pagó una liquidación.
+export async function notifyPayoutPaid(payoutId: string) {
+  try {
+    const admin = createAdminClient();
+    const { data: payout } = await admin.from("transfer_payouts").select("organization_id, amount, currency, orders_count, reference").eq("id", payoutId).maybeSingle();
+    if (!payout) return;
+    const [{ data: organization }, { data: members }] = await Promise.all([
+      admin.from("organizations").select("name").eq("id", payout.organization_id).maybeSingle(),
+      admin.from("organization_members").select("user_id").eq("organization_id", payout.organization_id).in("role", ["owner", "admin"]),
+    ]);
+    const emails = (await Promise.all((members ?? []).map(async (member) => (await admin.auth.admin.getUserById(member.user_id)).data.user?.email ?? null))).filter((email): email is string => !!email);
+    const provider = new SmtpEmailProvider();
+    for (const to of new Set(emails)) {
+      await provider.sendPayoutPaid({
+        to, organizationName: organization?.name ?? "tu cuenta", amountLabel: formatMoney(payout.amount, payout.currency), ordersCount: payout.orders_count,
+        reference: payout.reference, detailUrl: new URL("/app/settings/liquidaciones", appUrl()).toString(),
+      });
+    }
+  } catch (error) {
+    paymentLog("transfer.payout_notice.failed", { payoutId, message: error instanceof Error ? error.message : String(error) });
+  }
+}

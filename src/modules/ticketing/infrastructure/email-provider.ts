@@ -169,6 +169,15 @@ export type TransferRejectedEmail = {
   orderUrl: string;
 };
 
+export type PayoutPaidEmail = {
+  to: string;
+  organizationName: string;
+  amountLabel: string;
+  ordersCount: number;
+  reference: string | null;
+  detailUrl: string;
+};
+
 export interface EmailProvider {
   sendTicketDelivery(message: TicketEmail): Promise<void>;
   sendBuyerAccess(message: BuyerAccessEmail): Promise<void>;
@@ -178,6 +187,7 @@ export interface EmailProvider {
   sendClubListingRequest(message: ClubListingRequestEmail): Promise<void>;
   sendTransferReviewRequest(message: TransferReviewRequestEmail): Promise<void>;
   sendTransferRejected(message: TransferRejectedEmail): Promise<void>;
+  sendPayoutPaid(message: PayoutPaidEmail): Promise<void>;
   sendEventReminder(message: EventReminderEmail): Promise<void>;
   sendEventChangeNotice(message: EventChangeEmail): Promise<void>;
   sendSaleNotification(message: SaleNotificationEmail): Promise<void>;

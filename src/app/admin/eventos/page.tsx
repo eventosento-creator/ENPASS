@@ -40,7 +40,8 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
       <nav aria-label="Tipo" className="flex gap-1.5">{kinds.map((option) => <Pill key={option.value} href={href({ tipo: option.value === "todos" ? null : option.value })} active={kind === option.value}>{option.label}</Pill>)}</nav>
     </div>
 
-    <div className="mt-5 overflow-x-auto rounded-2xl border border-[var(--border)]">
+    <div className="mt-5 flex justify-end"><a className="text-xs font-bold text-neutral-500 underline" href={`/admin/eventos/export?${new URLSearchParams({ ver: scope, q: search, ...(organizationId ? { org: organizationId } : {}), ...(kind !== "todos" ? { tipo: kind } : {}) }).toString()}`}>Descargar esta lista (CSV)</a></div>
+    <div className="mt-2 overflow-x-auto rounded-2xl border border-[var(--border)]">
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-[var(--surface-strong)] text-xs font-bold text-neutral-500"><tr><th className="px-4 py-3">Evento</th><th className="px-4 py-3">Organiza</th><th className="px-4 py-3">Fecha</th><th className="px-4 py-3 text-right">Entradas</th><th className="px-4 py-3 text-right">Ventas</th><th className="px-4 py-3 text-right">Cargo ENPASS</th></tr></thead>
         <tbody className="divide-y divide-[var(--border)]">

@@ -9,7 +9,7 @@ import { paymentLog } from "@/shared/lib/structured-log";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
 import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 import { processPendingInvoices } from "@/modules/billing/application/process-invoices";
-import { notifyTransferRejected } from "./transfer-notices";
+import { notifyPayoutPaid, notifyTransferRejected } from "./transfer-notices";
 
 const publicIdSchema = z.string().regex(/^[0-9a-f]{32}$/);
 const done = (code: string) => redirect(`/admin/transferencias?r=${code}` as never);
@@ -78,6 +78,7 @@ export async function markTransferPayoutPaid(formData: FormData) {
   const reference = String(formData.get("reference") ?? "").trim().slice(0, 200) || null;
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_transfer_payout_paid", { target_payout: payoutId.data, target_reference: reference });
+  if (!error) await notifyPayoutPaid(payoutId.data);
   revalidatePath("/admin/liquidaciones");
   return payoutDone(error ? "error" : "paid");
 }
