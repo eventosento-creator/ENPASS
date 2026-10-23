@@ -89,3 +89,13 @@ export async function getAdminProducers() {
   const { data } = await supabase.rpc("admin_list_producers");
   return data ?? [];
 }
+
+/** Ventas día por día de los últimos N días (hora Argentina), para el gráfico del Resumen. */
+export async function getAdminSalesByDay(days = 14) {
+  const supabase = await requireAdmin();
+  const now = new Date();
+  const arNow = new Date(now.getTime() - AR_OFFSET_MS);
+  const from = Date.UTC(arNow.getUTCFullYear(), arNow.getUTCMonth(), arNow.getUTCDate() - (days - 1)) + AR_OFFSET_MS;
+  const { data } = await supabase.rpc("admin_sales_by_day", { target_from: new Date(from).toISOString(), target_to: now.toISOString() });
+  return data ?? [];
+}

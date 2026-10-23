@@ -783,6 +783,8 @@ export interface Database {
       create_transfer_payout: { Args: { target_org: string; target_include_upcoming?: boolean }; Returns: string };
       mark_transfer_payout_paid: { Args: { target_payout: string; target_reference: string | null }; Returns: undefined };
       cancel_transfer_payout: { Args: { target_payout: string }; Returns: undefined };
+      admin_sales_by_day: { Args: { target_from: string; target_to: string }; Returns: { day: string; sales_amount: number; fee_amount: number; orders_count: number }[] };
+      admin_pending_digest: { Args: Record<string, never>; Returns: Json };
       admin_overview: { Args: { target_from: string; target_to: string }; Returns: Json };
       admin_list_events: { Args: { target_scope?: string; target_search?: string | null; target_org?: string | null; target_limit?: number }; Returns: { event_id: string; event_name: string; event_slug: string; status: string; starts_at: string; organization_id: string; organization_name: string; is_club: boolean; capacity: number; tickets_sold: number; sales_amount: number; fee_amount: number }[] };
       admin_event_detail: { Args: { target_event: string }; Returns: Json };

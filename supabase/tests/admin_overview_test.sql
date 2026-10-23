@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(19);
 
 insert into auth.users (id, email, aud, role) values ('bb000000-0000-4000-8000-0000000000c1', 'admin-ov@example.invalid', 'authenticated', 'authenticated') on conflict do nothing;
 insert into auth.users (id, email, aud, role) values ('bb000000-0000-4000-8000-0000000000c2', 'plain-ov@example.invalid', 'authenticated', 'authenticated') on conflict do nothing;
@@ -26,6 +26,16 @@ select is((select count(*)::int from public.admin_list_events('all', 'zzz-no-exi
 select is(public.admin_event_detail('44444444-4444-4444-8444-444444444444')->'event'->>'name', (select name from public.events where id = '44444444-4444-4444-8444-444444444444'), 'el detalle del evento trae su nombre');
 select is((select count(*)::int from public.admin_clubs_overview()), (select count(*)::int from public.club_settings where enabled), 'la lista de clubes trae los clubes activos');
 select is((select count(*)::int from public.admin_list_producers()), (select count(*)::int from public.organizations), 'la lista de productores trae todas las cuentas');
+
+select is((select coalesce(sum(sales_amount), 0)::bigint from public.admin_sales_by_day(now() - interval '3650 days', now() + interval '1 day')),
+  (select coalesce(sum(subtotal_amount), 0)::bigint from public.orders where status = 'paid' and not is_courtesy), 'el gráfico por día suma lo mismo que el resumen');
+select ok((select count(*) from public.admin_sales_by_day(now() - interval '13 days', now())) between 14 and 15, 'el gráfico trae un punto por día, también los días sin ventas');
+select is((select count(*)::int from public.admin_sales_by_day(now() - interval '2 days', now()) where sales_amount < 0), 0, 'ningún día tiene ventas negativas');
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"bb000000-0000-4000-8000-0000000000c2","role":"authenticated"}';
+select throws_ok($$select * from public.admin_sales_by_day(now() - interval '2 days', now())$$, 'P0001', 'NOT_ALLOWED', 'un usuario común no ve el gráfico');
+select throws_ok($$select public.admin_pending_digest()$$, '42501', null, 'el resumen diario no se puede pedir desde el navegador');
 
 select * from finish();
 rollback;

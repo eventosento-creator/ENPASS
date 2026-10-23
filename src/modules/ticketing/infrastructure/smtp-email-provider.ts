@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, ClubListingRequestEmail, TransferRejectedEmail, TransferReviewRequestEmail, PayoutPaidEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
+import type { ArrepentimientoReceivedEmail, ArrepentimientoVerificationEmail, BuyerAccessEmail, ClubListingRequestEmail, TransferRejectedEmail, TransferReviewRequestEmail, PayoutPaidEmail, AdminDigestEmail, CollaboratorInviteEmail, EmailProvider, EventChangeEmail, EventReminderEmail, InvoiceEmail, MemberPasswordEmail, MembershipDueEmail, MembershipDuePaidEmail, MembershipWelcomeEmail, PromoterInviteEmail, SaleNotificationEmail, TicketEmail, ClubStaffInviteEmail } from "./email-provider";
 import { formatMoney } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
 
@@ -146,6 +146,25 @@ export class SmtpEmailProvider implements EmailProvider {
         <p style="margin:0 auto;max-width:400px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center"><strong>${escapeHtml(message.buyerName)}</strong> (${escapeHtml(message.buyerEmail)}) subió el comprobante de <strong>${escapeHtml(message.amountLabel)}</strong> por <strong>${escapeHtml(message.eventName)}</strong>.</p>
         ${accessButton(message.reviewUrl, "Revisar transferencia")}
         <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Compará el comprobante con el extracto del banco antes de aprobar.</p>
+      `),
+    });
+  }
+
+  async sendAdminDigest(message: AdminDigestEmail) {
+    const total = message.items.reduce((sum, item) => sum + item.count, 0);
+    await this.transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: `ENPASS: ${total} ${total === 1 ? "pendiente" : "pendientes"} para hoy`,
+      text: `Pendientes de hoy:\n${message.items.map((item) => `- ${item.label}: ${item.count}`).join("\n")}\n\nAyer: ventas ${message.salesYesterdayLabel}, cargo de ENPASS ${message.feesYesterdayLabel}.${message.owedLabel ? `\nLe debés a productores: ${message.owedLabel}.` : ""}\n\nAbrir el admin: ${message.adminUrl}`,
+      html: emailFrame(`
+        ${heroBanner()}
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">${total} ${total === 1 ? "pendiente" : "pendientes"} para hoy</h1>
+        <table role="presentation" style="margin:14px auto 0;width:100%;max-width:400px;border-collapse:collapse;font-size:14px;color:#3a3a40">
+          ${message.items.map((item) => `<tr><td style="padding:9px 0;border-bottom:1px solid #ececef">${escapeHtml(item.label)}</td><td style="padding:9px 0;border-bottom:1px solid #ececef;text-align:right;font-weight:700">${item.count}</td></tr>`).join("")}
+        </table>
+        <p style="margin:18px auto 0;max-width:400px;font-size:13px;line-height:1.6;color:#6f6f75;text-align:center">Ayer: ventas <strong>${escapeHtml(message.salesYesterdayLabel)}</strong> · cargo de ENPASS <strong>${escapeHtml(message.feesYesterdayLabel)}</strong>${message.owedLabel ? `<br>Le debés a productores: <strong>${escapeHtml(message.owedLabel)}</strong>` : ""}</p>
+        ${accessButton(message.adminUrl, "Abrir el admin")}
       `),
     });
   }

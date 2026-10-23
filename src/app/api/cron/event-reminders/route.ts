@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { sendEventReminders } from "@/modules/ticketing/application/send-event-reminders";
 import { ticketingLog } from "@/shared/lib/structured-log";
+import { sendAdminDigest } from "@/modules/admin/application/send-admin-digest";
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -43,5 +44,8 @@ export async function GET(request: NextRequest) {
     await admin.from("events").update({ status: "finished" }).in("id", finishedIds);
   }
 
-  return NextResponse.json({ checked: events?.length ?? 0, results, finished: finishedIds.length });
+  // Misma corrida diaria (el plan Hobby limita la cantidad de crons): resumen de pendientes para ENPASS.
+  const digest = await sendAdminDigest();
+
+  return NextResponse.json({ checked: events?.length ?? 0, results, finished: finishedIds.length, digest });
 }

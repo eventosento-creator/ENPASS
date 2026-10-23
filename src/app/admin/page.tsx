@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, Building2, Landmark, Users2, Wallet } from "lucide-react";
-import { adminPeriods, getAdminOverview, parsePeriod } from "@/modules/admin/application/queries";
+import { adminPeriods, getAdminOverview, getAdminSalesByDay, parsePeriod } from "@/modules/admin/application/queries";
+import { SalesChart } from "@/modules/admin/ui/sales-chart";
 import { formatMoneyCompact, formatShortDate, percentChange } from "@/modules/admin/ui/format";
 
 const methodLabels = { mercado_pago: "Mercado Pago", transferencia: "Transferencia", caja: "Caja" } as const;
@@ -8,7 +9,7 @@ const methodColors = { mercado_pago: "#378ADD", transferencia: "#1D9E75", caja: 
 
 export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
   const period = parsePeriod((await searchParams).p);
-  const overview = await getAdminOverview(period);
+  const [overview, salesByDay] = await Promise.all([getAdminOverview(period), getAdminSalesByDay(14)]);
   if (!overview) return <p className="text-sm text-neutral-500">No pudimos cargar el resumen. Probá de nuevo en un rato.</p>;
   const change = percentChange(overview.sales, overview.sales_prev);
   const methodsTotal = overview.methods.reduce((sum, method) => sum + method.amount, 0);
@@ -36,6 +37,8 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
       <Stat label="Entradas vendidas" value={overview.tickets.toLocaleString("es-AR")} note={`${overview.orders.toLocaleString("es-AR")} compras en ${overview.events_in_period} eventos`}/>
       <Stat label="Le debés a productores" value={formatMoneyCompact(overview.owed_total)} note={overview.owed_orgs ? `a ${overview.owed_orgs} ${overview.owed_orgs === 1 ? "productor" : "productores"} (transferencias)` : "nada pendiente"}/>
     </section>
+
+    <SalesChart days={salesByDay}/>
 
     <div className="mt-5 grid gap-4 lg:grid-cols-2">
       <section className="card p-5" aria-label="Necesita tu acción">

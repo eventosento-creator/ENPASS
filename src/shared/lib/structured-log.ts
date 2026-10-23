@@ -15,6 +15,7 @@ type PaymentLogEvent =
   | "transfer.review_notice.failed"
   | "transfer.rejected_notice.failed"
   | "transfer.payout_notice.failed"
+  | "admin.digest.failed"
   | "transfer.reviewed";
 
 type SafeLogValue = string | number | boolean | null | undefined;
