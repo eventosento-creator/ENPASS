@@ -19,7 +19,7 @@ select is((select count(*) from public.get_public_event_tables('55000000-0000-40
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
 select lives_ok(
-  $$select public.update_event_configuration('55000000-0000-4000-8000-000000000001', 'private_event', true, false, true, true, false, false)$$,
+  $$select public.update_event_configuration('55000000-0000-4000-8000-000000000001', 'private_event', true, false, true, true, false, false, false)$$,
   'owner can change profile and explicit capabilities'
 );
 select is((select profile::text from public.events where id = '55000000-0000-4000-8000-000000000001'), 'private_event', 'profile metadata changes');
@@ -36,7 +36,7 @@ select ok((select tickets_enabled and tables_enabled and access_enabled and not 
 select is((select count(*) from public.ticket_types t join public.events e on e.id = t.event_id where e.slug = 'tech-mendoza-copy-test'), 1::bigint, 'duplicate retains ticket configuration when requested');
 
 select lives_ok(
-  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'nightlife', true, false, false, true, false, false)$$,
+  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'nightlife', true, false, false, true, false, false, false)$$,
   'owner can disable modules without deleting history'
 );
 select ok(
@@ -53,7 +53,7 @@ select throws_ok(
 
 set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated"}';
 select throws_ok(
-  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'expo', true, true, true, true, false, false)$$,
+  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'expo', true, true, true, true, false, false, false)$$,
   'P0001', 'NOT_ALLOWED', 'another tenant cannot mutate capabilities'
 );
 

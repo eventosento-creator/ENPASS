@@ -8,6 +8,11 @@ grant execute on function public.create_guest_checkout_attributed(uuid, text, te
 
 create extension if not exists pgtap with schema extensions;
 select plan(58);
+-- Las fechas del evento demo salen del reset de la base: se deja el evento a futuro para que el test no dependa de cuándo se cargó.
+update public.events set doors_open_at = null, starts_at = now() + interval '1 day', ends_at = null where id = '44444444-4444-4444-8444-444444444444';
+
+-- La reserva activa de la mesa 203 vive 10 minutos desde el reset de la base: se renueva acá para que el test no dependa de cuándo se cargó.
+update public.table_holds set status = 'active', expires_at = now() + interval '10 minutes' where id = 'e5000000-0000-4000-8000-000000000702';
 
 -- Seed projections and idempotent fulfillment.
 select is((select availability_status from public.get_public_event_tables('44444444-4444-4444-8444-444444444444') where id = 'e5000000-0000-4000-8000-000000000202'), 'available', 'available table is public');

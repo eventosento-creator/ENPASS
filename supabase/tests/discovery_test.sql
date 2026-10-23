@@ -8,6 +8,8 @@ grant execute on function public.create_guest_checkout_attributed(uuid, text, te
 
 create extension if not exists pgtap with schema extensions;
 select plan(9);
+-- Las fechas del evento demo salen del reset de la base: se deja el evento a futuro para que el test no dependa de cuándo se cargó.
+update public.events set doors_open_at = null, starts_at = now() + interval '1 day', ends_at = null where id = '44444444-4444-4444-8444-444444444444';
 
 insert into public.events (id, organization_id, venue_id, name, slug, description, starts_at, status, capacity, currency, published_at, created_by)
 values

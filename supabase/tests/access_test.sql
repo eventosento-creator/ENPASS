@@ -2,6 +2,10 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(39);
 
+-- El ticket "todavía no vigente" del seed se arma con la fecha del reset: se fija acá hacia adelante para que el test no dependa de cuándo se cargó.
+update public.tickets set valid_from = now() + interval '1 day', valid_until = now() + interval '2 days'
+  where qr_token_hash = encode(extensions.digest(convert_to('NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', 'UTF8'), 'sha256'), 'hex');
+
 -- Isolated scanner sessions for deterministic checks inside this transaction.
 insert into public.scanner_device_authorizations (
   id, organization_id, event_id, access_gate_id, label, permission, pin_hash,

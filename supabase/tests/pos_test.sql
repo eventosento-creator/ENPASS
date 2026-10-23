@@ -1,6 +1,12 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(40);
+-- Las fechas del evento demo salen del reset de la base: se deja el evento a futuro para que el test no dependa de cuándo se cargó.
+update public.events set doors_open_at = null, starts_at = now() + interval '1 day', ends_at = null where id = '44444444-4444-4444-8444-444444444444';
+
+-- La caja demo del seed trae un PIN que dura 1 hora desde el reset de la base: se renueva acá para que el test no dependa de cuándo se cargó.
+update public.pos_device_authorizations set status = 'pending', code_expires_at = now() + interval '1 hour',
+  session_expires_at = now() + interval '16 hours' where id = 'f6000000-0000-4000-8000-000000000501';
 
 select has_table('public', 'products', 'products table exists');
 select has_table('public', 'event_products', 'event products table exists');
@@ -45,7 +51,7 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
 select throws_ok(
-  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'nightlife', true, true, true, true, false, false)$$,
+  $$select public.update_event_configuration('44444444-4444-4444-8444-444444444444', 'nightlife', true, true, true, true, false, false, false)$$,
   'P0001', 'OPEN_POS_SESSIONS', 'POS cannot be disabled while a cash session is open'
 );
 
