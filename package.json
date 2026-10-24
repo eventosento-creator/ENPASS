@@ -24,15 +24,15 @@
     "date-fns-tz": "^3.2.0",
     "lucide-react": "1.32.0",
     "mercadopago": "3.4.0",
-    "next": "^16.4.0",
-    "nodemailer": "^10.0.16",
+    "next": "16.4.3",
+    "nodemailer": "^10.2.1",
     "pdf-lib": "1.17.1",
     "qr-scanner": "1.4.2",
     "qrcode": "1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "3.6.0",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
