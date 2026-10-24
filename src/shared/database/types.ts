@@ -687,6 +687,7 @@ export interface Database {
       get_buyer_session_customers: { Args: { target_session_hash: string }; Returns: { customer_id: string }[] };
       revoke_buyer_session: { Args: { target_session_hash: string }; Returns: undefined };
       cancel_ticket: { Args: { target_ticket: string }; Returns: undefined };
+      get_events_occupancy: { Args: { target_org: string }; Returns: { event_id: string; tickets_sold: number }[] };
       get_event_ticket_metrics: { Args: { target_event: string }; Returns: { tickets_issued: number; paid_orders: number; delivery_failures: number }[] };
       get_event_table_metrics: { Args: { target_event: string }; Returns: { sold_tables: number; total_tables: number; table_revenue: number; held_tables: number; currency: string }[] };
       get_event_ticket_sales: { Args: { target_event: string }; Returns: { order_id: string; order_public_id: string; buyer_name: string; buyer_email: string; order_status: OrderStatus; total_amount: number; currency: string; ticket_count: number; ticket_names: string; delivery_status: TicketDeliveryStatus | null; created_at: string }[] };
