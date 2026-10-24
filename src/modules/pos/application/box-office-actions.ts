@@ -27,9 +27,18 @@ export async function enableBoxOfficeModule(formData: FormData) {
     target_access_enabled: event.access_enabled, target_pos_enabled: true,
     target_inventory_enabled: event.inventory_enabled, target_seatmap_enabled: event.seatmap_enabled,
   });
-  if (error) back(parsed.data.eventId, "error", "No pudimos activar la caja. Probá desde Editar evento > Funciones del evento.");
+  if (error) back(parsed.data.eventId, "error", "No pudimos activar la taquilla. Probá desde Editar evento > Funciones del evento.");
+  // Un solo paso para el productor: además de la caja, deja la taquilla habilitada (con los medios de pago que ya tuviera, o efectivo si es la primera vez).
+  const { data: current } = await supabase.from("event_box_office_settings").select("*").eq("event_id", parsed.data.eventId).maybeSingle();
+  const { error: settingsError } = await supabase.rpc("upsert_box_office_settings", {
+    target_event: parsed.data.eventId, target_enabled: true, target_cash: current?.cash_enabled ?? true, target_qr: current?.qr_enabled ?? false,
+    target_debit: current?.debit_enabled ?? false, target_credit: current?.credit_enabled ?? false, target_transfer: current?.transfer_enabled ?? false,
+    target_other: current?.other_enabled ?? false, target_allow_after_start: current?.allow_after_start ?? true, target_closes_at: current?.closes_at ?? null,
+    target_mp_qr: current?.mp_qr_enabled ?? false, target_qr_expiry: current?.qr_expiry_minutes ?? 10,
+  });
+  if (settingsError) back(parsed.data.eventId, "error", "La caja quedó activada pero no pudimos habilitar la taquilla. Tildá \"Taquilla habilitada\" más abajo y guardá.");
   revalidatePath(`/app/events/${parsed.data.eventId}`);
-  back(parsed.data.eventId, "notice", "Caja activada. Ahora configurá la taquilla.");
+  back(parsed.data.eventId, "notice", "Taquilla activada. Seguí los pasos de la lista para empezar a vender.");
 }
 
 const settingsSchema = z.object({ eventId, qrExpiry: z.coerce.number().int().min(3).max(30).default(10) });

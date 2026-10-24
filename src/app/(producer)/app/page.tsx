@@ -33,11 +33,12 @@ export default async function DashboardPage() {
   const nextEvent = upcoming[0];
   const otherEvents = upcoming.slice(1, 4);
   const metrics = metricsData?.[0] ?? { confirmed_orders: 0, confirmed_tickets: 0, pending_reservations: 0 };
-  const [ticketMetricResult, accessMetricResult] = nextEvent ? await Promise.all([
-    supabase.rpc("get_event_ticket_metrics", { target_event: nextEvent.id }),
+  const [soldResult, accessMetricResult] = nextEvent ? await Promise.all([
+    supabase.rpc("get_events_occupancy", { target_org: organization.id }),
     supabase.rpc("get_event_access_metrics", { target_event: nextEvent.id }),
   ]) : [{ data: null }, { data: null }];
-  const nextTicketMetrics = ticketMetricResult.data?.[0] ?? { tickets_issued: 0 };
+  // Entradas vendidas vigentes (sin las anuladas o reembolsadas); el contador anterior las incluía.
+  const nextTicketMetrics = { tickets_issued: Number((soldResult.data ?? []).find(row => row.event_id === nextEvent?.id)?.tickets_sold ?? 0) };
   const nextAccessMetrics = accessMetricResult.data?.[0] ?? { entries_today: 0 };
   const occupied = nextEvent ? nextTicketMetrics.tickets_issued + (reservationsByEvent[nextEvent.id] ?? 0) : 0;
   const firstEvent = (events ?? [])[0];

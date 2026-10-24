@@ -58,7 +58,16 @@ export default async function BoxOfficePage({ params, searchParams }: { params: 
     <EventSectionNav eventId={eventId} active="boxoffice" capabilities={capabilities} profile={event.profile}/>
     {query.notice && <p className="card mt-6 p-4 text-sm font-bold">{query.notice}</p>}
     {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm font-bold">{query.error}</p>}
-    {!event.pos_enabled && <section className="card mt-7 p-5 sm:p-7"><h2 className="section-title">Activá la caja para vender en puerta</h2><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">La taquilla usa el módulo de caja (POS) del evento, que hoy está apagado. Activarlo no cambia nada de lo que ya tenés cargado.</p><form action={enableBoxOfficeModule} className="mt-5"><input type="hidden" name="eventId" value={eventId}/><SubmitButton className="btn btn-primary" pendingLabel="Activando…">Activar caja</SubmitButton></form></section>}
+    {(!event.pos_enabled || !cfg.enabled) ? <section className="card mt-7 p-5 sm:p-7"><h2 className="section-title">Activá la taquilla para vender en puerta</h2><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">Con un toque queda lista para configurar: se enciende el módulo de caja del evento y se habilita la taquilla con cobro en efectivo. No cambia nada de lo que ya tenés cargado.</p><form action={enableBoxOfficeModule} className="mt-5"><input type="hidden" name="eventId" value={eventId}/><SubmitButton className="btn btn-primary w-full sm:w-auto" pendingLabel="Activando…">Activar taquilla</SubmitButton></form></section>
+    : <section className="card mt-7 p-5 sm:p-7" aria-label="Pasos para empezar a vender"><p className="eyebrow">Para empezar</p><h2 className="section-title mt-2">Pasos para vender en puerta</h2>
+      <ol className="mt-4 grid gap-3 text-sm">
+        {([
+          [true, "Taquilla activada", "Ya podés cobrar en puerta."],
+          [Object.entries(cfg).some(([key, value]) => key.endsWith("_enabled") && key !== "mp_qr_enabled" && value === true), "Medios de pago elegidos", "Tocá los medios que vas a aceptar en la sección Configuración y guardá."],
+          [devices.length > 0, "Crear una caja y su código", "Más abajo, en Cajas: creá la caja y generá el código para cargarlo en el celular del cajero."],
+          [devices.some((device) => device.cashier_label), "Cajero asignado a una caja", "El cajero tiene que tener cuenta en ENPASS; elegilo al generar el código de la caja."],
+        ] as const).map(([done, title, hint]) => <li key={title} className="flex items-start gap-3"><span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-black ${done ? "bg-[var(--accent)] text-[var(--on-accent)]" : "border border-[var(--border-strong)] text-neutral-500"}`} aria-hidden>{done ? "✓" : "•"}</span><span><b>{title}</b><span className="block text-xs leading-5 text-neutral-500">{done ? "Listo." : hint}</span></span></li>)}
+      </ol></section>}
 
     <section className="card mt-7 p-5 sm:p-7">
       <p className="eyebrow">Configuración</p><h2 className="section-title mt-2">Taquilla del evento</h2>

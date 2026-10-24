@@ -7,9 +7,9 @@ type SectionKey = "summary" | "tickets" | "guests" | "promoters" | "tables" | "s
 // Cuatro secciones principales; las que reúnen varias pantallas muestran una segunda fila.
 const groupDefs = [
   { key: "summary", label: "Resumen", children: ["summary"] },
-  { key: "sales", label: "Ventas", children: ["tickets", "tables", "seatmap", "boxoffice"] },
+  { key: "sales", label: "Ventas", children: ["tickets", "tables", "seatmap"] },
   { key: "people", label: "Invitados", children: ["guests", "promoters"] },
-  { key: "operation", label: "Operación", children: ["access", "pos"] },
+  { key: "operation", label: "Operación", children: ["access", "boxoffice", "pos"] },
 ] as const satisfies readonly { key: string; label: string; children: readonly SectionKey[] }[];
 
 export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: SectionKey; capabilities: EventCapabilities; profile?: EventProfile }) {
