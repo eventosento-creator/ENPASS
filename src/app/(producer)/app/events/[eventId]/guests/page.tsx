@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Download, ListChecks, Mail, Send, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, FileText, ListChecks, Mail, Printer, Send, Users } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
@@ -10,6 +10,7 @@ import { GuestSearch, type GuestRow } from "@/modules/events/ui/guest-search";
 import { CourtesyTicketForm } from "@/modules/orders/ui/courtesy-ticket-form";
 import { SendReminderButton } from "@/modules/events/ui/send-reminder-button";
 import { HowItWorksCard } from "@/shared/ui/how-it-works-card";
+import { ActionMenu } from "@/shared/ui/action-menu";
 
 export default async function EventGuestsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -59,9 +60,12 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
     <header className="flex flex-wrap items-end justify-between gap-5">
       <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Invitados</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{guests.length} {guests.length === 1 ? "entrada emitida" : "entradas emitidas"} · {checkedInCount} con ingreso registrado{event.reminder_sent_at && ` · Recordatorio enviado`}</p></div>
       <div className="flex flex-wrap items-center gap-2">
-        <Link className="btn btn-secondary" href={`/app/events/${event.id}/guests/lista` as never}><ListChecks size={16}/>Lista para imprimir</Link>
-        <a className="btn btn-secondary" href={`/app/events/${event.id}/guests/export`}><Download size={16}/>Descargar nombres</a>
-        <a className="btn btn-ghost" href={`/app/events/${event.id}/guests/export?tipo=completa`}>Descargar completa</a>
+        <ActionMenu label="Lista de invitados" icon={<ListChecks size={16}/>} align="right" items={[
+          { href: `/app/events/${event.id}/guests/lista`, label: "Ver e imprimir", hint: "Nombres en orden alfabético con casilleros para tildar.", icon: <Printer size={16}/> },
+          { href: `/app/events/${event.id}/guests/export?formato=pdf`, label: "Descargar PDF", hint: "Lista lista para imprimir o llevar a la puerta.", icon: <FileText size={16}/> },
+          { href: `/app/events/${event.id}/guests/export`, label: "Planilla con nombres", hint: "Excel o Google Sheets: apellido, nombre y cantidad de entradas.", icon: <Download size={16}/> },
+          { href: `/app/events/${event.id}/guests/export?tipo=completa`, label: "Planilla completa", hint: "Una fila por entrada, con DNI, tipo de entrada e ingreso.", icon: <Download size={16}/> },
+        ]}/>
         <SendReminderButton eventId={event.id}/>
       </div>
     </header>

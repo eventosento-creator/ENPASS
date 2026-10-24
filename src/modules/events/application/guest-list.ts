@@ -2,7 +2,9 @@ import "server-only";
 
 import { createClient } from "@/shared/database/server";
 
-export type GuestListEntry = { name: string; document: string | null; typeLabel: string; checkedIn: boolean };
+import type { GuestListEntry } from "../domain/guest-groups";
+
+export type { GuestListEntry };
 
 /** Lista de asistentes de un evento (una fila por entrada vigente), ordenada por apellido. null si el usuario no puede ver el evento. */
 export async function getEventGuestList(eventId: string) {
