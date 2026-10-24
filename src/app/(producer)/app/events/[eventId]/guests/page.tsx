@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Mail, Send, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, ListChecks, Mail, Send, Users } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
 import { getEventCapabilities } from "@/modules/events/domain/event-profile";
@@ -58,7 +58,12 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
   return <>
     <header className="flex flex-wrap items-end justify-between gap-5">
       <div><Link href={`/app/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-white"><ArrowLeft size={16}/>Volver al evento</Link><p className="eyebrow mt-7">Invitados</p><h1 className="page-title mt-3">{event.name}</h1><p className="mt-3 text-sm text-neutral-500">{guests.length} {guests.length === 1 ? "entrada emitida" : "entradas emitidas"} · {checkedInCount} con ingreso registrado{event.reminder_sent_at && ` · Recordatorio enviado`}</p></div>
-      <SendReminderButton eventId={event.id}/>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link className="btn btn-secondary" href={`/app/events/${event.id}/guests/lista` as never}><ListChecks size={16}/>Lista para imprimir</Link>
+        <a className="btn btn-secondary" href={`/app/events/${event.id}/guests/export`}><Download size={16}/>Descargar nombres</a>
+        <a className="btn btn-ghost" href={`/app/events/${event.id}/guests/export?tipo=completa`}>Descargar completa</a>
+        <SendReminderButton eventId={event.id}/>
+      </div>
     </header>
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
     {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}
