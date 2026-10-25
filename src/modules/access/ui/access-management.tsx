@@ -1,12 +1,29 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check, Copy, KeyRound, ShieldCheck } from "lucide-react";
-import { createAccessGate, createScannerAuthorization, updateAccessGate, type AccessActionState } from "../application/actions";
+import { Check, Copy, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react";
+import { createAccessGate, createScannerAuthorization, fixGateCoverage, updateAccessGate, type AccessActionState } from "../application/actions";
+import type { GateCoverage } from "../domain/gate-coverage";
 import type { AccessGate, AccessGateTicketType, TicketType } from "@/shared/database/types";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
 const initialState: AccessActionState = {};
+
+/** Aviso de entradas que el scanner rechazaría (sin puerta). Se arregla con un toque. */
+export function GateCoverageAlert({ eventId, coverage }: { eventId: string; coverage: GateCoverage }) {
+  const [state, action] = useActionState(fixGateCoverage, initialState);
+  const title = coverage.noGates ? "Todavía no tenés ninguna puerta: nadie va a poder ingresar."
+    : coverage.noActiveGates ? "Todas tus puertas están desactivadas: nadie va a poder ingresar."
+    : `${coverage.uncovered.length === 1 ? "Esta entrada no está aceptada" : "Estas entradas no están aceptadas"} en ninguna puerta: quienes ${coverage.uncovered.length === 1 ? "la tengan" : "las tengan"} no van a poder ingresar.`;
+  return <section role="alert" className="mt-8 rounded-2xl border border-red-500/40 bg-red-500/[.07] p-5">
+    <p className="flex items-center gap-2 text-sm font-black"><ShieldAlert size={18} className="shrink-0 text-red-500" aria-hidden/>{title}</p>
+    {coverage.uncovered.length > 0 && <ul className="mt-3 flex flex-wrap gap-2">{coverage.uncovered.map((type) => <li key={type.id} className="rounded-full border border-red-500/40 px-3 py-1 text-xs font-bold">{type.name}</li>)}</ul>}
+    <p className="mt-3 text-sm leading-6 text-neutral-500">{coverage.noGates ? "Creamos una puerta que acepta todas tus entradas; después podés ajustarla." : coverage.noActiveGates ? "Activá una puerta en la sección \"Puertas y reglas\" (más abajo)." : "Las habilitamos en todas tus puertas; después podés destildarlas donde no corresponda."}</p>
+    {!coverage.noActiveGates && <form action={action} className="mt-4"><input type="hidden" name="eventId" value={eventId}/>
+      <SubmitButton className="btn btn-primary w-full sm:w-auto" pendingLabel="Arreglando…">{coverage.noGates ? "Crear la puerta ahora" : "Habilitar en todas las puertas"}</SubmitButton></form>}
+    <Message state={state}/>
+  </section>;
+}
 
 export function CreateGateForm({ eventId, ticketTypes }: { eventId: string; ticketTypes: TicketType[] }) {
   const [state, action] = useActionState(createAccessGate, initialState);
@@ -15,7 +32,7 @@ export function CreateGateForm({ eventId, ticketTypes }: { eventId: string; tick
     <input type="hidden" name="eventId" value={eventId}/>
     <label className="label">Nombre<input className="field" name="name" placeholder="Acceso principal" required minLength={2}/></label>
     <label className="label">Descripción<input className="field" name="description" placeholder="Ubicación o referencia"/></label>
-    <TicketTypeChecks ticketTypes={ticketTypes} selected={new Set()}/>
+    <TicketTypeChecks ticketTypes={ticketTypes} selected={new Set(ticketTypes.filter((type) => type.active).map((type) => type.id))}/>
     <Message state={state}/><SubmitButton className="btn btn-primary w-full" pendingLabel="Creando…">Crear puerta</SubmitButton>
   </form>;
 }

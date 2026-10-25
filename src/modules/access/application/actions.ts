@@ -124,3 +124,19 @@ export async function revokeScannerSession(formData: FormData) {
   await supabase.rpc("revoke_scanner_session", { target_session: sessionId });
   revalidatePath(`/app/events/${eventId}/access`);
 }
+
+/** Un toque para arreglar las entradas que no pasan por ninguna puerta (o crear la puerta si no hay ninguna). */
+export async function fixGateCoverage(_: AccessActionState, formData: FormData): Promise<AccessActionState> {
+  const eventId = z.uuid().safeParse(formData.get("eventId"));
+  if (!eventId.success) return { error: "No encontramos el evento." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fix_event_gate_coverage", { target_event: eventId.data });
+  if (error) {
+    if (error.message.includes("NO_ACTIVE_GATES")) return { error: "Todas tus puertas están desactivadas. Activá al menos una y volvé a intentar." };
+    if (error.message.includes("NO_TICKET_TYPES")) return { error: "Primero creá al menos un tipo de entrada." };
+    return { error: "No pudimos arreglarlo. Probá de nuevo." };
+  }
+  revalidatePath(`/app/events/${eventId.data}/access`);
+  const result = data?.[0];
+  return { success: result?.gate_created ? "Listo: creamos la puerta \"Acceso principal\" y acepta todas las entradas." : "Listo: ahora todas las entradas pasan por las puertas operativas." };
+}

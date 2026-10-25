@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clock3, DoorOpen, KeyRound, ShieldAlert, Smartphone, UsersRound, XCircle } from "lucide-react";
 import { createClient } from "@/shared/database/server";
 import { AccessMonitor } from "@/modules/access/ui/access-monitor";
-import { CreateGateForm, DeviceAuthorizationForm, GateEditor } from "@/modules/access/ui/access-management";
+import { CreateGateForm, DeviceAuthorizationForm, GateCoverageAlert, GateEditor } from "@/modules/access/ui/access-management";
+import { analyzeGateCoverage, hasCoverageProblem } from "@/modules/access/domain/gate-coverage";
 import { revokeScannerAuthorization, revokeScannerSession } from "@/modules/access/application/actions";
 import type { CheckInResult } from "@/shared/database/types";
 import { EventSectionNav } from "@/modules/events/ui/event-section-nav";
@@ -35,6 +36,7 @@ export default async function EventAccessPage({ params }: { params: Promise<{ ev
   if (!venue) notFound();
   const gates = gatesResult.data ?? [];
   const rules = rulesResult.data ?? [];
+  const coverage = analyzeGateCoverage({ ticketTypes: ticketTypesResult.data ?? [], gates, rules });
   const authorizations = authorizationsResult.data ?? [];
   const sessions = sessionsResult.data ?? [];
   const metrics = metricsResult.data?.[0] ?? { entries_today: 0, valid_scans_today: 0, duplicate_scans_today: 0, rejected_scans_today: 0, active_devices: 0 };
@@ -50,6 +52,7 @@ export default async function EventAccessPage({ params }: { params: Promise<{ ev
       <div className="flex flex-wrap items-center gap-3"><AccessMonitor/><Link className="btn btn-primary" href="/scan" target="_blank"><Smartphone size={17}/>Abrir scanner</Link></div>
     </header>
     <EventSectionNav eventId={event.id} active="access" capabilities={capabilities}/>
+    {isManager && hasCoverageProblem(coverage) && <GateCoverageAlert eventId={event.id} coverage={coverage}/>}
 
     <section className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-5">
       <StatCard icon={UsersRound} tone="neutral" label="Ingresos hoy" value={String(metrics.entries_today)}/>

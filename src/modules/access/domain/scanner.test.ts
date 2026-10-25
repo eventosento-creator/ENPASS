@@ -33,6 +33,9 @@ describe("scanner domain", () => {
 
   it("shows the accepted gate without exposing buyer details", () => {
     expect(getResultPresentation({ result: "wrong_gate", suggested_gate_name: "Acceso VIP" }).detail).toBe("Dirigir a Acceso VIP");
+    const orphan = getResultPresentation({ result: "wrong_gate", suggested_gate_name: null });
+    expect(orphan.title).toBe("ENTRADA SIN PUERTA");
+    expect(orphan.detail).toContain("Avisá al organizador");
   });
 
   it("maps scanner throttling to a non-destructive warning", () => {
