@@ -19,6 +19,8 @@ import { getEventViewerRole, restrictCapabilitiesForCollaborator } from "@/modul
 import { getEventCollaborators } from "@/modules/collaborators/application/access";
 import { CollaboratorsCard } from "@/modules/collaborators/ui/collaborators-card";
 import { StatCard } from "@/shared/ui/stat-card";
+import { getEventReadiness } from "@/modules/events/application/event-readiness";
+import { EventReadinessCard } from "@/modules/events/ui/event-readiness-card";
 
 export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ error?: string; published?: string; cancelled?: string; soldOut?: string; reopened?: string }> }) {
   const { eventId } = await params; const query = await searchParams; const supabase = await createClient();
@@ -62,6 +64,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://enpass.com.ar"}/e/${event.slug}`;
   const primaryTicketType = (ticketTypes ?? [])[(ticketTypes ?? []).length - 1];
   const primaryTicketStock = primaryTicketType ? Math.max(0, primaryTicketType.quantity - ticketMetrics.tickets_issued) : 0;
+  // Chequeo "listo para la noche": solo para quien administra el evento y mientras el evento no terminó ni se canceló.
+  const readiness = isManager && !["finished", "cancelled"].includes(event.status) ? await getEventReadiness(event, capabilities) : null;
   return <>
     <section className="card p-5 sm:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-4"><div className="relative size-16 shrink-0 overflow-hidden rounded-xl sm:size-20"><EventCover src={event.cover_image_url} alt={`Flyer de ${event.name}`} className="h-full w-full" sizes="80px"/></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2.5"><h1 className="truncate text-2xl font-black tracking-[-.03em] sm:text-3xl">{event.name}</h1><EventStatusBadge status={event.status}/></div><p className="mt-2 flex items-center gap-1.5 text-sm text-neutral-500"><CalendarDays size={14} className="shrink-0"/>{formatEventDate(event.starts_at, venue.timezone)}</p><p className="mt-1 flex items-center gap-1.5 text-sm text-neutral-500"><MapPin size={14} className="shrink-0"/><span className="truncate">{venue.name} · {venue.address}, {venue.city}</span></p></div></div><div className="flex shrink-0 items-center gap-2">{event.status === "published" && <Link target="_blank" href={`/e/${event.slug}`} className="btn btn-secondary" aria-label="Ver evento"><ExternalLink size={16}/><span className="hidden lg:inline">Ver evento</span></Link>}<ShareEventButton url={publicUrl}/>{isManager && !["finished", "cancelled"].includes(event.status) && <Link href={`/app/events/${event.id}/edit`} className="btn btn-primary"><Pencil size={16}/>Editar</Link>}{isManager && <EventActionsMenu>
       {capabilities.access && ["published", "sold_out"].includes(event.status) && <Link href={`/app/events/${event.id}/access`} className="btn btn-secondary w-full justify-start"><DoorOpen size={16}/>Abrir accesos</Link>}
@@ -74,6 +78,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     </EventActionsMenu>}</div></div></section>
     <EventSectionNav eventId={event.id} active="summary" capabilities={capabilities}/>
     {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm">{query.error}</p>}
+    {readiness && <EventReadinessCard result={readiness}/>}
     {query.published && <p className="status-success mt-6 rounded-xl p-4 text-sm">Evento publicado. Ya podés compartirlo.</p>}
     {query.cancelled && <p className="status-danger mt-6 rounded-xl p-4 text-sm">Evento cancelado. Ya no se pueden comprar entradas nuevas; las ventas existentes no se reembolsaron automáticamente.</p>}
     {query.soldOut && <p className="status-warning mt-6 rounded-xl p-4 text-sm">Evento marcado como agotado. Ya no se venden entradas nuevas.</p>}
