@@ -2,14 +2,14 @@ import Link from "next/link";
 import type { EventCapabilities, EventProfile } from "../domain/event-profile";
 import { getPosModuleLabel } from "@/modules/pos/domain/pos";
 
-type SectionKey = "summary" | "tickets" | "guests" | "promoters" | "tables" | "seatmap" | "access" | "pos" | "boxoffice";
+type SectionKey = "summary" | "tickets" | "guests" | "promoters" | "tables" | "seatmap" | "access" | "pos" | "boxoffice" | "live";
 
 // Cuatro secciones principales; las que reúnen varias pantallas muestran una segunda fila.
 const groupDefs = [
   { key: "summary", label: "Resumen", children: ["summary"] },
   { key: "sales", label: "Ventas", children: ["tickets", "tables", "seatmap"] },
   { key: "people", label: "Invitados", children: ["guests", "promoters"] },
-  { key: "operation", label: "Operación", children: ["access", "boxoffice", "pos"] },
+  { key: "operation", label: "Operación", children: ["access", "live", "boxoffice", "pos"] },
 ] as const satisfies readonly { key: string; label: string; children: readonly SectionKey[] }[];
 
 export function EventSectionNav({ eventId, active, capabilities, profile = "nightlife" }: { eventId: string; active: SectionKey; capabilities: EventCapabilities; profile?: EventProfile }) {
@@ -23,8 +23,9 @@ export function EventSectionNav({ eventId, active, capabilities, profile = "nigh
     access: { href: `/app/events/${eventId}/access`, label: "Accesos" },
     pos: { href: `/app/events/${eventId}/pos`, label: getPosModuleLabel(profile) },
     boxoffice: { href: `/app/events/${eventId}/box-office`, label: "Taquilla" },
+    live: { href: `/app/events/${eventId}/live`, label: "En vivo" },
   };
-  const isVisible = (key: SectionKey) => key === "summary" || (key === "guests" ? capabilities.tickets || capabilities.tables || capabilities.seatmap : key === "boxoffice" ? capabilities.tickets : capabilities[key]);
+  const isVisible = (key: SectionKey) => key === "summary" || (key === "guests" ? capabilities.tickets || capabilities.tables || capabilities.seatmap : key === "boxoffice" ? capabilities.tickets : key === "live" ? capabilities.access : capabilities[key]);
   // Un grupo aparece solo si tiene alguna pantalla disponible para este evento; su pestaña lleva a la primera.
   const groups = groupDefs
     .map((group) => ({ ...group, visible: group.children.filter(isVisible) }))

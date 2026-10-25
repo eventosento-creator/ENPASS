@@ -21,6 +21,7 @@ import { CollaboratorsCard } from "@/modules/collaborators/ui/collaborators-card
 import { StatCard } from "@/shared/ui/stat-card";
 import { getEventReadiness } from "@/modules/events/application/event-readiness";
 import { EventReadinessCard } from "@/modules/events/ui/event-readiness-card";
+import { isEventLiveWindow } from "@/modules/events/domain/event-live";
 
 export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ error?: string; published?: string; cancelled?: string; soldOut?: string; reopened?: string }> }) {
   const { eventId } = await params; const query = await searchParams; const supabase = await createClient();
@@ -78,6 +79,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     </EventActionsMenu>}</div></div></section>
     <EventSectionNav eventId={event.id} active="summary" capabilities={capabilities}/>
     {query.error && <p className="status-danger mt-6 rounded-xl p-4 text-sm">{query.error}</p>}
+    {isManager && capabilities.access && ["published", "sold_out"].includes(event.status) && isEventLiveWindow(event.starts_at, event.ends_at) && <Link href={`/app/events/${event.id}/live` as never} className="card card-interactive mt-6 flex items-center justify-between gap-3 border-lime-400/40 p-4 sm:p-5"><span className="flex items-center gap-3"><span className="size-2.5 animate-pulse rounded-full bg-lime-400" aria-hidden/><span><b className="block">El evento es hoy: abrí el evento en vivo</b><span className="text-xs text-neutral-500">Ingresos, scanners, taquilla y alertas en una sola pantalla.</span></span></span><span className="btn btn-primary min-h-9 shrink-0 px-4 text-xs">Abrir</span></Link>}
     {readiness && <EventReadinessCard result={readiness}/>}
     {query.published && <p className="status-success mt-6 rounded-xl p-4 text-sm">Evento publicado. Ya podés compartirlo.</p>}
     {query.cancelled && <p className="status-danger mt-6 rounded-xl p-4 text-sm">Evento cancelado. Ya no se pueden comprar entradas nuevas; las ventas existentes no se reembolsaron automáticamente.</p>}
