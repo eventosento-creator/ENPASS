@@ -7,7 +7,14 @@ import { hashOpaqueToken } from "../domain/credentials";
 import { decryptTicketToken } from "../infrastructure/ticket-cipher";
 
 export type TicketPresentation = {
+  id: string;
   shortCode: string;
+  holderFirstName: string;
+  holderLastName: string;
+  holderDocument: string | null;
+  /** El comprador puede cambiar el titular: entrada común, vigente, sin usar y con más de 3 horas para el evento. */
+  canEditHolder: boolean;
+  requireDocument: boolean;
   status: TicketStatus;
   holderName: string;
   ticketTypeName: string;
@@ -90,8 +97,15 @@ async function hydrateTicketPresentations(tickets: Ticket[]) {
       });
     }
 
+    const editableUntil = new Date(event.starts_at).getTime() - 3 * 3600_000;
     return {
+      id: ticket.id,
       shortCode: ticket.short_code,
+      holderFirstName: ticket.holder_first_name,
+      holderLastName: ticket.holder_last_name,
+      holderDocument: ticket.holder_document,
+      canEditHolder: !eventTable && ticket.status === "valid" && order.status === "paid" && ticket.used_entries === 0 && !["finished", "cancelled"].includes(event.status) && new Date().getTime() < editableUntil,
+      requireDocument: event.require_document,
       status: order.status === "refunded" ? "refunded" : ticket.status,
       holderName: `${ticket.holder_first_name} ${ticket.holder_last_name}`.trim(),
       ticketTypeName: ticketType?.name ?? eventTable!.name,

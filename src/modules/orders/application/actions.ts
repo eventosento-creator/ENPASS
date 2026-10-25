@@ -6,6 +6,7 @@ import { createAdminClient } from "@/shared/database/admin";
 import { createClient } from "@/shared/database/server";
 import { getPromoterAttributionSessionHash } from "@/modules/promoters/infrastructure/session";
 import { checkoutSchema, courtesyTicketInputSchema } from "../domain/checkout";
+import { expectedTicketUnits, parseHolders } from "../domain/holders";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { reconcilePromoterCommissionsForOrder } from "@/modules/promoters/application/commissions";
 import { fulfillPaidOrder } from "@/modules/ticketing/application/fulfillment";
@@ -22,6 +23,19 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
   if (!parsed.success) return { error: "Revisá tus datos y seleccioná al menos una opción." };
   // Tope de reservas por cuenta y por IP: cada reserva retiene cupos unos minutos, así que repetirla en masa bloquearía entradas.
   if (!(await allowRequest("checkout_account", accountEmail, 10, 3600)) || !(await allowRequest("checkout_ip", await getClientIp(), 40, 3600))) return { error: RATE_LIMIT_MESSAGE };
+  // Entradas nominales: cada entrada lleva su titular. La primera es del comprador; las demás se piden en el formulario (se validan antes de reservar).
+  const ticketUnits = expectedTicketUnits(parsed.data.selections);
+  let holders: ReturnType<typeof parseHolders> | null = null;
+  if (ticketUnits.length > 1) {
+    const { data: eventRow } = await createAdminClient().from("events").select("require_document").eq("id", parsed.data.eventId).maybeSingle();
+    holders = parseHolders({
+      units: ticketUnits,
+      buyer: { firstName: parsed.data.firstName, lastName: parsed.data.lastName, document: parsed.data.document },
+      requireDocument: eventRow?.require_document === true,
+      field: (name) => String(formData.get(name) ?? ""),
+    });
+    if (!holders.ok) return { error: holders.error };
+  }
   const attributionSessionHash = await getPromoterAttributionSessionHash();
   const checkoutArgs = {
     target_event: parsed.data.eventId, buyer_first_name: parsed.data.firstName, buyer_last_name: parsed.data.lastName,
@@ -44,6 +58,10 @@ export async function createCheckout(_: ActionState, formData: FormData): Promis
   const admin = createAdminClient();
   const { data: storedOrder } = await admin.from("orders").select("id, total_amount").eq("public_id", order.order_public_id).single();
   if (!storedOrder) return { error: "No pudimos recuperar la reserva creada." };
+  if (holders?.ok) {
+    const { error: holdersError } = await admin.rpc("set_order_ticket_holders", { target_order_public_id: order.order_public_id, target_holders: holders.holders });
+    if (holdersError) return { error: "No pudimos guardar los nombres de las entradas. Probá de nuevo." };
+  }
   if (storedOrder.total_amount > 0 && !parsed.data.document) return { error: "Ingresá tu DNI: lo necesitamos para emitir la factura del cargo de servicio." };
   if (storedOrder.total_amount === 0) {
     const { error: confirmationError } = await admin.rpc("complete_free_order", { target_order_public_id: order.order_public_id });
