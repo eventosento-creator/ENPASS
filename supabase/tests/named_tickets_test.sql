@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(26);
 
 -- Fixture: evento demo a futuro, entradas con cupo y en la misma etapa de venta.
 update public.ticket_holds set expires_at = now() - interval '1 second' where status = 'active';
@@ -73,6 +73,28 @@ select throws_ok($$select public.update_ticket_holder(current_setting('nt.t')::u
 update public.events set starts_at = now() + interval '10 days', require_document = true where id = '44444444-4444-4444-8444-444444444444';
 select throws_ok($$select public.update_ticket_holder(current_setting('nt.t')::uuid, array[current_setting('nt.cust')::uuid], 'Sin', 'Dni', null)$$, 'P0001', 'DOCUMENT_REQUIRED', 'si el evento pide DNI, el cambio también lo pide');
 select throws_ok($$select public.update_ticket_holder(current_setting('nt.t')::uuid, array[current_setting('nt.cust')::uuid], 'Dni', 'Malo', '12')$$, 'P0001', 'INVALID_DOCUMENT', 'un DNI inválido se rechaza');
+
+
+-- 7) El productor corrige el titular (también con la entrada usada y cerca del evento).
+update public.events set starts_at = now() + interval '10 days', require_document = false where id = '44444444-4444-4444-8444-444444444444';
+update public.tickets set used_entries = 1 where id = current_setting('nt.t')::uuid;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
+select lives_ok($$select public.update_ticket_holder_as_manager(current_setting('nt.t')::uuid, 'Elena', 'Correccion', null)$$, 'el productor corrige el nombre de una entrada');
+select is((select holder_first_name from public.tickets where id = current_setting('nt.t')::uuid), 'Elena', 'el nombre quedó corregido');
+select is((select count(*) from public.audit_logs where action = 'ticket.holder.changed' and entity_id = current_setting('nt.t')::uuid and after_data->>'by' = 'organizer')::int, 1, 'queda auditado como cambio del organizador');
+select throws_ok($$select public.update_ticket_holder_as_manager(current_setting('nt.t')::uuid, '', 'Sin nombre', null)$$, 'P0001', 'INVALID_NAME', 'un nombre vacío se rechaza');
+reset role;
+update public.tickets set status = 'cancelled', cancelled_at = now() where id = current_setting('nt.t')::uuid;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
+select throws_ok($$select public.update_ticket_holder_as_manager(current_setting('nt.t')::uuid, 'No', 'Aplica', null)$$, 'P0001', 'NOT_EDITABLE', 'una entrada anulada no se edita');
+set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated"}';
+select throws_ok($$select public.update_ticket_holder_as_manager(current_setting('nt.t')::uuid, 'Ajeno', 'Intruso', null)$$, 'P0001', 'NOT_ALLOWED', 'otra organización no puede editar');
+reset role;
+set local role anon;
+select throws_ok($$select public.update_ticket_holder_as_manager(current_setting('nt.t')::uuid, 'Anon', 'Ymo', null)$$, '42501', null, 'sin sesión no se puede');
+reset role;
 
 select * from finish();
 rollback;

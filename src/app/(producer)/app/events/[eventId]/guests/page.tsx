@@ -44,6 +44,9 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
     return {
       id: ticket.id,
       name: `${ticket.holder_first_name} ${ticket.holder_last_name}`.trim() || "Sin nombre",
+      firstName: ticket.holder_first_name,
+      lastName: ticket.holder_last_name,
+      editable: !!ticket.ticket_type_id,
       document: ticket.holder_document,
       typeLabel,
       status: ticket.status,
@@ -72,7 +75,7 @@ export default async function EventGuestsPage({ params }: { params: Promise<{ ev
     <EventSectionNav eventId={event.id} active="guests" capabilities={capabilities}/>
     {capabilities.tickets && <div className="mt-8"><CourtesyTicketForm eventId={event.id} ticketTypes={(ticketTypes ?? []).filter((type) => type.active)}/></div>}
     <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_300px] xl:items-start">
-      {guests.length ? <GuestSearch guests={guests} eventId={event.id} canMarkEntry/> : <div><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
+      {guests.length ? <GuestSearch guests={guests} eventId={event.id} canMarkEntry canEditHolder={isManager} requireDocument={event.require_document}/> : <div><EmptyState icon={Users} title="Todavía no hay invitados" description="Cuando se confirme la primera venta, la lista de asistentes va a aparecer acá."/></div>}
       <HowItWorksCard title="Cómo funciona" layout="column" steps={[
         { icon: Mail, title: "Las cortesías se envían por mail", description: "Agregá una cortesía y la persona recibirá su entrada por correo electrónico." },
         { icon: CheckCircle2, title: "Podés hacer seguimiento", description: "Vas a ver quién confirmó, quién ingresó y quién aún no lo hizo." },

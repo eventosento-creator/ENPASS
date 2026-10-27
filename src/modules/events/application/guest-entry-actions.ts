@@ -32,3 +32,29 @@ export async function markGuestEntry(ticketId: string, eventId: string): Promise
 export async function undoGuestEntry(ticketId: string, eventId: string): Promise<GuestEntryResult> {
   return run("undo_ticket_entry", { ticketId, eventId });
 }
+
+export type GuestHolderResult = { error?: string };
+
+const holderSchema = z.object({
+  ticketId: z.uuid(), eventId: z.uuid(),
+  firstName: z.string().trim().min(1, "Escribí el nombre.").max(80),
+  lastName: z.string().trim().min(1, "Escribí el apellido.").max(80),
+  document: z.string().trim().max(30).default("").transform((value) => value.replace(/[.\s-]/g, "")),
+});
+
+/** El productor corrige el titular de una entrada desde Invitados. */
+export async function updateGuestHolder(input: { ticketId: string; eventId: string; firstName: string; lastName: string; document: string }): Promise<GuestHolderResult> {
+  const parsed = holderSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_ticket_holder_as_manager", { target_ticket: parsed.data.ticketId, target_first_name: parsed.data.firstName, target_last_name: parsed.data.lastName, target_document: parsed.data.document || null });
+  if (error) {
+    if (error.message.includes("DOCUMENT_REQUIRED")) return { error: "Este evento pide el DNI de cada persona." };
+    if (error.message.includes("INVALID_DOCUMENT")) return { error: "El DNI no es válido: ingresá solo números." };
+    if (error.message.includes("NOT_EDITABLE")) return { error: "Esta entrada no se puede editar (está anulada, reembolsada o es una mesa)." };
+    if (error.message.includes("NOT_ALLOWED")) return { error: "No tenés permiso." };
+    return { error: "No pudimos cambiar el nombre. Probá de nuevo." };
+  }
+  revalidatePath(`/app/events/${parsed.data.eventId}/guests`);
+  return {};
+}
