@@ -15,7 +15,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     return <section className="mx-auto max-w-2xl">
       <p className="eyebrow">Primeros pasos</p>
       <h1 className="mt-3 text-4xl font-black tracking-tight">¿Qué querés hacer en ENPASS?</h1>
-      <p className="mt-3 text-neutral-400">Después podés usar las dos cosas igual, esto solo decide por dónde arrancamos.</p>
+      <p className="mt-3 text-neutral-400">Club y eventos son espacios separados, cada uno con su propio panel. Podés tener los dos y pasar de uno a otro desde el selector.</p>
       <OnboardingIntentPicker nextPath={nextPath}/>
     </section>;
   }

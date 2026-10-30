@@ -18,9 +18,10 @@ export default async function ProducerLayout({ children }: { children: React.Rea
   if (!data.user) redirect("/login");
   const [organization, admin, adminViewOrgId, workspaces] = await Promise.all([getCurrentOrganization(), isPlatformAdmin(), getAdminViewOrgId(), getWorkspaces()]);
   // Selector de espacio: el actual, los demás a los que tiene acceso (ej. un club donde colabora) y "Crear club".
-  const switcherOptions = workspaces.map((workspace) => ({ id: workspace.organization.id, name: workspace.organization.name, role: workspace.role, logoUrl: workspace.logoUrl }));
+  const switcherOptions = workspaces.map((workspace) => ({ id: workspace.organization.id, name: workspace.organization.name, role: workspace.role, logoUrl: workspace.logoUrl, kind: workspace.kind }));
   const collaboratorOnly = !organization && (await getCollaboratorEventIds()).length > 0;
   const clubStaffOnly = organization?.role === "staff";
+  // Un espacio es un club o es de eventos: cada uno con su propio menú.
   const clubEnabled = organization ? await isClubEnabled(organization.id) : false;
   const workspaceLabel = organization?.name ?? (collaboratorOnly ? "Panel de colaborador" : "Creá tu evento");
   const profileName = typeof data.user.user_metadata.full_name === "string" && data.user.user_metadata.full_name.trim()

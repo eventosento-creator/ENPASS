@@ -6,7 +6,6 @@ import { disconnectMercadoPago } from "@/modules/payments/application/actions";
 import { ensurePaymentAccountEmail } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
 import { isClubEnabled } from "@/modules/clubs/application/queries";
-import { toggleClubEnabled } from "@/modules/clubs/application/actions";
 import { RenameOrganizationForm } from "@/modules/organizations/ui/rename-organization-form";
 import { createClient } from "@/shared/database/server";
 import { SubmitButton } from "@/shared/ui/submit-button";
@@ -24,7 +23,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const accountEmail = connected && !account?.provider_account_email ? await ensurePaymentAccountEmail(organization.id) : (account?.provider_account_email ?? null);
 
   return <div className="mx-auto max-w-4xl">
-    <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Ajustes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">Cómo cobrás, tus lugares y los datos de tu espacio.</p>
+    <p className="eyebrow">Organización</p><h1 className="page-title mt-2">Ajustes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">{clubEnabled ? "Cómo cobrás y los datos de tu espacio." : "Cómo cobrás, tus lugares y los datos de tu espacio."}</p>
     {notice && <Notice code={notice} detail={detail}/>}
     <section className="card mt-8 overflow-hidden">
       <div className="flex flex-col gap-5 border-b border-white/[.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)]"><CreditCard size={20}/></span><div><h2 className="text-xl font-black tracking-[-.025em]">Pagos</h2><p className="mt-1 text-sm text-neutral-500">Mercado Pago{connected ? ` · ${account?.live_mode ? "cobro real" : "entorno de prueba"}` : ""}</p>{connected && accountEmail && <p className="mt-0.5 text-xs text-neutral-600">Cuenta conectada: <span className="font-mono text-neutral-400">{accountEmail}</span></p>}</div></div><StatusBadge connected={connected} status={account?.status}/></div>
@@ -33,11 +32,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </div>
       {!environment.ready && <div className="border-t border-amber-300/10 bg-amber-300/[.04] p-5 text-sm leading-6 text-amber-100/70 sm:px-7"><strong className="text-amber-100">Configuración local incompleta.</strong> {environment.message}</div>}
     </section>
+    {!clubEnabled && <>
     <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={MapPin} tone="blue" size={11}/><div><h2 className="font-bold">Lugares</h2><p className="mt-1 text-sm text-neutral-500">Direcciones, capacidad y zona horaria.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href="/app/venues">Administrar lugares</Link></section>
     <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={Package} tone="amber" size={11}/><div><h2 className="font-bold">Productos</h2><p className="mt-1 text-sm text-neutral-500">Catálogo reutilizable para las barras y puntos de venta.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href="/app/products">Administrar productos</Link></section>
-    <section className="card mt-4 overflow-hidden">
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={UserRoundCheck} tone="violet" size={11}/><div><h2 className="font-bold">Club</h2><p className="mt-1 text-sm text-neutral-500">Socios, categorías y cobro de cuotas — pensado para clubes.{clubEnabled && <> El nombre, la identidad y la publicación se editan en <Link className="font-bold underline" href={"/app/socios/ajustes" as never}>Club → Ajustes → Datos del club</Link>.</>}</p></div></div><form action={toggleClubEnabled}><input type="hidden" name="organizationId" value={organization.id}/><input type="hidden" name="enabled" value={clubEnabled ? "false" : "true"}/><SubmitButton className={`btn w-full sm:w-auto ${clubEnabled ? "btn-ghost" : "btn-secondary"}`}>{clubEnabled ? "Desactivar módulo" : "Activar módulo"}</SubmitButton></form></div>
-    </section>
+    </>}
+    {clubEnabled && <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={UserRoundCheck} tone="violet" size={11}/><div><h2 className="font-bold">Datos del club</h2><p className="mt-1 text-sm text-neutral-500">El nombre, la identidad y la publicación del club se editan desde Club → Ajustes.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href={"/app/socios/ajustes" as never}>Ir a ajustes del club</Link></section>}
     {transferOrg?.ticket_transfer_enabled && ["owner", "admin"].includes(organization.role) && <section className="card mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><IconBadge icon={Landmark} tone="blue" size={11}/><div><h2 className="font-bold">Liquidaciones</h2><p className="mt-1 text-sm text-neutral-500">Lo cobrado por transferencia, lo que ENPASS te debe y a dónde te lo enviamos.</p></div></div><Link className="btn btn-secondary w-full sm:w-auto" href={"/app/settings/liquidaciones" as never}>Ver liquidaciones</Link></section>}
     {["owner", "admin"].includes(organization.role) && <section className="card mt-4 p-5 sm:p-7"><h2 className="mb-4 text-lg font-black">Nombre del espacio</h2><RenameOrganizationForm organizationId={organization.id} name={organization.name}/></section>}
   </div>;

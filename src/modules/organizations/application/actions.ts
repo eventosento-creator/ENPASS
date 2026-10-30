@@ -115,5 +115,5 @@ export async function switchWorkspace(formData: FormData) {
   if (!target) return;
   await setPreferredWorkspaceId(target.organization.id);
   revalidatePath("/app", "layout");
-  redirect(target.role === "staff" ? "/app/socios" : "/app");
+  redirect(target.kind === "club" ? "/app/socios" : "/app");
 }

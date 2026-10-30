@@ -25,7 +25,9 @@ export const isPlatformAdmin = cache(async () => {
   return data === true;
 });
 
-export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff"; clubRole: ClubRole | null; logoUrl: string | null };
+/** Cada espacio es de una sola cosa: un club (socios y cuotas) o una organización de eventos. */
+export type WorkspaceKind = "club" | "events";
+export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff"; clubRole: ClubRole | null; logoUrl: string | null; kind: WorkspaceKind };
 
 /** Todos los espacios a los que la persona tiene acceso: donde es dueña/admin y donde es colaboradora del club. */
 export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
@@ -33,7 +35,7 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   if (!user) return [];
   const supabase = await createClient();
   const { data: memberships } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).order("created_at");
-  const own: Array<Omit<Workspace, "logoUrl">> = (memberships ?? []).flatMap((membership) => {
+  const own: Array<Omit<Workspace, "logoUrl" | "kind">> = (memberships ?? []).flatMap((membership) => {
     const organization = membership.organizations as unknown as Organization | null;
     return organization ? [{ organization, role: membership.role, clubRole: null }] : [];
   });
@@ -44,11 +46,12 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   const staffIds = (staffRows ?? []).map((row) => row.organization_id).filter((id) => !own.some((workspace) => workspace.organization.id === id));
   const staffOrganizations = staffIds.length ? ((await admin.from("organizations").select("*").in("id", staffIds)).data ?? []) as Organization[] : [];
   const roleByOrg = new Map((staffRows ?? []).map((row) => [row.organization_id, row.role as ClubRole]));
-  const all: Array<Omit<Workspace, "logoUrl">> = [...own, ...staffOrganizations.map((organization) => ({ organization, role: "staff" as const, clubRole: roleByOrg.get(organization.id) ?? "viewer" }))];
+  const all: Array<Omit<Workspace, "logoUrl" | "kind">> = [...own, ...staffOrganizations.map((organization) => ({ organization, role: "staff" as const, clubRole: roleByOrg.get(organization.id) ?? "viewer" }))];
   // Logo del club (si lo cargó) para mostrarlo en el selector de espacios.
-  const { data: logos } = all.length ? await admin.from("club_settings").select("organization_id, brand_logo_url").in("organization_id", all.map((workspace) => workspace.organization.id)) : { data: [] };
+  const { data: logos } = all.length ? await admin.from("club_settings").select("organization_id, brand_logo_url, enabled").in("organization_id", all.map((workspace) => workspace.organization.id)) : { data: [] };
   const logoByOrg = new Map((logos ?? []).map((row) => [row.organization_id, row.brand_logo_url]));
-  return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null }));
+  const clubIds = new Set((logos ?? []).filter((row) => row.enabled).map((row) => row.organization_id));
+  return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null, kind: clubIds.has(workspace.organization.id) || workspace.role === "staff" ? "club" as const : "events" as const }));
 });
 
 export const getCurrentOrganization = cache(async () => {
