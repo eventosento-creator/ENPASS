@@ -48,6 +48,8 @@ export const ticketTypeInputSchema = z.object({
   phaseName: z.string().trim().min(1).max(100),
   pricePesos: z.coerce.number().nonnegative().multipleOf(1), quantity: z.coerce.number().int().positive(),
   maxPerOrder: z.coerce.number().int().min(1).max(20),
+  // Hora límite de ingreso (HH:MM, hora local del evento). Vacía = puede entrar hasta el cierre del evento.
+  entryCutoff: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()),
 });
 
 export const ticketTypeUpdateSchema = ticketTypeInputSchema.omit({ phaseName: true }).extend({

@@ -186,7 +186,7 @@ export async function createTicketType(_: ActionState, formData: FormData): Prom
     organization_id: parsed.data.organizationId, event_id: parsed.data.eventId, name: parsed.data.name,
     sale_phase_id: phase.id,
     description: "", price_amount: pesosToMinorUnits(parsed.data.pricePesos), currency: "ARS",
-    quantity: parsed.data.quantity, max_per_order: parsed.data.maxPerOrder, sales_start: null,
+    quantity: parsed.data.quantity, max_per_order: parsed.data.maxPerOrder, entry_cutoff_time: parsed.data.entryCutoff ?? null, sales_start: null,
     sales_end: null, active: true, sort_order: sortOrder,
   });
   if (error) {
@@ -213,6 +213,7 @@ export async function updateTicketType(_: ActionState, formData: FormData): Prom
     price_amount: pesosToMinorUnits(parsed.data.pricePesos),
     quantity: parsed.data.quantity,
     max_per_order: parsed.data.maxPerOrder,
+    entry_cutoff_time: parsed.data.entryCutoff ?? null,
   }).eq("id", parsed.data.ticketTypeId).eq("event_id", parsed.data.eventId).eq("organization_id", parsed.data.organizationId);
   if (error) return { error: "No pudimos guardar los cambios." };
   revalidatePath(`/app/events/${parsed.data.eventId}`);

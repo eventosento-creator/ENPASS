@@ -6,6 +6,21 @@ describe("ticket type money", () => {
   it("rejects fractional peso input in the initial product", () => expect(ticketTypeInputSchema.safeParse({ eventId: crypto.randomUUID(), organizationId: crypto.randomUUID(), name: "General", phaseName: "General", pricePesos: 10.5, quantity: 1, maxPerOrder: 6 }).success).toBe(false));
 });
 
+describe("ticket type entry cutoff", () => {
+  const base = { eventId: crypto.randomUUID(), organizationId: crypto.randomUUID(), name: "Gratis", phaseName: "Gratis", pricePesos: 0, quantity: 10, maxPerOrder: 4 };
+  it("is optional: empty means no cutoff", () => {
+    expect(ticketTypeInputSchema.parse({ ...base, entryCutoff: "" }).entryCutoff).toBeUndefined();
+    expect(ticketTypeInputSchema.parse(base).entryCutoff).toBeUndefined();
+  });
+  it("accepts HH:MM, including after midnight", () => {
+    expect(ticketTypeInputSchema.parse({ ...base, entryCutoff: "01:00" }).entryCutoff).toBe("01:00");
+    expect(ticketTypeInputSchema.parse({ ...base, entryCutoff: "23:59" }).entryCutoff).toBe("23:59");
+  });
+  it("rejects malformed times", () => {
+    for (const entryCutoff of ["25:00", "1:00", "02:60", "abc"]) expect(ticketTypeInputSchema.safeParse({ ...base, entryCutoff }).success).toBe(false);
+  });
+});
+
 describe("event updates", () => {
   const valid = {
     eventId: crypto.randomUUID(), venueId: crypto.randomUUID(), name: "Neon Ritual",

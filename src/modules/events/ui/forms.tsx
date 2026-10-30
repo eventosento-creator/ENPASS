@@ -136,6 +136,7 @@ export function TicketTypeForm({ organizationId, eventId }: { organizationId: st
     <div className="grid gap-4 sm:grid-cols-2"><label className="label">Etapa de venta<input className="field" name="phaseName" placeholder="Preventa 1" required/></label><label className="label">Nombre de entrada<input className="field" name="name" placeholder="General" required/></label></div>
     <label className="label">Precio en ARS<input className="field" name="pricePesos" type="number" min="0" step="1" inputMode="numeric" required/></label>
     <div className="grid gap-4 sm:grid-cols-2"><label className="label">Cantidad<input className="field" name="quantity" type="number" min="1" required/></label><label className="label">Máximo por compra<input className="field" name="maxPerOrder" type="number" min="1" max="20" defaultValue="6" required/></label></div>
+    <label className="label">Hora límite de ingreso (opcional)<input className="field" name="entryCutoff" type="time"/><span className="text-xs font-normal text-neutral-500">Pasada esta hora, el scanner rechaza esta entrada. Vacío: puede entrar hasta el final del evento.</span></label>
     <ActionMessage message={state.error}/><SubmitButton className="btn btn-secondary">Agregar entrada</SubmitButton>
   </form>;
 }
@@ -147,6 +148,7 @@ export function TicketTypeEditForm({ organizationId, eventId, ticketType }: { or
     <label className="label">Nombre<input className="field" name="name" defaultValue={ticketType.name} required/></label>
     <div className="grid grid-cols-2 gap-3"><label className="label">Precio en ARS<input className="field" name="pricePesos" type="number" min="0" step="1" defaultValue={ticketType.price_amount / 100} required/></label><label className="label">Cantidad<input className="field" name="quantity" type="number" min="1" defaultValue={ticketType.quantity} required/></label></div>
     <label className="label">Máximo por compra<input className="field" name="maxPerOrder" type="number" min="1" max="20" defaultValue={ticketType.max_per_order} required/></label>
+    <label className="label">Hora límite de ingreso (opcional)<input className="field" name="entryCutoff" type="time" defaultValue={ticketType.entry_cutoff_time?.slice(0, 5) ?? ""}/><span className="text-xs font-normal text-neutral-500">Pasada esta hora, el scanner rechaza esta entrada. Vacío: puede entrar hasta el final del evento.</span></label>
     <ActionMessage message={state.error}/><SubmitButton className="btn btn-secondary">Guardar cambios</SubmitButton>
   </form>;
 }

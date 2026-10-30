@@ -30,7 +30,7 @@ export type TicketType = {
   id: string; organization_id: string; event_id: string; sale_phase_id: string | null; name: string; description: string;
   price_amount: number; currency: string; quantity: number; max_per_order: number;
   sales_start: string | null; sales_end: string | null; active: boolean; publicly_available: boolean; sort_order: number;
-  link_only: boolean; link_token: string | null;
+  link_only: boolean; link_token: string | null; entry_cutoff_time: string | null;
 };
 
 export type MembershipCategory = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
@@ -526,7 +526,7 @@ export interface Database {
       venues: { Row: Venue; Insert: Omit<Venue, "id"> & { id?: string }; Update: Partial<Venue>; Relationships: [] };
       events: { Row: Event; Insert: Omit<Event, "id" | "published_at" | "reminder_sent_at" | "discovery_category"> & { id?: string; published_at?: string | null; reminder_sent_at?: string | null; discovery_category?: EventDiscoveryCategory; created_by: string }; Update: Partial<Event>; Relationships: [] };
       sale_phases: { Row: { id: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out: boolean }; Insert: { id?: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out?: boolean }; Update: { name?: string; sort_order?: number; activate_next_when_sold_out?: boolean }; Relationships: [] };
-      ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available" | "link_only" | "link_token"> & { id?: string; publicly_available?: boolean; link_only?: boolean; link_token?: string | null }; Update: Partial<TicketType>; Relationships: [] };
+      ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available" | "link_only" | "link_token" | "entry_cutoff_time"> & { id?: string; publicly_available?: boolean; link_only?: boolean; link_token?: string | null; entry_cutoff_time?: string | null }; Update: Partial<TicketType>; Relationships: [] };
       product_categories: { Row: ProductCategory; Insert: Partial<ProductCategory> & Pick<ProductCategory, "organization_id" | "name">; Update: Partial<ProductCategory>; Relationships: [] };
       products: { Row: Product; Insert: Partial<Product> & Pick<Product, "organization_id" | "name">; Update: Partial<Product>; Relationships: [] };
       event_products: { Row: EventProduct; Insert: Partial<EventProduct> & Pick<EventProduct, "organization_id" | "event_id" | "product_id" | "price_amount" | "currency">; Update: Partial<EventProduct>; Relationships: [] };
