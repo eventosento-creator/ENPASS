@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check, Copy, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, Copy, Send, ShieldAlert, ShieldCheck, Smartphone } from "lucide-react";
 import { createAccessGate, createScannerAuthorization, fixGateCoverage, updateAccessGate, type AccessActionState } from "../application/actions";
 import type { GateCoverage } from "../domain/gate-coverage";
 import type { AccessGate, AccessGateTicketType, TicketType } from "@/shared/database/types";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { scannerWhatsappUrl } from "../domain/scanner-link";
 
 const initialState: AccessActionState = {};
 
@@ -52,17 +53,24 @@ export function GateEditor({ gate, rules, ticketTypes, entries, activeDevices }:
   </form>;
 }
 
-export function DeviceAuthorizationForm({ eventId, gates }: { eventId: string; gates: AccessGate[] }) {
+export function DeviceAuthorizationForm({ eventId, eventName, gates, suggestedLabel }: { eventId: string; eventName: string; gates: AccessGate[]; suggestedLabel: string }) {
   const [state, action] = useActionState(createScannerAuthorization, initialState);
   const [copied, setCopied] = useState(false);
+  const activeGates = gates.filter((gate) => gate.active);
+  const singleGate = activeGates.length === 1 ? activeGates[0] : null;
   return <form action={action} className="card grid gap-4 p-5">
-    <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)]"><KeyRound size={19}/></span><div><p className="font-black">Autorizar dispositivo</p><p className="text-xs text-neutral-500">PIN único · vence en 30 minutos</p></div></div>
+    <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)]"><Smartphone size={19}/></span><div><p className="font-black">Agregar scanner</p><p className="text-xs text-neutral-500">Un celular para escanear en la puerta</p></div></div>
     <input type="hidden" name="eventId" value={eventId}/>
-    <label className="label">Puerta<select className="field" name="gateId" required defaultValue=""><option value="" disabled>Elegí una puerta</option>{gates.filter((gate) => gate.active).map((gate) => <option value={gate.id} key={gate.id}>{gate.name}</option>)}</select></label>
-    <label className="label">Nombre del dispositivo<input className="field" name="label" placeholder="Scanner puerta 2" required/></label>
-    <label className="label">Permiso<select className="field" name="permission" defaultValue="scanner"><option value="scanner">Scanner</option><option value="supervisor">Supervisor</option></select></label>
-    {state.pin && <div className="rounded-2xl border border-lime-400/25 bg-lime-400/[.07] p-5 text-center"><p className="text-xs font-black uppercase tracking-[.2em] text-lime-300">PIN de activación</p><p className="mt-3 font-mono text-4xl font-black tracking-[.16em]">{state.pin.slice(0, 3)} {state.pin.slice(3)}</p><p className="mt-3 text-xs leading-5 text-lime-100/70">Usá este código para activar un dispositivo de puerta. Se muestra una sola vez y, si no lo usás, vence en 30 minutos; una vez activado sirve para volver a entrar a este mismo scanner las veces que haga falta.</p><button className="btn btn-ghost mt-4 w-full" type="button" onClick={() => { void navigator.clipboard.writeText(state.pin!); setCopied(true); }} disabled={copied}>{copied ? <Check size={16}/> : <Copy size={16}/>} {copied ? "Copiado" : "Copiar PIN"}</button></div>}
-    <Message state={state}/><SubmitButton className="btn btn-primary w-full" pendingLabel="Generando…"><ShieldCheck size={17}/>Generar PIN</SubmitButton>
+    {singleGate && <input type="hidden" name="gateId" value={singleGate.id}/>}
+    <label className="label">Nombre del celular<input className="field" name="label" defaultValue={suggestedLabel} placeholder="Puerta 1" required/></label>
+    {!singleGate && <label className="label">Puerta<select className="field" name="gateId" required defaultValue=""><option value="" disabled>Elegí una puerta</option>{activeGates.map((gate) => <option value={gate.id} key={gate.id}>{gate.name}</option>)}</select></label>}
+    <details className="text-sm"><summary className="cursor-pointer font-bold text-neutral-500">Más opciones</summary>
+      <label className="label mt-3">Permiso<select className="field" name="permission" defaultValue="scanner"><option value="scanner">Scanner (solo escanea)</option><option value="supervisor">Supervisor (puede autorizar excepciones)</option></select></label>
+    </details>
+    {state.pin && <div className="rounded-2xl border border-lime-400/25 bg-lime-400/[.07] p-5 text-center"><p className="text-xs font-black uppercase tracking-[.2em] text-lime-300">PIN de activación</p><p className="mt-3 font-mono text-4xl font-black tracking-[.16em]">{state.pin.slice(0, 3)} {state.pin.slice(3)}</p><p className="mt-3 text-xs leading-5 text-lime-100/70">Mandáselo a quien tiene el celular. Sirve una sola vez y vence en 30 minutos; una vez activado, ese celular vuelve a entrar solo las veces que haga falta.</p>
+      <a className="btn btn-primary mt-4 w-full" href={scannerWhatsappUrl(window.location.origin, state.pin, eventName)} target="_blank" rel="noreferrer"><Send size={16}/>Mandar por WhatsApp</a>
+      <button className="btn btn-ghost mt-2 w-full" type="button" onClick={() => { void navigator.clipboard.writeText(state.pin!); setCopied(true); }} disabled={copied}>{copied ? <Check size={16}/> : <Copy size={16}/>} {copied ? "Copiado" : "Copiar PIN"}</button></div>}
+    <Message state={state}/><SubmitButton className="btn btn-primary w-full" pendingLabel="Generando…"><ShieldCheck size={17}/>Agregar scanner</SubmitButton>
   </form>;
 }
 

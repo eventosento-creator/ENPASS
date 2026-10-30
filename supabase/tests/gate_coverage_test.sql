@@ -34,6 +34,9 @@ select is((select count(*) from public.access_gate_ticket_types where ticket_typ
 reset role;
 insert into public.ticket_types (organization_id, event_id, name, price_amount, currency, quantity, max_per_order, active, sort_order)
 values ('22222222-2222-4222-8222-222222222222', '55000000-0000-4000-8000-000000000001', 'General test', 500000, 'ARS', 20, 4, true, 0);
+-- Desde que la puerta se crea sola, este evento ya nació con una; se la saca para simular un evento viejo, sin puertas.
+delete from public.access_gate_ticket_types where event_id = '55000000-0000-4000-8000-000000000001';
+delete from public.access_gates where event_id = '55000000-0000-4000-8000-000000000001';
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
 select is((select gate_created from public.fix_event_gate_coverage('55000000-0000-4000-8000-000000000001')), true, 'un evento sin puertas recibe una puerta automática');

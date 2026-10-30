@@ -179,6 +179,10 @@ on conflict (id) do nothing;
 
 -- FASE 3 local access fixtures. These deterministic credentials are intentionally
 -- development-only and are exposed exclusively by /dev/qr outside production.
+-- Los tipos de entrada de arriba ya generaron la puerta automática "Acceso principal"; este fixture define sus propias puertas y reglas.
+delete from public.access_gate_ticket_types where event_id = '44444444-4444-4444-8444-444444444444';
+delete from public.access_gates where event_id = '44444444-4444-4444-8444-444444444444' and id not in ('a3000000-0000-4000-8000-000000000001', 'a3000000-0000-4000-8000-000000000002');
+
 insert into public.access_gates (id, organization_id, event_id, name, description, active)
 values
   (

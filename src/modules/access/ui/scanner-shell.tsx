@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AlertTriangle, Camera, CheckCircle2, Flashlight, Keyboard, LogOut, RotateCcw, ScanLine, Settings2, ShieldCheck, Vibrate, Volume2, VolumeX, Wifi, WifiOff, X, XCircle } from "lucide-react";
 import type QrScannerType from "qr-scanner";
+import { readPinFromHash } from "../domain/scanner-link";
 import { canUseSupervisorTools, getResultPresentation, isNightlifeQrPayload, type CheckInResponse, type ScannerSessionView } from "../domain/scanner";
 
 type ManualPreview = {
@@ -23,8 +24,14 @@ export function ScannerShell({ initialSession, initialUnavailable = false, devel
   return <ActiveScanner session={session} developmentMode={developmentMode} onSessionEnded={() => setSession(null)}/>;
 }
 
+function subscribeToHash(onChange: () => void) { window.addEventListener("hashchange", onChange); return () => window.removeEventListener("hashchange", onChange); }
+
 function ActivationScreen({ onActivated }: { onActivated: (session: ScannerSessionView) => void }) {
-  const [pin, setPin] = useState("");
+  // El link que se manda por WhatsApp trae el PIN en el fragmento (#pin=…): se precarga, y si tipean algo se usa lo tipeado.
+  const hashPin = useSyncExternalStore(subscribeToHash, () => readPinFromHash(window.location.hash), () => "");
+  const [typedPin, setTypedPin] = useState<string | null>(null);
+  const pin = typedPin ?? hashPin;
+  const setPin = setTypedPin;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   async function activate(event: React.FormEvent) {
@@ -33,6 +40,7 @@ function ActivationScreen({ onActivated }: { onActivated: (session: ScannerSessi
       const response = await fetch("/api/scanner/activate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin }) });
       const body = await response.json() as { session?: ScannerSessionView; error?: string };
       if (!response.ok || !body.session) { setError(body.error ?? "No pudimos autorizar el dispositivo."); return; }
+      window.history.replaceState(null, "", window.location.pathname);
       onActivated(body.session);
     } catch { setError("Sin conexión. Revisá la red e intentá nuevamente."); }
     finally { setPending(false); }

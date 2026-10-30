@@ -20,7 +20,7 @@ const deviceSchema = z.object({
   eventId: z.uuid(),
   gateId: z.uuid(),
   label: z.string().trim().min(2).max(80),
-  permission: z.enum(["scanner", "supervisor"]),
+  permission: z.enum(["scanner", "supervisor"]).default("scanner"),
 });
 
 function parseGateForm(formData: FormData) {
@@ -71,7 +71,7 @@ export async function updateAccessGate(_: AccessActionState, formData: FormData)
 
 export async function createScannerAuthorization(_: AccessActionState, formData: FormData): Promise<AccessActionState> {
   const parsed = deviceSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Elegí una puerta, un nombre y el nivel de permiso." };
+  if (!parsed.success) return { error: "Ponele un nombre al scanner (por ejemplo \"Puerta 1\")." };
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return { error: "Tu sesión venció." };
