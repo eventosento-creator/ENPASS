@@ -3,10 +3,17 @@
 -- y la configuración de taquilla con sus precios. Un boliche repite cada fin de semana: la copia debe quedar lista para editar la fecha y publicar.
 -- Los scanners no se copian (el PIN es de una noche) y la puerta "Acceso principal" la crea sola el sistema al copiar las entradas.
 
-alter function public.duplicate_event_with_options(uuid, text, text, timestamptz, boolean, boolean, boolean, boolean, boolean)
-rename to duplicate_event_phase_6;
+-- Repetible: si ya se corrió una vez, la función original ya quedó guardada como duplicate_event_phase_6 y no se vuelve a renombrar.
+do $$
+begin
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'duplicate_event_phase_6') then
+    alter function public.duplicate_event_with_options(uuid, text, text, timestamptz, boolean, boolean, boolean, boolean, boolean)
+    rename to duplicate_event_phase_6;
+  end if;
+end;
+$$;
 
-create function public.duplicate_event_with_options(
+create or replace function public.duplicate_event_with_options(
   target_event uuid, target_name text, target_slug text, target_starts_at timestamptz,
   preserve_tickets boolean, preserve_promoters boolean, preserve_tables boolean,
   preserve_products boolean, preserve_sales_locations boolean
