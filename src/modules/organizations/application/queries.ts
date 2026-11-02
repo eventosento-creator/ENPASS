@@ -50,7 +50,11 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   // Logo del club (si lo cargó) para mostrarlo en el selector de espacios.
   const { data: logos } = all.length ? await admin.from("club_settings").select("organization_id, brand_logo_url, enabled").in("organization_id", all.map((workspace) => workspace.organization.id)) : { data: [] };
   const logoByOrg = new Map((logos ?? []).map((row) => [row.organization_id, row.brand_logo_url]));
-  const clubIds = new Set((logos ?? []).filter((row) => row.enabled).map((row) => row.organization_id));
+  const enabledIds = (logos ?? []).filter((row) => row.enabled).map((row) => row.organization_id);
+  // Un espacio con club activado que además tiene eventos sigue siendo de eventos (no se le esconde nada).
+  const { data: withEvents } = enabledIds.length ? await admin.from("events").select("organization_id").in("organization_id", enabledIds) : { data: [] };
+  const eventOrgs = new Set((withEvents ?? []).map((row) => row.organization_id));
+  const clubIds = new Set(enabledIds.filter((id) => !eventOrgs.has(id)));
   return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null, kind: clubIds.has(workspace.organization.id) || workspace.role === "staff" ? "club" as const : "events" as const }));
 });
 

@@ -5,7 +5,7 @@ import { getCurrentOrganization } from "@/modules/organizations/application/quer
 import { disconnectMercadoPago } from "@/modules/payments/application/actions";
 import { ensurePaymentAccountEmail } from "@/modules/payments/application/account-credentials";
 import { assertPublicHttpsUrl, getMercadoPagoRuntimeConfig } from "@/modules/payments/infrastructure/config";
-import { isClubEnabled } from "@/modules/clubs/application/queries";
+import { isClubSpace } from "@/modules/clubs/application/queries";
 import { RenameOrganizationForm } from "@/modules/organizations/ui/rename-organization-form";
 import { createClient } from "@/shared/database/server";
 import { SubmitButton } from "@/shared/ui/submit-button";
@@ -14,7 +14,7 @@ import { IconBadge } from "@/shared/ui/icon-badge";
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ payment?: string; detail?: string }> }) {
   const organization = await getCurrentOrganization();
   if (!organization) redirect("/app/onboarding");
-  const [{ payment: notice, detail }, supabase, clubEnabled] = await Promise.all([searchParams, createClient(), isClubEnabled(organization.id)]);
+  const [{ payment: notice, detail }, supabase, clubEnabled] = await Promise.all([searchParams, createClient(), isClubSpace(organization.id)]);
   const { data: transferOrg } = await supabase.from("organizations").select("ticket_transfer_enabled").eq("id", organization.id).maybeSingle();
   const { data } = await supabase.rpc("get_payment_account_status", { target_organization: organization.id });
   const account = data?.[0];
