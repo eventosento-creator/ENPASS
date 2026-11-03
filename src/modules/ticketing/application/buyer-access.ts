@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/shared/database/admin";
 import { ticketingLog } from "@/shared/lib/structured-log";
-import { generateOpaqueToken, hashEmail, hashOpaqueToken, normalizeEmail } from "../domain/credentials";
+import { generateAccessCode, generateOpaqueToken, hashAccessCode, hashEmail, hashOpaqueToken, normalizeAccessCode, normalizeEmail } from "../domain/credentials";
 import type { EmailProvider } from "../infrastructure/email-provider";
 import { SmtpEmailProvider } from "../infrastructure/smtp-email-provider";
 import { BUYER_ACCESS_PUBLIC_MESSAGE, buyerAccessPublicResult } from "../domain/buyer-access-policy";
@@ -14,6 +14,11 @@ export const BUYER_ACCESS_RESPONSE = BUYER_ACCESS_PUBLIC_MESSAGE;
 const emailSchema = z.string().trim().email().max(320);
 
 export async function createBuyerMagicLink(email: string, options: { expiresAt?: Date; next?: string } = {}) {
+  return (await issueBuyerAccess(email, options))?.accessUrl ?? null;
+}
+
+/** Crea el pedido de acceso y devuelve el link; con `withCode` también un código de 6 dígitos para escribir en la pantalla. */
+async function issueBuyerAccess(email: string, options: { expiresAt?: Date; next?: string; withCode?: boolean } = {}) {
   const normalizedEmail = normalizeEmail(email);
   const rawToken = generateOpaqueToken();
   // Default: 15 min, para el flujo interactivo de "mandame un acceso" (se clickea al toque).
@@ -35,7 +40,13 @@ export async function createBuyerMagicLink(email: string, options: { expiresAt?:
   accessUrl.searchParams.set("token", rawToken);
   const next = safeNextPath(options.next);
   if (next) accessUrl.searchParams.set("next", next);
-  return accessUrl.toString();
+  let code: string | null = null;
+  if (options.withCode) {
+    const candidate = generateAccessCode();
+    const { data: stored } = await admin.rpc("set_buyer_access_code", { target_token_hash: hashOpaqueToken(rawToken), target_code_hash: hashAccessCode(candidate, hashEmail(normalizedEmail)) });
+    if (stored) code = candidate;
+  }
+  return { accessUrl: accessUrl.toString(), code };
 }
 
 // Solo rutas internas ("/algo"): evita que el link del mail redirija a otro sitio.
@@ -50,9 +61,9 @@ export async function requestBuyerAccess(emailInput: string, next?: string, prov
   if (!parsed.success) return buyerAccessPublicResult("not_found");
 
   try {
-    const accessUrl = await createBuyerMagicLink(parsed.data, { next });
-    if (accessUrl) await provider.sendBuyerAccess({ to: normalizeEmail(parsed.data), accessUrl });
-    return buyerAccessPublicResult(accessUrl ? "sent" : "not_found");
+    const access = await issueBuyerAccess(parsed.data, { next, withCode: true });
+    if (access) await provider.sendBuyerAccess({ to: normalizeEmail(parsed.data), accessUrl: access.accessUrl, code: access.code ?? undefined });
+    return buyerAccessPublicResult(access ? "sent" : "not_found");
   } catch {
     // Enumeration-safe by design: the public result is identical for no match and delivery failure.
     return buyerAccessPublicResult("failed");
@@ -72,6 +83,29 @@ export async function exchangeBuyerAccessToken(rawToken: string) {
   if (error || !data) return null;
   ticketingLog("buyer.access.granted");
   return { rawSession, expiresAt };
+}
+
+/** Canjea el código de 6 dígitos que llegó por mail. Devuelve la sesión (para guardar en la cookie) o null si el código no sirve. */
+export async function exchangeBuyerAccessCode(emailInput: string, codeInput: string) {
+  const email = emailSchema.safeParse(emailInput);
+  const code = normalizeAccessCode(codeInput);
+  if (!email.success || !code) return null;
+  const emailHash = hashEmail(email.data);
+  const rawSession = generateOpaqueToken();
+  const expiresAt = new Date(Date.now() + BUYER_SESSION_MAX_AGE_SECONDS * 1000);
+  const { data, error } = await createAdminClient().rpc("exchange_buyer_access_code", {
+    target_email_hash: emailHash,
+    target_code_hash: hashAccessCode(code, emailHash),
+    target_session_hash: hashOpaqueToken(rawSession),
+    target_session_expires_at: expiresAt.toISOString(),
+  });
+  if (error || data !== true) return null;
+  ticketingLog("buyer.access.granted");
+  return { rawSession, expiresAt };
+}
+
+export function buyerSessionCookieOptions(expiresAt: Date) {
+  return { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", expires: expiresAt, maxAge: BUYER_SESSION_MAX_AGE_SECONDS, priority: "high" as const };
 }
 
 export async function getBuyerSessionCustomerIds(rawSession: string | undefined) {

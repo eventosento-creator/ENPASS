@@ -682,6 +682,8 @@ export interface Database {
       claim_ticket_delivery: { Args: { target_order_id: string; target_destination_hash: string; force_delivery?: boolean }; Returns: { delivery_id: string; should_send: boolean }[] };
       complete_ticket_delivery: { Args: { target_delivery_id: string; succeeded: boolean; error_message?: string | null }; Returns: undefined };
       create_buyer_access_token: { Args: { target_email: string; target_token_hash: string; target_email_hash: string; target_expires_at: string }; Returns: string | null };
+      set_buyer_access_code: { Args: { target_token_hash: string; target_code_hash: string }; Returns: boolean };
+      exchange_buyer_access_code: { Args: { target_email_hash: string; target_code_hash: string; target_session_hash: string; target_session_expires_at: string }; Returns: boolean };
       exchange_buyer_access_token: { Args: { target_token_hash: string; target_session_hash: string; target_session_expires_at: string }; Returns: boolean };
       get_buyer_session_email: { Args: { target_session_hash: string }; Returns: string | null };
       get_buyer_session_customers: { Args: { target_session_hash: string }; Returns: { customer_id: string }[] };

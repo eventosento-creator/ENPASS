@@ -31,7 +31,7 @@ export function FavoriteButton({ eventId, initiallyFavorited, className = "" }: 
     </form>
     {showLogin && <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={() => setShowLogin(false)}>
       <div className="card w-full max-w-sm p-6" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">Favoritos</p><h2 className="mt-2 text-xl font-black">Iniciá sesión para guardar</h2><p className="mt-2 text-sm leading-6 text-neutral-500">Te mandamos un acceso a tu email, sin contraseña.</p></div><button aria-label="Cerrar" className="text-neutral-500 hover:text-white" onClick={() => setShowLogin(false)}><X size={18}/></button></div>
+        <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">Favoritos</p><h2 className="mt-2 text-xl font-black">Iniciá sesión para guardar</h2><p className="mt-2 text-sm leading-6 text-neutral-500">Te mandamos un código a tu email, sin contraseña.</p></div><button aria-label="Cerrar" className="text-neutral-500 hover:text-white" onClick={() => setShowLogin(false)}><X size={18}/></button></div>
         <BuyerAccessForm/>
       </div>
     </div>}

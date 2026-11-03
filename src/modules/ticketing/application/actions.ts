@@ -6,25 +6,33 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
-import { allowRequest, getClientIp } from "@/shared/lib/rate-limit";
+import { allowRequest, getClientIp, RATE_LIMIT_MESSAGE } from "@/shared/lib/rate-limit";
 import { deliverTicketsForPaidOrder } from "./deliver-tickets";
-import { BUYER_ACCESS_RESPONSE, BUYER_SESSION_COOKIE, getBuyerSessionCustomerIds, requestBuyerAccess, revokeBuyerSession } from "./buyer-access";
+import { BUYER_SESSION_COOKIE, buyerSessionCookieOptions, exchangeBuyerAccessCode, getBuyerSessionCustomerIds, requestBuyerAccess, revokeBuyerSession } from "./buyer-access";
 
-export type BuyerAccessActionState = { message: string | null };
+export type BuyerCodeResult = { ok: boolean; error?: string };
 
-export async function requestBuyerAccessAction(
-  _previous: BuyerAccessActionState,
-  formData: FormData,
-): Promise<BuyerAccessActionState> {
-  const email = String(formData.get("email") ?? "");
-  const next = String(formData.get("next") ?? "");
+/** Manda el código de ingreso (y el link como alternativa). La respuesta es la misma exista o no el email. */
+export async function requestBuyerCodeAction(email: string, next?: string): Promise<BuyerCodeResult> {
   try {
-    // Tope por IP para que no se use el formulario para llenar de mails a otras personas (la respuesta es la misma, no revela nada).
-    if (!(await allowRequest("buyer_access_ip", await getClientIp(), 15, 3600))) return { message: BUYER_ACCESS_RESPONSE };
-    return await requestBuyerAccess(email, next);
+    // Tope por IP para que no se use el formulario para llenar de mails a otras personas.
+    if (!(await allowRequest("buyer_access_ip", await getClientIp(), 15, 3600))) return { ok: false, error: RATE_LIMIT_MESSAGE };
+    await requestBuyerAccess(String(email ?? ""), next);
+    return { ok: true };
   } catch {
-    return { message: BUYER_ACCESS_RESPONSE };
+    return { ok: true };
   }
+}
+
+/** Canjea el código de 6 dígitos y deja la sesión del comprador iniciada en esta misma pantalla. */
+export async function verifyBuyerCodeAction(email: string, code: string): Promise<BuyerCodeResult> {
+  const invalid = { ok: false, error: "Ese código no es correcto o ya venció. Revisalo o pedí uno nuevo." };
+  const normalizedEmail = String(email ?? "").trim().toLowerCase();
+  if (!(await allowRequest("buyer_code_ip", await getClientIp(), 30, 3600)) || !(await allowRequest("buyer_code_email", normalizedEmail, 12, 3600))) return { ok: false, error: RATE_LIMIT_MESSAGE };
+  const session = await exchangeBuyerAccessCode(normalizedEmail, String(code ?? ""));
+  if (!session) return invalid;
+  (await cookies()).set(BUYER_SESSION_COOKIE, session.rawSession, buyerSessionCookieOptions(session.expiresAt));
+  return { ok: true };
 }
 
 export async function logoutBuyer() {

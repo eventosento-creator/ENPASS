@@ -20,6 +20,8 @@ export type TicketEmail = {
 export type BuyerAccessEmail = {
   to: string;
   accessUrl: string;
+  /** Código de 6 dígitos para escribir en la pantalla de compra (el link sigue funcionando como alternativa). */
+  code?: string;
 };
 
 export type PromoterInviteEmail = {

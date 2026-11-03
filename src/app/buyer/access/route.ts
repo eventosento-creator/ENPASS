@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BUYER_SESSION_COOKIE, BUYER_SESSION_MAX_AGE_SECONDS, exchangeBuyerAccessToken, safeNextPath } from "@/modules/ticketing/application/buyer-access";
+import { BUYER_SESSION_COOKIE, buyerSessionCookieOptions, exchangeBuyerAccessToken, safeNextPath } from "@/modules/ticketing/application/buyer-access";
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") ?? "";
@@ -13,14 +13,6 @@ export async function GET(request: NextRequest) {
   }
 
   const response = NextResponse.redirect(destination);
-  response.cookies.set(BUYER_SESSION_COOKIE, session.rawSession, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: session.expiresAt,
-    maxAge: BUYER_SESSION_MAX_AGE_SECONDS,
-    priority: "high",
-  });
+  response.cookies.set(BUYER_SESSION_COOKIE, session.rawSession, buyerSessionCookieOptions(session.expiresAt));
   return response;
 }

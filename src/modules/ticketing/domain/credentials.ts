@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
 export const QR_PAYLOAD_PREFIX = "NLOS1:";
 const SHORT_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -28,6 +28,22 @@ export function hashOpaqueToken(value: string) {
 
 export function hashEmail(value: string) {
   return hashOpaqueToken(normalizeEmail(value));
+}
+
+/** Código de ingreso de 6 dígitos que se manda por mail (se escribe en la misma pantalla en vez de abrir un link). */
+export function generateAccessCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+/** Acepta lo que pega la gente ("123 456", "123-456") y devuelve los 6 dígitos, o null si no lo son. */
+export function normalizeAccessCode(value: string) {
+  const digits = value.replace(/[\s-]/g, "");
+  return /^\d{6}$/.test(digits) ? digits : null;
+}
+
+/** El código se guarda atado al email: el mismo número en otra cuenta da otro hash. */
+export function hashAccessCode(code: string, emailHash: string) {
+  return hashOpaqueToken(`${code}:${emailHash}`);
 }
 
 export function normalizeEmail(value: string) {

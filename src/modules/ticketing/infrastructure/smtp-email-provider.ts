@@ -56,14 +56,20 @@ export class SmtpEmailProvider implements EmailProvider {
     await this.transport.sendMail({
       from: this.from,
       to: message.to,
-      subject: "Tu acceso está listo",
-      text: `Tu acceso está listo. Hacé clic para ingresar a tus entradas y mesas: ${message.accessUrl}`,
+      subject: message.code ? `${message.code} es tu código para ingresar a ENPASS` : "Tu acceso está listo",
+      text: message.code
+        ? `Tu código para ingresar a ENPASS es ${message.code}. Escribilo en la pantalla donde lo pediste. Vence en 15 minutos. También podés ingresar con este link: ${message.accessUrl}`
+        : `Tu acceso está listo. Hacé clic para ingresar a tus entradas y mesas: ${message.accessUrl}`,
       html: emailFrame(`
         ${heroBanner()}
-        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">Tu acceso está listo</h1>
-        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hacé clic en el botón de abajo para ingresar a tu cuenta y ver tus entradas, mesas y próximos eventos.</p>
+        <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">${message.code ? "Tu código para ingresar" : "Tu acceso está listo"}</h1>
+        ${message.code
+          ? `<p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Escribilo en la pantalla donde lo pediste y seguís con tu compra sin salir de la página.</p>
+        <p style="margin:22px 0 0;text-align:center"><span style="display:inline-block;border-radius:16px;background:#f4f4f1;padding:16px 28px;font-size:38px;font-weight:900;letter-spacing:.32em;text-indent:.32em;color:#0a0a0b;font-family:'Courier New',monospace">${escapeHtml(message.code)}</span></p>
+        <p style="margin:22px 0 0;font-size:12px;color:#9a9a9f;text-align:center">¿Preferís no escribirlo? Tocá el botón y entrás directo.</p>`
+          : `<p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hacé clic en el botón de abajo para ingresar a tu cuenta y ver tus entradas, mesas y próximos eventos.</p>`}
         ${accessButton(message.accessUrl, "Ingresar a ENPASS")}
-        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">Este enlace es personal, seguro y expira en 15 minutos.</p>
+        <p style="margin:18px 0 0;font-size:12px;color:#9a9a9f;text-align:center">${message.code ? "El código y el enlace son personales, seguros y vencen en 15 minutos." : "Este enlace es personal, seguro y expira en 15 minutos."}</p>
         ${noticeBox("¿No solicitaste este acceso?", "Podés ignorar este mensaje. Si tenés dudas, escribinos a enpass.gf@gmail.com")}
       `),
     });

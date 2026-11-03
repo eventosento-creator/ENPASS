@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Mail } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
@@ -16,7 +16,6 @@ import { AnalyticsEvent } from "@/shared/ui/analytics-event";
 import { toPesos } from "@/shared/lib/analytics";
 import { getEventAnalyticsMeta } from "@/modules/events/application/analytics-meta";
 import { EnpassLogo } from "@/shared/ui/brand";
-import { BuyerAccessForm } from "@/modules/ticketing/ui/buyer-access-form";
 import { BUYER_SESSION_COOKIE, getBuyerSessionEmail } from "@/modules/ticketing/application/buyer-access";
 import { previewCheckoutPromotion } from "@/modules/promotions/application/checkout-preview";
 import { checkoutTotals } from "@/modules/promotions/domain/promotions";
@@ -32,12 +31,9 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   try { selections = selectionsSchema.parse(JSON.parse(query.selection ?? "[]")); } catch { redirect(`/e/${slug}`); }
   if (new Set(selections.map((selection) => `${selection.item_type}:${selection.item_id}`)).size !== selections.length) redirect(`/e/${slug}`);
 
-  // Para comprar hace falta cuenta: sin sesión de comprador se pide el email y se manda un link que vuelve acá.
+  // Para comprar hace falta una cuenta con el email verificado. Se verifica al final del formulario con un código (sin salir de la página);
+  // mientras tanto el resto del checkout se ve y se completa igual.
   const buyerEmail = await getBuyerSessionEmail((await cookies()).get(BUYER_SESSION_COOKIE)?.value);
-  if (!buyerEmail) return <main className="container-shell grid min-h-screen place-items-center py-8"><section className="w-full max-w-md">
-    <header className="mb-8 flex items-center justify-between"><Link href={`/e/${slug}`} className="inline-flex min-h-11 items-center gap-1 text-sm text-neutral-500 hover:text-white"><ChevronLeft size={17}/>Volver al evento</Link><Link href="/"><EnpassLogo/></Link></header>
-    <div className="card p-6 sm:p-8"><div className="grid size-12 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><Mail size={22}/></div><p className="eyebrow mt-7">Un paso antes de comprar</p><h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">Ingresá o creá tu cuenta.</h1><p className="mt-4 text-sm leading-6 text-neutral-500">Ponés tu email y te mandamos un link para entrar, sin contraseña. Si es tu primera vez, tu cuenta se crea sola. Tu selección queda guardada.</p><BuyerAccessForm next={`/e/${slug}/checkout?selection=${encodeURIComponent(query.selection ?? "[]")}`}/></div>
-  </section></main>;
 
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -86,7 +82,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   const serviceFee = organization.fee_payer === "buyer" ? items.reduce((sum, item) => sum + applyBasisPoints(item.unitPrice * item.quantity, item.serviceFeeBps), 0) : 0;
   // Cupón: la base de datos calcula el descuento; el cargo de servicio no cambia (se calcula sobre el precio base).
   const hasTicketLines = items.some((item) => item.itemType === "ticket");
-  const promotion = hasTicketLines && query.code ? await previewCheckoutPromotion({ eventId: event.id, code: query.code, selections, email: buyerEmail }) : null;
+  const promotion = hasTicketLines && query.code && buyerEmail ? await previewCheckoutPromotion({ eventId: event.id, code: query.code, selections, email: buyerEmail }) : null;
   const totals = checkoutTotals({ listSubtotal: subtotal, serviceFee, preview: promotion?.preview ?? null });
   const total = totals.total;
   const appliedPromotionCode = promotion?.preview.valid ? promotion.code : undefined;
