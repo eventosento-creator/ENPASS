@@ -21,8 +21,9 @@ export default async function EventsDiscoveryPage({ searchParams }: { searchPara
   const filters = parseDiscoveryFilters(query);
   const location = parseLocationCookie((await cookies()).get(LOCATION_COOKIE)?.value);
   const dated = filterDiscoveryEvents(events, filters);
-  // Con ubicación: del más cercano al más lejano. Sin ella, por fecha como siempre.
-  const filtered: NearbyDiscoveryEvent[] = location ? sortByProximity(dated, location) : dated.map((event) => ({ ...event, distanceKm: null }));
+  // Siempre por fecha (el primero en ocurrir, primero). Con ubicación solo se suma la distancia a cada tarjeta.
+  const withDistance: NearbyDiscoveryEvent[] = location ? sortByProximity(dated, location) : dated.map((event) => ({ ...event, distanceKm: null }));
+  const filtered = withDistance.toSorted((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   const cities = getDiscoveryCities(events);
   const favorited = new Set(favoritedIds);
   const hasActiveFilters = Boolean(filters.city) || filters.when !== "all" || Boolean(filters.category) || Boolean(filters.q) || Boolean(filters.price);
@@ -45,7 +46,7 @@ export default async function EventsDiscoveryPage({ searchParams }: { searchPara
 
     <section className="mt-10 sm:mt-12" aria-label="Próximos eventos">
       <div className="mb-5 flex items-end justify-between gap-4">
-        <div><h2 className="text-2xl font-black tracking-[-.02em] sm:text-3xl">Próximos eventos</h2><p className="mt-1 text-sm text-[var(--muted)]">{location ? "Ordenados por cercanía a tu ubicación" : "Los próximos eventos en ENPASS"}</p></div>
+        <div><h2 className="text-2xl font-black tracking-[-.02em] sm:text-3xl">Próximos eventos</h2><p className="mt-1 text-sm text-[var(--muted)]">Los próximos eventos en ENPASS</p></div>
         <Link href="/eventos" className="inline-flex shrink-0 items-center gap-1.5 text-sm font-bold hover:gap-2.5">Ver todos<ArrowRight aria-hidden size={16}/></Link>
       </div>
       {filtered.length ? <div className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-5">
