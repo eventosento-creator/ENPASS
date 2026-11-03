@@ -64,8 +64,8 @@ export async function deliverTicketsForPaidOrder(
     }));
     if (!ticketItems.length) throw new Error("DELIVERY_CONTEXT_INCOMPLETE");
 
-    const accessUrl = await createBuyerMagicLink(customer.email);
-    if (!accessUrl) throw new Error("BUYER_ACCESS_CREATE_FAILED");
+    // El link personal es un extra: si no se puede crear (tope de 5 por hora por email, que se agota al reintentar), la entrada igual se manda con el acceso general.
+    const accessUrl = (await createBuyerMagicLink(customer.email).catch(() => null)) ?? new URL("/mis-entradas", process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").toString();
     const { dateLabel, timeLabel } = formatEventDateParts(event.starts_at, venue.timezone);
 
     await (options.provider ?? new SmtpEmailProvider()).sendTicketDelivery({
@@ -109,5 +109,8 @@ export function formatEventDateParts(value: string, timeZone: string) {
 
 function safeDeliveryError(error: unknown) {
   if (error instanceof Error && /^[A-Z0-9_]+$/.test(error.message)) return error.message.toLowerCase();
-  return "smtp_delivery_failed";
+  // Errores de nodemailer: se guarda solo el código técnico (EAUTH, ECONNECTION, 535, 550…), nunca el texto del servidor, para poder diagnosticar sin exponer datos.
+  const { code, responseCode } = (error ?? {}) as { code?: unknown; responseCode?: unknown };
+  const parts = [typeof code === "string" && /^[A-Z_]{3,20}$/.test(code) ? code : null, typeof responseCode === "number" ? String(responseCode) : null].filter(Boolean);
+  return parts.length ? `smtp_${parts.join("_")}`.toLowerCase() : "smtp_delivery_failed";
 }
