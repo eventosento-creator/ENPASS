@@ -127,6 +127,5 @@ export async function switchPanel(formData: FormData) {
   if (!target) redirect(`/app/onboarding?intent=${panel === "club" ? "club" : "event"}&nuevo=1` as never);
   await setPreferredWorkspaceId(target.organization.id);
   await setPreferredPanel(panel);
-  revalidatePath("/app", "layout");
   redirect(panel === "club" ? "/app/socios" : "/app");
 }

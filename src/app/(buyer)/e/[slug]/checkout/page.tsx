@@ -39,8 +39,9 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   const admin = createAdminClient();
   const { data: event } = await admin.from("events").select("*").eq("slug", slug).eq("status", "published").maybeSingle();
   if (!event) notFound();
-  const [{ data: publicTypes }, { data: publicTables }, { data: publicSeats }, { data: organization, error: feePolicyError }, { data: termsDoc }, { data: refundDoc }] = await Promise.all([
+  const [{ data: publicTypes }, { data: comboSizes }, { data: publicTables }, { data: publicSeats }, { data: organization, error: feePolicyError }, { data: termsDoc }, { data: refundDoc }] = await Promise.all([
     supabase.rpc("get_public_ticket_types", { target_event: event.id }),
+    supabase.rpc("get_event_combo_sizes", { target_event: event.id }),
     supabase.rpc("get_public_event_tables", { target_event: event.id }),
     supabase.rpc("get_public_event_seats", { target_event: event.id }),
     admin.from("organizations").select("service_fee_bps, fee_payer").eq("id", event.organization_id).single(),
@@ -65,7 +66,8 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
     if (selection.item_type === "ticket") {
       const type = ticketById.get(selection.item_id) ?? linkTypeById.get(selection.item_id);
       if (!type?.sale_open || type.available_quantity < selection.quantity || selection.quantity > type.max_per_order) return [];
-      return [{ id: type.id, itemType: "ticket", name: type.name, quantity: selection.quantity, unitPrice: type.price_amount, serviceFeeBps: organization.service_fee_bps }];
+      const comboEntries = (comboSizes ?? []).find((combo) => combo.ticket_type_id === type.id)?.entries_per_unit ?? 1;
+      return [{ id: type.id, itemType: "ticket", name: comboEntries > 1 ? `${type.name} · ${comboEntries} ingresos` : type.name, quantity: selection.quantity, unitPrice: type.price_amount, serviceFeeBps: organization.service_fee_bps }];
     }
     if (selection.item_type === "seat") {
       const seat = seatById.get(selection.item_id);

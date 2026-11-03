@@ -25,7 +25,7 @@ Sin esto no conviene salir en vivo.
 | 1.1 | **Hora límite de ingreso por tipo de entrada** | M | Campo nuevo en el tipo de entrada (hora de corte). El scanner rechaza con "FUERA DE HORARIO · cerró a la 1:00". Mostrar el corte en la entrada del comprador. Considerar eventos que pasan la medianoche |
 | 1.2 | Scanner: mostrar el **nombre del tipo de entrada en grande** | S | Para controlar "H+25 M+23" contra el documento |
 | 1.3 | **Duplicar evento** (copiar tipos, fases, puertas, scanners) | M | Un boliche repite cada fin de semana |
-| 1.4 | **Combos con varios ingresos**: una compra genera N entradas (un QR por persona) | L | Reutiliza entradas nominales. Se conecta con la Fase 2 (botella como beneficio) |
+| 1.4 | **Combos con varios ingresos**: una compra genera N entradas (un QR por persona) | L | **Hecho (migración `20261102120000_ticket_combos.sql`).** `entries_per_unit` en el tipo de entrada; cupo y aforo cuentan personas; cortesías no soportan combos; la botella como beneficio va en la Fase 2 |
 | 1.5 | **Interruptores de módulos** por organización con precio configurable | M | Como la taquilla: se activa o se apaga por boliche |
 | 1.6 | Entradas gratis con cupo y corte de horario propio | S | Ya funciona precio 0; falta verificar con 1.1 |
 | 1.7 | Prueba completa con el flujo real del boliche (transferencia, preventas, gratis, combos) | M | Con datos de su evento anterior |

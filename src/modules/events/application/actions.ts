@@ -186,7 +186,7 @@ export async function createTicketType(_: ActionState, formData: FormData): Prom
     organization_id: parsed.data.organizationId, event_id: parsed.data.eventId, name: parsed.data.name,
     sale_phase_id: phase.id,
     description: "", price_amount: pesosToMinorUnits(parsed.data.pricePesos), currency: "ARS",
-    quantity: parsed.data.quantity, max_per_order: parsed.data.maxPerOrder, entry_cutoff_time: parsed.data.entryCutoff ?? null, sales_start: null,
+    quantity: parsed.data.quantity, max_per_order: parsed.data.maxPerOrder, entries_per_unit: parsed.data.entriesPerUnit, entry_cutoff_time: parsed.data.entryCutoff ?? null, sales_start: null,
     sales_end: null, active: true, sort_order: sortOrder,
   });
   if (error) {
@@ -208,11 +208,14 @@ export async function updateTicketType(_: ActionState, formData: FormData): Prom
     .or(`status.eq.consumed,and(status.eq.active,expires_at.gt.${new Date().toISOString()})`);
   const sold = (holds ?? []).reduce((total, hold) => total + hold.quantity, 0);
   if (parsed.data.quantity < sold) return { error: `No podés bajar el cupo por debajo de lo ya vendido o reservado (${sold}).` };
+  const { data: current } = await supabase.from("ticket_types").select("entries_per_unit").eq("id", parsed.data.ticketTypeId).eq("event_id", parsed.data.eventId).single();
+  if (current && current.entries_per_unit !== parsed.data.entriesPerUnit && sold > 0) return { error: "Ya hay ventas de esta entrada: no se puede cambiar cuántos ingresos incluye. Creá otra entrada." };
   const { error } = await supabase.from("ticket_types").update({
     name: parsed.data.name,
     price_amount: pesosToMinorUnits(parsed.data.pricePesos),
     quantity: parsed.data.quantity,
     max_per_order: parsed.data.maxPerOrder,
+    entries_per_unit: parsed.data.entriesPerUnit,
     entry_cutoff_time: parsed.data.entryCutoff ?? null,
   }).eq("id", parsed.data.ticketTypeId).eq("event_id", parsed.data.eventId).eq("organization_id", parsed.data.organizationId);
   if (error) return { error: "No pudimos guardar los cambios." };

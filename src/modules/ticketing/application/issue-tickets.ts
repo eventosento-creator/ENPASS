@@ -29,7 +29,7 @@ export async function issueTicketsForPaidOrder(orderId: string) {
 
   ticketingLog("ticket.issue.started", { orderId, itemCount: items.length });
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const credentials = createStoredCredentials(items);
+    const credentials = createStoredCredentials(await expandComboUnits(admin, items));
     const { data, error } = await admin.rpc("issue_tickets_for_paid_order", {
       target_order_id: orderId,
       credentials: credentials as unknown as Json,
@@ -55,6 +55,15 @@ export async function issueTicketsForPaidOrder(orderId: string) {
   }
 
   throw new Error("TICKET_ISSUANCE_FAILED");
+}
+
+/** Un combo de N ingresos emite N entradas por unidad comprada: cada una necesita su propio QR. */
+async function expandComboUnits(admin: ReturnType<typeof createAdminClient>, items: OrderItem[]) {
+  const typeIds = [...new Set(items.filter((item) => item.item_type === "ticket" && item.ticket_type_id).map((item) => item.ticket_type_id as string))];
+  if (!typeIds.length) return items;
+  const { data } = await admin.from("ticket_types").select("id, entries_per_unit").in("id", typeIds);
+  const entries = new Map((data ?? []).map((type) => [type.id, type.entries_per_unit]));
+  return items.map((item) => item.item_type === "ticket" && item.ticket_type_id ? { ...item, quantity: item.quantity * (entries.get(item.ticket_type_id) ?? 1) } : item);
 }
 
 export function createStoredCredentials(items: Pick<OrderItem, "id" | "quantity">[]) {

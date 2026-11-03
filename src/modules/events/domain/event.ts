@@ -49,6 +49,8 @@ export const ticketTypeInputSchema = z.object({
   pricePesos: z.coerce.number().nonnegative().multipleOf(1), quantity: z.coerce.number().int().positive(),
   maxPerOrder: z.coerce.number().int().min(1).max(20),
   // Hora límite de ingreso (HH:MM, hora local del evento). Vacía = puede entrar hasta el cierre del evento.
+  // Ingresos por compra: 1 = entrada normal; más de 1 = combo (una compra da N entradas, un QR por persona). El cupo de un combo cuenta personas.
+  entriesPerUnit: z.preprocess(value => value === "" || value === undefined ? 1 : value, z.coerce.number().int().min(1).max(20)),
   entryCutoff: z.preprocess(value => value === "" || value === undefined ? undefined : value, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()),
 });
 

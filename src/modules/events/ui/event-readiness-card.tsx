@@ -6,7 +6,7 @@ const icons = { ok: CheckCircle2, warning: AlertTriangle, error: XCircle } as co
 const tones = { ok: "text-emerald-600", warning: "text-amber-500", error: "text-red-500" } as const;
 
 /**
- * "¿Estás listo para la noche?": una sola línea que se despliega con un toque. Cerrada por defecto para no tapar el resumen del evento;
+ * "¿Estás listo para el evento?": una sola línea que se despliega con un toque. Cerrada por defecto para no tapar el resumen del evento;
  * el borde y el ícono de la línea avisan si falta algo importante. Adentro: primero lo que falta (con su botón) y después lo que ya está.
  */
 export function EventReadinessCard({ result }: { result: ReadinessResult }) {
@@ -14,13 +14,13 @@ export function EventReadinessCard({ result }: { result: ReadinessResult }) {
   const done = result.items.filter((item) => item.level === "ok");
   const level = result.errors > 0 ? "error" : result.warnings > 0 ? "warning" : "ok";
   const Icon = icons[level];
-  const headline = result.ready ? "Todo listo para la noche"
-    : result.errors > 0 ? `Faltan ${problems.length} ${problems.length === 1 ? "cosa" : "cosas"} para la noche${result.errors < problems.length ? ` (${result.errors} ${result.errors === 1 ? "importante" : "importantes"})` : ""}`
+  const headline = result.ready ? "Todo listo para el evento"
+    : result.errors > 0 ? `Faltan ${problems.length} ${problems.length === 1 ? "cosa" : "cosas"} para el evento${result.errors < problems.length ? ` (${result.errors} ${result.errors === 1 ? "importante" : "importantes"})` : ""}`
     : `Todo lo importante está · ${problems.length === 1 ? "1 recomendación" : `${problems.length} recomendaciones`}`;
   return <details className={`group card mt-6 ${level === "error" ? "border-red-500/40" : level === "warning" ? "border-amber-400/40" : ""}`}>
     <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
       <Icon className={`shrink-0 ${tones[level]}`} size={22} aria-hidden/>
-      <span className="min-w-0 flex-1"><b className="block text-sm sm:text-base">{headline}</b><span className="text-xs text-neutral-500">{result.ready ? "Revisamos publicación, cobro, puertas y scanners." : "¿Estás listo para la noche? Tocá para ver qué falta."}</span></span>
+      <span className="min-w-0 flex-1"><b className="block text-sm sm:text-base">{headline}</b><span className="text-xs text-neutral-500">{result.ready ? "Revisamos publicación, cobro, puertas y scanners." : "¿Estás listo para el evento? Tocá para ver qué falta."}</span></span>
       <ChevronDown size={18} className="shrink-0 text-neutral-500 transition group-open:rotate-180" aria-hidden/>
     </summary>
     <div className="border-t border-[var(--border)] px-4 pb-4 pt-3 sm:px-5">

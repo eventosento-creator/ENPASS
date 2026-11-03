@@ -30,7 +30,7 @@ export type TicketType = {
   id: string; organization_id: string; event_id: string; sale_phase_id: string | null; name: string; description: string;
   price_amount: number; currency: string; quantity: number; max_per_order: number;
   sales_start: string | null; sales_end: string | null; active: boolean; publicly_available: boolean; sort_order: number;
-  link_only: boolean; link_token: string | null; entry_cutoff_time: string | null;
+  link_only: boolean; link_token: string | null; entry_cutoff_time: string | null; entries_per_unit: number;
 };
 
 export type MembershipCategory = { id: string; organization_id: string; name: string; monthly_fee_amount: number; active: boolean; sort_order: number; created_at: string; updated_at: string };
@@ -526,7 +526,7 @@ export interface Database {
       venues: { Row: Venue; Insert: Omit<Venue, "id"> & { id?: string }; Update: Partial<Venue>; Relationships: [] };
       events: { Row: Event; Insert: Omit<Event, "id" | "published_at" | "reminder_sent_at" | "discovery_category"> & { id?: string; published_at?: string | null; reminder_sent_at?: string | null; discovery_category?: EventDiscoveryCategory; created_by: string }; Update: Partial<Event>; Relationships: [] };
       sale_phases: { Row: { id: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out: boolean }; Insert: { id?: string; organization_id: string; event_id: string; name: string; sort_order: number; activate_next_when_sold_out?: boolean }; Update: { name?: string; sort_order?: number; activate_next_when_sold_out?: boolean }; Relationships: [] };
-      ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available" | "link_only" | "link_token" | "entry_cutoff_time"> & { id?: string; publicly_available?: boolean; link_only?: boolean; link_token?: string | null; entry_cutoff_time?: string | null }; Update: Partial<TicketType>; Relationships: [] };
+      ticket_types: { Row: TicketType; Insert: Omit<TicketType, "id" | "publicly_available" | "link_only" | "link_token" | "entry_cutoff_time" | "entries_per_unit"> & { id?: string; entries_per_unit?: number; publicly_available?: boolean; link_only?: boolean; link_token?: string | null; entry_cutoff_time?: string | null }; Update: Partial<TicketType>; Relationships: [] };
       product_categories: { Row: ProductCategory; Insert: Partial<ProductCategory> & Pick<ProductCategory, "organization_id" | "name">; Update: Partial<ProductCategory>; Relationships: [] };
       products: { Row: Product; Insert: Partial<Product> & Pick<Product, "organization_id" | "name">; Update: Partial<Product>; Relationships: [] };
       event_products: { Row: EventProduct; Insert: Partial<EventProduct> & Pick<EventProduct, "organization_id" | "event_id" | "product_id" | "price_amount" | "currency">; Update: Partial<EventProduct>; Relationships: [] };
@@ -655,6 +655,7 @@ export interface Database {
       create_courtesy_checkout: { Args: { target_event: string; target_ticket_type: string; buyer_first_name: string; buyer_last_name: string; buyer_email: string; quantity: number }; Returns: { order_public_id: string }[] };
       update_customer_notes: { Args: { target_customer: string; target_notes: string; target_tags: string[] }; Returns: undefined };
       get_public_order: { Args: { target_public_id: string }; Returns: { public_id: string; event_name: string; event_slug: string; event_cover_url: string | null; status: OrderStatus; subtotal_amount: number; service_fee_amount: number; total_amount: number; currency: string; expires_at: string; items: Json; payment_public_id: string | null; payment_status: PaymentStatus | null; payment_requires_action: boolean; payment_updated_at: string | null; payment_account_connected: boolean }[] };
+      get_event_combo_sizes: { Args: { target_event: string }; Returns: { ticket_type_id: string; entries_per_unit: number }[] };
       get_public_ticket_types: { Args: { target_event: string }; Returns: (Omit<TicketType, "publicly_available" | "link_only" | "link_token"> & { available_quantity: number; sale_open: boolean })[] };
       get_link_ticket_type: { Args: { target_event: string; target_token: string }; Returns: { id: string; name: string; description: string; price_amount: number; currency: string; max_per_order: number; sales_start: string | null; sales_end: string | null; available_quantity: number; sale_state: "upcoming" | "open" | "ended" | "sold_out"; sale_open: boolean }[] };
       get_public_event_tables: { Args: { target_event: string }; Returns: { id: string; event_id: string; table_zone_id: string; zone_name: string; name: string; description: string; capacity: number; base_price_amount: number; currency: string; service_fee_bps: number; sort_order: number; availability_status: "available" | "held" | "sold"; benefits: Json }[] };
