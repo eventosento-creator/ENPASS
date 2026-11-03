@@ -16,8 +16,8 @@ security definer
 set search_path = ''
 as $$
 declare
-  event_row public.events;
-  type_row public.ticket_types;
+  event_row record;
+  type_row record;
   customer_id uuid;
   order_id uuid;
   generated_public_id text := encode(extensions.gen_random_bytes(16), 'hex');
