@@ -7,8 +7,8 @@ import { createClient } from "@/shared/database/server";
 import { slugify } from "@/shared/lib/format";
 import type { ActionState } from "@/modules/identity/application/actions";
 import { safeProducerPath } from "@/shared/lib/navigation";
-import { getWorkspaces } from "./queries";
-import { setPreferredWorkspaceId } from "../infrastructure/workspace";
+import { getCurrentOrganization, getWorkspaces } from "./queries";
+import { setPreferredPanel, setPreferredWorkspaceId } from "../infrastructure/workspace";
 
 const organizationSchema = z.object({ name: z.string().trim().min(2).max(100), intent: z.enum(["event", "club"]).optional() });
 const venueSchema = z.object({
@@ -115,5 +115,18 @@ export async function switchWorkspace(formData: FormData) {
   if (!target) return;
   await setPreferredWorkspaceId(target.organization.id);
   revalidatePath("/app", "layout");
-  redirect(target.kind === "club" ? "/app/socios" : "/app");
+  redirect("/app");
+}
+
+/** Botón Eventos | Club: pasa al panel pedido, en el mismo espacio si sirve para eso o en otro de la persona; si no tiene, lo ofrece crear. */
+export async function switchPanel(formData: FormData) {
+  const panel = formData.get("panel") === "club" ? "club" : "events";
+  const [workspaces, current] = await Promise.all([getWorkspaces(), getCurrentOrganization()]);
+  const serves = (kind: string) => kind === panel || kind === "both";
+  const target = workspaces.find((workspace) => workspace.organization.id === current?.id && serves(workspace.kind)) ?? workspaces.find((workspace) => serves(workspace.kind));
+  if (!target) redirect(`/app/onboarding?intent=${panel === "club" ? "club" : "event"}&nuevo=1` as never);
+  await setPreferredWorkspaceId(target.organization.id);
+  await setPreferredPanel(panel);
+  revalidatePath("/app", "layout");
+  redirect(panel === "club" ? "/app/socios" : "/app");
 }

@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/shared/database/server";
 import { createAdminClient } from "@/shared/database/admin";
 import { getAdminViewOrgId } from "../infrastructure/admin-view";
-import { getPreferredWorkspaceId } from "../infrastructure/workspace";
+import { getPreferredPanel, getPreferredWorkspaceId } from "../infrastructure/workspace";
 import type { Organization } from "@/shared/database/types";
 
 // auth.getUser() is a real network round-trip to Supabase Auth. Several queries on this
@@ -25,8 +25,8 @@ export const isPlatformAdmin = cache(async () => {
   return data === true;
 });
 
-/** Cada espacio es de una sola cosa: un club (socios y cuotas) o una organización de eventos. */
-export type WorkspaceKind = "club" | "events";
+/** Un espacio es un club (socios y cuotas), una organización de eventos, o las dos cosas a la vez ("both", espacios que ya tenían las dos). */
+export type WorkspaceKind = "club" | "events" | "both";
 export type Workspace = { organization: Organization; role: "owner" | "admin" | "staff"; clubRole: ClubRole | null; logoUrl: string | null; kind: WorkspaceKind };
 
 /** Todos los espacios a los que la persona tiene acceso: donde es dueña/admin y donde es colaboradora del club. */
@@ -54,8 +54,24 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   // Un espacio con club activado que además tiene eventos sigue siendo de eventos (no se le esconde nada).
   const { data: withEvents } = enabledIds.length ? await admin.from("events").select("organization_id").in("organization_id", enabledIds) : { data: [] };
   const eventOrgs = new Set((withEvents ?? []).map((row) => row.organization_id));
-  const clubIds = new Set(enabledIds.filter((id) => !eventOrgs.has(id)));
-  return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null, kind: clubIds.has(workspace.organization.id) || workspace.role === "staff" ? "club" as const : "events" as const }));
+  const clubEnabledIds = new Set(enabledIds);
+  return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null, kind: workspaceKind(workspace.role, clubEnabledIds.has(workspace.organization.id), eventOrgs.has(workspace.organization.id)) }));
+});
+
+function workspaceKind(role: Workspace["role"], clubEnabled: boolean, hasEvents: boolean): WorkspaceKind {
+  if (role === "staff") return "club";
+  if (!clubEnabled) return "events";
+  return hasEvents ? "both" : "club";
+}
+
+/** Panel que se está viendo en el espacio actual: club o eventos. En un espacio con las dos cosas elige el botón Eventos | Club. */
+export const getActivePanel = cache(async (): Promise<"club" | "events"> => {
+  const organization = await getCurrentOrganization();
+  if (!organization) return "events";
+  const workspace = (await getWorkspaces()).find((item) => item.organization.id === organization.id);
+  if (!workspace) return "events";
+  if (workspace.kind === "both") return getPreferredPanel();
+  return workspace.kind;
 });
 
 export const getCurrentOrganization = cache(async () => {

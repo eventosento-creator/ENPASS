@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { switchWorkspace } from "../application/actions";
 
-export type WorkspaceOption = { id: string; name: string; role: "owner" | "admin" | "staff"; logoUrl: string | null; kind: "club" | "events" };
+export type WorkspaceOption = { id: string; name: string; role: "owner" | "admin" | "staff"; logoUrl: string | null; kind: "club" | "events" | "both" };
 
 const roleLabels = { owner: "Propietario", admin: "Administrador", staff: "Colaborador" } as const;
-const kindLabels = { club: "Club", events: "Eventos" } as const;
+const kindLabels = { club: "Club", events: "Eventos", both: "Eventos y club" } as const;
 
 function Avatar({ option, size }: { option: WorkspaceOption; size: number }) {
   const initial = option.name.trim().charAt(0).toUpperCase() || "E";

@@ -21,11 +21,11 @@ const trailingItems = [
 
 const mobileGridCols: Record<number, string> = { 1: "grid-cols-1", 2: "grid-cols-2", 6: "grid-cols-6", 7: "grid-cols-7" };
 
-export function ProducerNavigation({ mobile = false, collaboratorOnly = false, clubEnabled = false, clubOnly = false, clubStaffOnly = false }: { mobile?: boolean; collaboratorOnly?: boolean; clubEnabled?: boolean; clubOnly?: boolean; clubStaffOnly?: boolean }) {
+export function ProducerNavigation({ mobile = false, collaboratorOnly = false, clubOnly = false, clubStaffOnly = false }: { mobile?: boolean; collaboratorOnly?: boolean; clubOnly?: boolean; clubStaffOnly?: boolean }) {
   const pathname = usePathname();
   if (collaboratorOnly) return null;
-  // Un club y una organización de eventos son espacios distintos: cada uno ve solo su menú.
-  const items = clubStaffOnly ? [clubItems[0]] : clubOnly ? clubItems : [...baseItems, ...(clubEnabled ? [clubItems[0]] : []), ...trailingItems];
+  // Eventos y club son paneles distintos: cada uno ve solo su menú.
+  const items = clubStaffOnly ? [clubItems[0]] : clubOnly ? clubItems : [...baseItems, ...trailingItems];
   return <nav aria-label={mobile ? "Navegación móvil" : "Navegación del productor"} className={mobile ? `grid ${mobileGridCols[items.length] ?? "grid-cols-4"} gap-1` : "grid gap-1"}>
     {items.map(({ href, label, icon: Icon }) => {
       const active = href === "/app" ? pathname === href : pathname.startsWith(href === "/app/marketing/cupones" ? "/app/marketing" : href);

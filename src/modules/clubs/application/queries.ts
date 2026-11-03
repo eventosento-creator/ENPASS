@@ -13,14 +13,6 @@ export const isClubEnabled = cache(async (organizationId: string) => {
   return data?.enabled ?? false;
 });
 
-/** Espacio que es solo un club: tiene el club activado y ningún evento. Si ya tenía eventos, conserva también su menú de eventos. */
-export const isClubSpace = cache(async (organizationId: string) => {
-  if (!(await isClubEnabled(organizationId))) return false;
-  const supabase = await createClient();
-  const { count } = await supabase.from("events").select("id", { count: "exact", head: true }).eq("organization_id", organizationId);
-  return (count ?? 0) === 0;
-});
-
 export const getClubBranding = cache(async (organizationId: string) => {
   const supabase = await createClient();
   const { data } = await supabase.from("club_settings").select("brand_logo_url, brand_name, brand_accent_color, cover_image_url, location_text, main_activity, cover_focus_x, cover_focus_y").eq("organization_id", organizationId).maybeSingle();

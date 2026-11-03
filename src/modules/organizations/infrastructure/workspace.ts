@@ -19,3 +19,20 @@ export async function setPreferredWorkspaceId(organizationId: string) {
     maxAge: 60 * 60 * 24 * 90,
   });
 }
+
+// Panel que se está viendo en un espacio que tiene club y eventos a la vez: "events" (por defecto) o "club".
+const PANEL_COOKIE = "workspace_panel";
+
+export async function getPreferredPanel() {
+  return (await cookies()).get(PANEL_COOKIE)?.value === "club" ? "club" : "events";
+}
+
+export async function setPreferredPanel(panel: "club" | "events") {
+  (await cookies()).set(PANEL_COOKIE, panel, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 90,
+  });
+}
