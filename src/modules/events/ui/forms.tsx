@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Armchair, CalendarDays, DoorOpen, Grid3x3, MapPin, Music2, Presentation, Shield, ShoppingCart, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
+import { Armchair, CalendarDays, DoorOpen, Grid3x3, Music2, Presentation, Shield, ShoppingCart, Sparkles, Ticket, Trophy, UsersRound } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createEvent, createTicketType, replaceEventCover, updateEvent, updateEventConfiguration, updateTicketType } from "../application/actions";
 import { ActionMessage } from "@/shared/ui/action-message";
@@ -16,6 +16,8 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
   const validInitialProfile = EVENT_PROFILE_OPTIONS.some((option) => option.value === initialProfile) ? initialProfile as EventProfile : null;
   const [profile, setProfile] = useState<EventProfile | null>(validInitialProfile);
   const [capabilities, setCapabilities] = useState<EventCapabilities>(() => getDefaultCapabilitiesForProfile(validInitialProfile ?? "nightlife"));
+  // El lugar se elige entre los ya cargados o se arma acá mismo ("new"); sin lugares cargados arranca en "nuevo".
+  const [venueChoice, setVenueChoice] = useState(venues.length ? "" : "new");
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   function previewFile(file?: File) { if (preview) URL.revokeObjectURL(preview); setPreview(file ? URL.createObjectURL(file) : null); }
   function selectProfile(nextProfile: EventProfile) {
@@ -29,13 +31,6 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
         <Icon size={22} className="text-[var(--accent)]"/><strong className="mt-8 block text-lg font-black">{option.label}</strong><span className="mt-2 block text-sm leading-5 text-neutral-500">{option.description}</span>
       </button>;
     })}</div>
-  </section>;
-  if (!venues.length) return <section className="mt-8 card p-7 text-center sm:p-10">
-    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--on-accent)]"><MapPin size={24}/></div>
-    <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-600"><span>{getEventProfileLabel(profile)}</span><button type="button" className="underline hover:text-white" onClick={() => setProfile(null)}>Cambiar</button></div>
-    <h2 className="mt-3 text-2xl font-black">Ahora, ¿dónde es?</h2>
-    <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-neutral-500">Todavía no tenés lugares cargados. La capacidad y zona horaria del venue protegen la venta.</p>
-    <a className="btn btn-primary mt-6" href={`/app/venues?next=${encodeURIComponent(`/app/events/new?profile=${profile}`)}`}>Crear lugar</a>
   </section>;
   return <form action={action} className="mt-8 grid gap-6 md:grid-cols-[240px_1fr] md:items-start">
     <input type="hidden" name="organizationId" value={organizationId}/>
@@ -55,7 +50,13 @@ export function EventForm({ organizationId, venues, initialProfile }: { organiza
       <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[.07] p-4"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-600">Tipo de evento</span><p className="mt-1 font-black">{getEventProfileLabel(profile)}</p></div><button className="btn btn-ghost min-h-10 px-3 text-xs" type="button" onClick={() => setProfile(null)}>Cambiar</button></div>
       {profile === "other" && <div><p className="label">¿Qué necesitás gestionar?</p><div className="mt-3 grid grid-cols-2 gap-2">{visibleCapabilities.map((capability) => <CapabilityButton key={capability} capability={capability} active={capabilities[capability]} onToggle={() => setCapabilities((current) => ({ ...current, [capability]: !current[capability] }))}/>)}</div></div>}
       <label className="label">Nombre<input className="field text-lg font-bold" name="name" placeholder="Noche 2000" required autoFocus/></label>
-      <label className="label">Lugar<select className="field" name="venueId" required defaultValue=""><option value="" disabled>Elegí un lugar</option>{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
+      <label className="label">Lugar<select className="field" name="venueId" required value={venueChoice} onChange={(change) => setVenueChoice(change.target.value)}>{venues.length > 0 && <option value="" disabled>Elegí un lugar</option>}{venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}<option value="new">{venues.length ? "+ Otro lugar (nuevo)" : "Escribí dónde es"}</option></select></label>
+      {venueChoice === "new" && <div className="grid gap-4 rounded-xl border border-white/[.07] p-4">
+        <label className="label">Nombre del lugar<input className="field" name="venueName" placeholder="Club Central" required/></label>
+        <label className="label">Dirección<input className="field" name="venueAddress" placeholder="Av. España 2110" required/></label>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="label">Ciudad<input className="field" name="venueCity" defaultValue="Mendoza" required/></label><label className="label">Provincia<input className="field" name="venueProvince" defaultValue="Mendoza" required/></label></div>
+        <label className="label">Capacidad del lugar<input className="field" name="venueCapacity" type="number" min="1" inputMode="numeric" placeholder="1500" required/><span className="text-xs font-normal text-neutral-500">Es el máximo de personas; la venta nunca lo pasa. Queda guardado para tus próximos eventos.</span></label>
+      </div>}
       <div className="grid gap-5 2xl:grid-cols-2">
         <label className="label">Inicio<input className="field" name="startsAt" type="datetime-local" required/></label>
         <label className="label">Fin <span className="font-normal text-neutral-600">(opcional)</span><input className="field" name="endsAt" type="datetime-local"/></label>

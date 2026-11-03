@@ -28,13 +28,24 @@ export async function sendEventReminderAction(_: ActionState, formData: FormData
   }
 }
 
+// El lugar se puede crear dentro del mismo formulario del evento ("new"): no hace falta armar los lugares de antemano.
+const createEventSchema = eventInputSchema.extend({ venueId: z.union([z.uuid(), z.literal("new")]) });
+const newVenueSchema = z.object({
+  venueName: z.string().trim().min(2).max(120), venueAddress: z.string().trim().min(3).max(200),
+  venueCity: z.string().trim().min(2), venueProvince: z.string().trim().min(2), venueCapacity: z.coerce.number().int().positive().max(100000),
+});
+const DEFAULT_VENUE_TIMEZONE = "America/Argentina/Mendoza";
+
 export async function createEvent(_: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = eventInputSchema.safeParse(Object.fromEntries(formData));
+  const parsed = createEventSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá el nombre, lugar, fecha y hora." };
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return { error: "Tu sesión venció." };
-  const { data: venue } = await supabase.from("venues").select("timezone, capacity").eq("id", parsed.data.venueId).eq("organization_id", parsed.data.organizationId).single();
+  const newVenue = parsed.data.venueId === "new" ? newVenueSchema.safeParse(Object.fromEntries(formData)) : null;
+  if (newVenue && !newVenue.success) return { error: "Completá el nombre, la dirección, la ciudad y la capacidad del lugar." };
+  const { data: existingVenue } = newVenue ? { data: null } : await supabase.from("venues").select("timezone, capacity").eq("id", parsed.data.venueId).eq("organization_id", parsed.data.organizationId).single();
+  const venue = newVenue?.success ? { timezone: DEFAULT_VENUE_TIMEZONE, capacity: newVenue.data.venueCapacity } : existingVenue;
   if (!venue) return { error: "El lugar no pertenece a tu organización." };
   const eventCapacity = parsed.data.capacity ?? venue.capacity;
   if (eventCapacity > venue.capacity) return { error: "La capacidad del evento supera la del lugar." };
@@ -65,9 +76,23 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
     }
     coverImageUrl = supabase.storage.from("event-covers").getPublicUrl(uploadedPath).data.publicUrl;
   }
+  let venueId = parsed.data.venueId;
+  let createdVenueId: string | null = null;
+  if (newVenue?.success) {
+    const { data: created, error: venueError } = await supabase.from("venues").insert({
+      organization_id: parsed.data.organizationId, name: newVenue.data.venueName, address: newVenue.data.venueAddress,
+      city: newVenue.data.venueCity, province: newVenue.data.venueProvince, capacity: newVenue.data.venueCapacity, timezone: DEFAULT_VENUE_TIMEZONE,
+    }).select("id").single();
+    if (venueError || !created) {
+      if (uploadedPath) await supabase.storage.from("event-covers").remove([uploadedPath]);
+      return { error: "No pudimos guardar el lugar." };
+    }
+    venueId = created.id;
+    createdVenueId = created.id;
+  }
   const { data, error } = await supabase.from("events").insert({
     id: eventId,
-    organization_id: parsed.data.organizationId, venue_id: parsed.data.venueId,
+    organization_id: parsed.data.organizationId, venue_id: venueId,
     name: parsed.data.name, slug: `${slugify(parsed.data.name)}-${crypto.randomUUID().slice(0, 6)}`,
     description: parsed.data.description, starts_at: startsAt, doors_open_at: null, ends_at: endsAt,
     status: "draft", capacity: eventCapacity, require_document: parsed.data.requireDocument,
@@ -84,6 +109,8 @@ export async function createEvent(_: ActionState, formData: FormData): Promise<A
   }).select("id").single();
   if (error || !data) {
     if (uploadedPath) await supabase.storage.from("event-covers").remove([uploadedPath]);
+    // Si el evento no se pudo crear, el lugar recién armado no queda huérfano (al reintentar se vuelve a crear).
+    if (createdVenueId) await supabase.from("venues").delete().eq("id", createdVenueId);
     console.error(JSON.stringify({ level: "error", event: "event.create.failed", code: error?.code, detail: error?.message }));
     return { error: eventMutationError(error?.message) };
   }

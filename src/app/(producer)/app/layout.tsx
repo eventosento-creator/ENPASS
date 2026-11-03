@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut, ShieldCheck } from "lucide-react";
-import { createClient } from "@/shared/database/server";
 import { logout } from "@/modules/identity/application/actions";
 import { WorkspaceSwitcher } from "@/modules/organizations/ui/workspace-switcher";
 import { ProducerNavigation } from "@/modules/organizations/ui/producer-navigation";
-import { getActivePanel, getCollaboratorEventIds, getCurrentOrganization, getWorkspaces, isPlatformAdmin } from "@/modules/organizations/application/queries";
+import { getActivePanel, getAuthUser, getCollaboratorEventIds, getCurrentOrganization, getWorkspaces, isPlatformAdmin } from "@/modules/organizations/application/queries";
 import { getAdminViewOrgId } from "@/modules/organizations/infrastructure/admin-view";
 import { exitAdminView } from "@/modules/organizations/application/admin-actions";
 import { PanelSwitch } from "@/modules/organizations/ui/panel-switch";
@@ -13,9 +12,8 @@ import { EnpassLogo } from "@/shared/ui/brand";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export default async function ProducerLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login");
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
   const [organization, admin, adminViewOrgId, workspaces] = await Promise.all([getCurrentOrganization(), isPlatformAdmin(), getAdminViewOrgId(), getWorkspaces()]);
   // Selector de espacio: el actual, los demás a los que tiene acceso (ej. un club donde colabora) y "Crear club".
   const switcherOptions = workspaces.map((workspace) => ({ id: workspace.organization.id, name: workspace.organization.name, role: workspace.role, logoUrl: workspace.logoUrl, kind: workspace.kind }));
@@ -24,8 +22,8 @@ export default async function ProducerLayout({ children }: { children: React.Rea
   // Eventos y club son dos paneles distintos con su propio menú; el botón Eventos | Club pasa de uno a otro.
   const panel = organization ? await getActivePanel() : "events";
   const workspaceLabel = organization?.name ?? (collaboratorOnly ? "Panel de colaborador" : "Creá tu evento");
-  const profileName = typeof data.user.user_metadata.full_name === "string" && data.user.user_metadata.full_name.trim()
-    ? data.user.user_metadata.full_name.trim() : data.user.email;
+  const profileName = typeof user.user_metadata.full_name === "string" && user.user_metadata.full_name.trim()
+    ? user.user_metadata.full_name.trim() : user.email;
   const impersonating = admin && !!adminViewOrgId;
   const canSwitchPanel = !impersonating && workspaces.some((workspace) => workspace.kind !== "club") && workspaces.some((workspace) => workspace.kind !== "events");
   return <div className="min-h-screen pb-24 md:pb-0 md:pl-60 print:pb-0 print:pl-0">

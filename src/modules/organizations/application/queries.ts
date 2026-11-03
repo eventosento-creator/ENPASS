@@ -11,7 +11,7 @@ import type { Organization } from "@/shared/database/types";
 // check) — without this, each one re-runs it, and a single /app page load was paying for
 // it 3-4 times over. cache() memoizes it per request (same pattern as publicEventContext
 // on the public event page).
-const getAuthUser = cache(async () => {
+export const getAuthUser = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return data.user;
@@ -34,25 +34,33 @@ export const getWorkspaces = cache(async (): Promise<Workspace[]> => {
   const user = await getAuthUser();
   if (!user) return [];
   const supabase = await createClient();
-  const { data: memberships } = await supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).order("created_at");
+  // Cada consulta es un viaje a la base: las que no dependen una de otra salen juntas (esto corre en cada pantalla del panel).
+  // club_staff no se puede leer con su sesión (RLS), así que se verifica con el cliente de servicio por su user id.
+  const admin = createAdminClient();
+  const [{ data: memberships }, { data: staffRows }] = await Promise.all([
+    supabase.from("organization_members").select("role, organizations(*)").eq("user_id", user.id).order("created_at"),
+    admin.from("club_staff").select("organization_id, role").eq("user_id", user.id),
+  ]);
   const own: Array<Omit<Workspace, "logoUrl" | "kind">> = (memberships ?? []).flatMap((membership) => {
     const organization = membership.organizations as unknown as Organization | null;
     return organization ? [{ organization, role: membership.role, clubRole: null }] : [];
   });
   // Colaborador del club (staff): no es miembro de la organización, pero puede gestionar socios y cuotas.
-  // club_staff no se puede leer con su sesión (RLS), así que se verifica con el cliente de servicio por su user id.
-  const admin = createAdminClient();
-  const { data: staffRows } = await admin.from("club_staff").select("organization_id, role").eq("user_id", user.id);
   const staffIds = (staffRows ?? []).map((row) => row.organization_id).filter((id) => !own.some((workspace) => workspace.organization.id === id));
-  const staffOrganizations = staffIds.length ? ((await admin.from("organizations").select("*").in("id", staffIds)).data ?? []) as Organization[] : [];
   const roleByOrg = new Map((staffRows ?? []).map((row) => [row.organization_id, row.role as ClubRole]));
+  const allIds = [...own.map((workspace) => workspace.organization.id), ...staffIds];
+  // Organizaciones de colaborador, logos/estado del club y eventos salen juntos (solo dependen de los ids).
+  const [staffOrganizationsResult, { data: logos }, { data: withEvents }] = await Promise.all([
+    staffIds.length ? admin.from("organizations").select("*").in("id", staffIds) : Promise.resolve({ data: [] }),
+    allIds.length ? admin.from("club_settings").select("organization_id, brand_logo_url, enabled").in("organization_id", allIds) : Promise.resolve({ data: [] }),
+    allIds.length ? admin.from("events").select("organization_id").in("organization_id", allIds) : Promise.resolve({ data: [] }),
+  ]);
+  const staffOrganizations = (staffOrganizationsResult.data ?? []) as Organization[];
   const all: Array<Omit<Workspace, "logoUrl" | "kind">> = [...own, ...staffOrganizations.map((organization) => ({ organization, role: "staff" as const, clubRole: roleByOrg.get(organization.id) ?? "viewer" }))];
   // Logo del club (si lo cargó) para mostrarlo en el selector de espacios.
-  const { data: logos } = all.length ? await admin.from("club_settings").select("organization_id, brand_logo_url, enabled").in("organization_id", all.map((workspace) => workspace.organization.id)) : { data: [] };
   const logoByOrg = new Map((logos ?? []).map((row) => [row.organization_id, row.brand_logo_url]));
   const enabledIds = (logos ?? []).filter((row) => row.enabled).map((row) => row.organization_id);
   // Un espacio con club activado que además tiene eventos sigue siendo de eventos (no se le esconde nada).
-  const { data: withEvents } = enabledIds.length ? await admin.from("events").select("organization_id").in("organization_id", enabledIds) : { data: [] };
   const eventOrgs = new Set((withEvents ?? []).map((row) => row.organization_id));
   const clubEnabledIds = new Set(enabledIds);
   return all.map((workspace) => ({ ...workspace, logoUrl: logoByOrg.get(workspace.organization.id) ?? null, kind: workspaceKind(workspace.role, clubEnabledIds.has(workspace.organization.id), eventOrgs.has(workspace.organization.id)) }));
