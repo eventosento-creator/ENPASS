@@ -5,11 +5,13 @@ import { Search, UserRoundCheck, X } from "lucide-react";
 import { searchCustomersForClub, type CustomerSearchState } from "../application/actions";
 import type { CustomerCandidate } from "../domain/club";
 
-export function CustomerLinkPicker({ organizationId, onSelect, onClear, selected }: {
+export function CustomerLinkPicker({ organizationId, onSelect, onClear, selected, allowMembers = false }: {
   organizationId: string;
   onSelect: (candidate: CustomerCandidate) => void;
   onClear: () => void;
   selected: CustomerCandidate | null;
+  /** Permite elegir a alguien que ya es socio (para anotarlo como tutor de un alumno). */
+  allowMembers?: boolean;
 }) {
   const [state, action] = useActionState<CustomerSearchState, FormData>(searchCustomersForClub, { results: [] });
   const [searching, setSearching] = useState(false);
@@ -34,7 +36,7 @@ export function CustomerLinkPicker({ organizationId, onSelect, onClear, selected
     {state.results.length > 0 && <div className="mt-4 grid gap-2">
       {state.results.map((c) => <div key={c.customerId} className="flex items-center justify-between gap-3 rounded-lg border border-white/[.06] px-3 py-2 text-sm">
         <span>{c.firstName} {c.lastName} · {c.email}{c.document ? ` · DNI ${c.document}` : ""}</span>
-        {c.alreadyMember
+        {c.alreadyMember && !allowMembers
           ? <span className="text-xs font-bold text-neutral-500">Ya es socio</span>
           : <button type="button" className="btn btn-secondary" onClick={() => { onSelect(c); setSearching(false); }}>Vincular</button>}
       </div>)}

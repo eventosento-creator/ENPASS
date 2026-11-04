@@ -112,6 +112,8 @@ export type MembershipWelcomeEmail = {
   memberNumber: string;
   categoryName: string;
   brand?: ClubBrand;
+  /** Si el alta es de un alumno a cargo del tutor que recibe el mail. */
+  studentName?: string;
 };
 
 export type MemberPasswordEmail = {

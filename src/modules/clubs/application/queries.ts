@@ -92,6 +92,7 @@ export async function getMembershipDetail(membershipId: string): Promise<Members
     phone: row.phone, document: row.document, categoryId: row.category_id, categoryName: row.category_name,
     membershipStatus: row.membership_status, statusReason: row.status_reason, statusChangedAt: row.status_changed_at,
     startsAt: row.starts_at, notes: row.notes,
+    guardianFirstName: row.guardian_first_name, guardianLastName: row.guardian_last_name, birthDate: row.birth_date,
   };
 }
 

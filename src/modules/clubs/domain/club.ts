@@ -34,6 +34,10 @@ export type MembershipDetail = {
   statusChangedAt: string | null;
   startsAt: string;
   notes: string;
+  /** Si es un alumno a cargo de un tutor: nombre del tutor (first/last/email/phone de arriba son del alumno o del tutor según el caso). */
+  guardianFirstName: string | null;
+  guardianLastName: string | null;
+  birthDate: string | null;
 };
 
 export type MembershipDue = {

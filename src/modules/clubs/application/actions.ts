@@ -163,12 +163,18 @@ const createMembershipSchema = z.object({
   email: z.string().max(160).optional(),
   phone: z.string().max(30).optional(),
   document: z.string().max(20).optional(),
+  studentFirstName: z.string().max(80).optional(),
+  studentLastName: z.string().max(80).optional(),
+  studentDocument: z.string().max(20).optional(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("").transform(() => undefined)),
 });
 
 export async function createMembership(_: ClubActionState, formData: FormData): Promise<ClubActionState> {
   const parsed = createMembershipSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Revisá los datos: falta algo." };
   const linkingExisting = !!parsed.data.customerId;
+  const isStudent = !!parsed.data.studentFirstName?.trim();
+  if (isStudent && (!parsed.data.studentLastName?.trim() || !parsed.data.birthDate)) return { error: "Para el alumno completá nombre, apellido y fecha de nacimiento." };
   if (!linkingExisting && (!parsed.data.firstName || !parsed.data.lastName || !z.email().safeParse(parsed.data.email).success)) {
     return { error: "Revisá los datos: falta algo o el email no es válido." };
   }
@@ -184,11 +190,16 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
     target_document: parsed.data.document ?? null,
     target_customer_id: parsed.data.customerId ?? null,
     target_plan: parsed.data.planId ?? null,
+    target_student_first_name: isStudent ? parsed.data.studentFirstName : undefined,
+    target_student_last_name: isStudent ? parsed.data.studentLastName : undefined,
+    target_student_document: isStudent ? parsed.data.studentDocument || undefined : undefined,
+    target_birth_date: isStudent ? parsed.data.birthDate : undefined,
   });
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
     if (error.message?.includes("CUSTOMER_ALREADY_MEMBER")) return { error: "Esa persona ya es socia." };
     if (error.message?.includes("DOCUMENT_TAKEN")) return { error: "Ya hay otro socio con ese DNI." };
+    if (error.message?.includes("INVALID_STUDENT_DATA")) return { error: "Revisá los datos del alumno: nombre, apellido y una fecha de nacimiento válida." };
     console.error("club.create_membership.failed", { code: error.code, message: error.message });
     return { error: "No pudimos crear el socio." };
   }
@@ -197,6 +208,7 @@ export async function createMembership(_: ClubActionState, formData: FormData): 
     await sendMembershipWelcomeEmail({
       to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       memberNumber: parsed.data.memberNumber, categoryName: result.category_name, brand: brandFrom(result),
+      studentName: result.student_first_name ? `${result.student_first_name} ${parsed.data.studentLastName ?? ""}`.trim() : undefined,
     });
     if (result.due_id) {
       await sendDueGeneratedEmail({

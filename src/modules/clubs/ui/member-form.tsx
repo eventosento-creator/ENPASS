@@ -12,12 +12,30 @@ type Category = { id: string; name: string };
 export function MemberForm({ organizationId, categories, plans = [], suggestedNumber }: { organizationId: string; categories: Category[]; plans?: Array<{ id: string; name: string; description: string }>; suggestedNumber?: string }) {
   const [state, action] = useActionState<ClubActionState, FormData>(createMembership, {});
   const [linked, setLinked] = useState<CustomerCandidate | null>(null);
+  const [isStudent, setIsStudent] = useState(false);
 
   return <div className="mt-7 grid gap-5">
-    <div className="card p-5 sm:p-7"><CustomerLinkPicker organizationId={organizationId} selected={linked} onSelect={setLinked} onClear={() => setLinked(null)}/></div>
+    <div className="card p-5 sm:p-7"><CustomerLinkPicker organizationId={organizationId} selected={linked} onSelect={setLinked} onClear={() => setLinked(null)} allowMembers={isStudent}/></div>
     <form action={action} className="card grid gap-5 p-5 sm:p-7">
     <input type="hidden" name="organizationId" value={organizationId}/>
     {linked && <input type="hidden" name="customerId" value={linked.customerId}/>}
+
+    <label className="flex items-start gap-3 rounded-xl border border-white/[.08] p-4 text-sm">
+      <input type="checkbox" className="mt-1" checked={isStudent} onChange={(event) => setIsStudent(event.target.checked)}/>
+      <span><strong>Es un alumno menor, a cargo de un tutor</strong><span className="mt-1 block text-xs text-neutral-500">El tutor es quien recibe los avisos y paga las cuotas. Un mismo tutor puede tener varios hijos anotados.</span></span>
+    </label>
+    {isStudent && <div className="grid gap-4 rounded-xl border border-white/[.08] p-4">
+      <p className="text-sm font-bold">Datos del alumno</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="label">Nombre del alumno<input className="field" name="studentFirstName" required/></label>
+        <label className="label">Apellido del alumno<input className="field" name="studentLastName" required/></label>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="label">Fecha de nacimiento<input className="field" name="birthDate" type="date" required/></label>
+        <label className="label">DNI del alumno <span className="font-normal text-neutral-500">(opcional)</span><input className="field" name="studentDocument" inputMode="numeric"/></label>
+      </div>
+      <p className="text-sm font-bold">Datos del tutor (quien paga)</p>
+    </div>}
 
     {!linked && <>
       <p className="text-xs text-neutral-500">Si la persona ya compró una entrada antes y no la encontrás buscando arriba, completá los datos a mano — igual evitamos duplicarla por DNI o email.</p>

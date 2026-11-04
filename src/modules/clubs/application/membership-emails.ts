@@ -15,12 +15,12 @@ const dateLabel = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateS
 const paymentMethodLabels: Record<string, string> = { cash: "Efectivo", transfer: "Transferencia", other: "Otro", mercado_pago: "Mercado Pago" };
 
 export async function sendMembershipWelcomeEmail(input: {
-  to: string; firstName: string; organizationName: string; memberNumber: string; categoryName: string; brand?: ClubBrand;
+  to: string; firstName: string; organizationName: string; memberNumber: string; categoryName: string; brand?: ClubBrand; studentName?: string;
 }) {
   try {
     await new SmtpEmailProvider().sendMembershipWelcome({
       to: input.to, memberFirstName: input.firstName, organizationName: input.organizationName,
-      memberNumber: input.memberNumber, categoryName: input.categoryName, brand: input.brand,
+      memberNumber: input.memberNumber, categoryName: input.categoryName, brand: input.brand, studentName: input.studentName,
     });
   } catch (error) {
     membershipDueLog("membership_due.email.failed", { context: "welcome_email", errorCode: error instanceof Error ? error.message : "unknown" });

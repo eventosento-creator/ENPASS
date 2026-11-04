@@ -341,12 +341,12 @@ export class SmtpEmailProvider implements EmailProvider {
     await this.transport.sendMail({
       from: this.brandedFrom(message.brand?.name),
       to: message.to,
-      subject: `Ya sos socio de ${message.organizationName}`,
-      text: `¡Bienvenido/a a ${message.organizationName}!\n\nN° de socio: ${message.memberNumber}\nCategoría: ${message.categoryName}`,
+      subject: message.studentName ? `${message.studentName} ya es parte de ${message.organizationName}` : `Ya sos socio de ${message.organizationName}`,
+      text: `¡Bienvenido/a a ${message.organizationName}!\n\n${message.studentName ? `Alumno/a: ${message.studentName}\n` : ""}N° de socio: ${message.memberNumber}\nCategoría: ${message.categoryName}`,
       html: emailFrame(`
         ${heroBanner()}
         <h1 style="margin:0 0 10px;font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#0a0a0b;text-align:center">¡Bienvenido/a!</h1>
-        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ya sos socio de <strong>${escapeHtml(message.organizationName)}</strong>.</p>
+        <p style="margin:0 auto;max-width:380px;font-size:14px;line-height:1.6;color:#6f6f75;text-align:center">Hola ${escapeHtml(message.memberFirstName)}, ${message.studentName ? `<strong>${escapeHtml(message.studentName)}</strong> ya es parte de` : "ya sos socio de"} <strong>${escapeHtml(message.organizationName)}</strong>.</p>
         <div style="margin-top:22px;border-radius:14px;background:#f4f4f1;padding:16px 18px;text-align:center">
           <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9a9a9f">N° de socio</p>
           <p style="margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.04em;color:${accent || "#0a0a0b"}">${escapeHtml(message.memberNumber)}</p>
