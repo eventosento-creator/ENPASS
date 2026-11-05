@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { filterDiscoveryEvents, getDiscoveryCities, formatDistance, getStartingPrice, matchesPrice, parseLocationCookie, sortByProximity, matchesWhen, parseDiscoveryFilters, type DiscoveryEvent } from "./discovery";
+import { filterDiscoveryEvents, getDiscoveryCities, formatDistance, getStartingPrice, matchesPrice, parseLocationCookie, sortByProximity, matchesWhen, parseDiscoveryFilters, eventBadge, type DiscoveryEvent } from "./discovery";
 
 const base: DiscoveryEvent = {
   id: "1", slug: "evento", name: "Evento", description: "", cover_image_url: null,
   starts_at: "2026-08-21T03:00:00.000Z", currency: "ARS", venue_name: "Club",
   venue_address: "Calle 1", city: "Mendoza", province: "Mendoza",
-  timezone: "America/Argentina/Mendoza", from_price_amount: 1000000, has_availability: true,
+  timezone: "America/Argentina/Mendoza", from_price_amount: 1000000, has_availability: true, tickets_total: 100, tickets_sold: 10,
   discovery_category: "party", latitude: null, longitude: null,
 };
 
@@ -83,5 +83,22 @@ describe("cercanía", () => {
     expect(formatDistance(0.4)).toBe("A menos de 1 km");
     expect(formatDistance(3.46)).toBe("A 3,5 km");
     expect(formatDistance(42.2)).toBe("A 42 km");
+  });
+});
+
+describe("cucardas", () => {
+  it("avisa 'últimas entradas' desde el 80% vendido", () => {
+    expect(eventBadge({ has_availability: true, tickets_total: 100, tickets_sold: 79 })).toBeNull();
+    expect(eventBadge({ has_availability: true, tickets_total: 100, tickets_sold: 80 })).toBe("last_tickets");
+  });
+  it("marca sold out solo si se vendió todo", () => {
+    expect(eventBadge({ has_availability: false, tickets_total: 100, tickets_sold: 100 })).toBe("sold_out");
+    expect(eventBadge({ has_availability: false, tickets_total: 0, tickets_sold: 0 })).toBe("sold_out");
+  });
+  it("sin cucarda si la venta todavía no abrió o ya cerró", () => {
+    expect(eventBadge({ has_availability: false, tickets_total: 100, tickets_sold: 20 })).toBeNull();
+  });
+  it("viene como texto desde la base y lo entiende igual", () => {
+    expect(eventBadge({ has_availability: true, tickets_total: "100" as unknown as number, tickets_sold: "85" as unknown as number })).toBe("last_tickets");
   });
 });

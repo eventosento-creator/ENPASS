@@ -9,6 +9,8 @@ import { AnalyticsEvent } from "@/shared/ui/analytics-event";
 import { toPesos } from "@/shared/lib/analytics";
 import { getEventAnalyticsMeta } from "@/modules/events/application/analytics-meta";
 import { EventHero } from "@/modules/events/ui/event-hero";
+import { eventBadge } from "@/modules/discovery/domain/discovery";
+import { EventBadgePill } from "@/modules/discovery/ui/event-badge";
 import { PublicHeader } from "@/modules/discovery/ui/public-header";
 import { formatEventDate } from "@/shared/lib/format";
 import { googleMapsUrl } from "@/shared/lib/maps";
@@ -50,12 +52,13 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
   if (!context) notFound();
   const { event, venue } = context;
   const supabase = await createClient();
-  const [typesResult, comboResult, tablesResult, seatsResult, attribution] = await Promise.all([
+  const [typesResult, comboResult, tablesResult, seatsResult, attribution, countsResult] = await Promise.all([
     event.tickets_enabled ? supabase.rpc("get_public_ticket_types", { target_event: event.id }) : Promise.resolve({ data: [] }),
     event.tickets_enabled ? supabase.rpc("get_event_combo_sizes", { target_event: event.id }) : Promise.resolve({ data: [] }),
     event.tables_enabled ? supabase.rpc("get_public_event_tables", { target_event: event.id }) : Promise.resolve({ data: [] }),
     event.seatmap_enabled ? supabase.rpc("get_public_event_seats", { target_event: event.id }) : Promise.resolve({ data: [] }),
     getPromoterAttributionSessionHash().then((sessionHash) => getActivePromoterAttribution(event.id, sessionHash)),
+    event.tickets_enabled ? supabase.rpc("get_event_ticket_counts", { target_event: event.id }) : Promise.resolve({ data: [] }),
   ]);
   const types = typesResult.data ?? [];
   const tables = (tablesResult.data ?? []) as PublicEventTable[];
@@ -85,6 +88,8 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
   ];
   const startingPrice = payable.length ? Math.min(...payable) : 0;
   const hasPurchase = types.length > 0 || tables.length > 0 || seats.length > 0;
+  const counts = countsResult.data?.[0];
+  const badge = eventBadge({ has_availability: types.some((type) => type.sale_open) || tables.length > 0 || seats.length > 0, tickets_total: counts?.tickets_total ?? 0, tickets_sold: counts?.tickets_sold ?? 0 });
   const mapsUrl = googleMapsUrl({ name: venue.name, address: venue.address, city: venue.city });
   // Solo campos que existen de verdad; si no hay ninguno, la tarjeta no se muestra.
   const infoRows: Array<{ icon: typeof Clock; label: string; value: string }> = [
@@ -100,7 +105,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
     <div className="container-shell md:pt-5"><Link href="/eventos" className="mb-4 hidden min-h-9 items-center gap-1 text-sm font-semibold text-neutral-500 transition hover:text-white md:inline-flex"><ChevronLeft size={16}/>Eventos</Link></div>
     <div className="container-shell grid items-start gap-x-8 gap-y-6 md:grid-cols-[minmax(0,1fr)_330px] md:grid-rows-[auto_1fr] lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-12">
       <section className="md:col-start-1">
-        <EventHero src={event.cover_image_url} alt={`Flyer de ${event.name}`}/>
+        <EventHero src={event.cover_image_url} alt={`Flyer de ${event.name}`} badge={!finished && badge ? <EventBadgePill badge={badge} className="absolute left-3 top-3"/> : null}/>
         <div className="mt-5 px-1">
           <p className="eyebrow">{venue.city}</p>
           <h1 className="mt-2 text-4xl font-black uppercase leading-[1.05] tracking-[.01em] md:text-5xl lg:text-6xl">{event.name}</h1>

@@ -5,7 +5,8 @@ import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, MapPin } from "luc
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { formatEventDate } from "@/shared/lib/format";
 import { useAutoplayCarousel } from "./use-autoplay-carousel";
-import type { DiscoveryEvent } from "../domain/discovery";
+import { eventBadge, type DiscoveryEvent } from "../domain/discovery";
+import { EventBadgePill } from "./event-badge";
 
 /** Hero de eventos destacados: foto protagonista, un solo evento a la vez, flechas y numeración discreta. */
 export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) {
@@ -25,6 +26,7 @@ export function DiscoveryHeroCarousel({ events }: { events: DiscoveryEvent[] }) 
         <EventCover src={event.cover_image_url} alt={`Flyer de ${event.name}`} className="absolute inset-0" priority={index === (loop ? 1 : 0)} sizes="(max-width: 1440px) 100vw, 1440px" fit="cover"/>
         <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-black/5"/>
         <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20"/>
+        {eventBadge(event) && <EventBadgePill badge={eventBadge(event)!} className="absolute right-5 top-5 sm:right-8 sm:top-8"/>}
         <div className="absolute inset-0 flex flex-col justify-end p-6 pb-16 sm:justify-center sm:p-12 sm:pb-12 lg:px-16">
           <p className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-[.22em] !text-white/70">Destacado<span aria-hidden className="h-px w-24 bg-white/30"/></p>
           <h2 className="mt-3 line-clamp-2 max-w-2xl text-4xl font-black leading-[1.02] tracking-[-.035em] !text-white sm:text-6xl">{event.name}</h2>

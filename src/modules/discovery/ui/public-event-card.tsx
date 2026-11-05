@@ -3,7 +3,8 @@ import { ArrowRight, MapPin } from "lucide-react";
 import { EventCover } from "@/modules/events/ui/event-cover";
 import { formatMoney } from "@/shared/lib/format";
 import { FavoriteButton } from "./favorite-button";
-import { formatDistance, type DiscoveryEvent } from "../domain/discovery";
+import { eventBadge, formatDistance, type DiscoveryEvent } from "../domain/discovery";
+import { EventBadgePill } from "./event-badge";
 
 /** Card editorial: foto grande con la fecha encima, corazón de favoritos, título, lugar y CTA. */
 export function PublicEventCard({ event, priority = false, favorited = false, distanceKm = null }: { event: DiscoveryEvent; priority?: boolean; favorited?: boolean; distanceKm?: number | null }) {
@@ -11,11 +12,13 @@ export function PublicEventCard({ event, priority = false, favorited = false, di
   const day = parts.find((part) => part.type === "day")?.value ?? "";
   const month = (parts.find((part) => part.type === "month")?.value ?? "").replace(".", "").toUpperCase();
   const price = event.has_availability ? event.from_price_amount === 0 ? "Gratis" : event.from_price_amount ? `Desde ${formatMoney(event.from_price_amount, event.currency)}` : null : "Agotado";
+  const badge = eventBadge(event);
   return <div className="group relative flex min-w-0 flex-col overflow-hidden rounded-[1.15rem] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-xs)] transition duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)]">
     <Link href={`/e/${event.slug}`} className="flex flex-1 flex-col">
       <div className="relative">
-        <EventCover src={event.cover_image_url} alt={`Flyer de ${event.name}`} className="aspect-[4/3]" priority={priority} sizes="(max-width: 640px) 70vw, (max-width: 1024px) 31vw, 20vw"/>
+        <EventCover src={event.cover_image_url} alt={`Flyer de ${event.name}`} className={badge === "sold_out" ? "aspect-[4/3] opacity-75 grayscale-[.4]" : "aspect-[4/3]"} priority={priority} sizes="(max-width: 640px) 70vw, (max-width: 1024px) 31vw, 20vw"/>
         <span className="absolute left-3 top-3 grid min-w-12 place-items-center rounded-xl bg-black/55 px-2.5 py-1.5 text-center leading-none !text-white backdrop-blur"><span className="text-[10px] font-bold tracking-[.12em] !text-white/80">{month}</span><span className="mt-1 text-xl font-black !text-white">{day}</span></span>
+        {badge && <EventBadgePill badge={badge} className="absolute bottom-3 left-3"/>}
       </div>
       <div className="flex-1 p-4 pb-3">
         <h3 className="line-clamp-2 text-base font-black leading-tight tracking-[-.02em] sm:text-[17px]">{event.name}</h3>

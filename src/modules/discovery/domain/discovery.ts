@@ -23,6 +23,8 @@ export type DiscoveryEvent = {
   discovery_category: EventDiscoveryCategory;
   latitude: number | null;
   longitude: number | null;
+  tickets_total: number;
+  tickets_sold: number;
 };
 
 export const discoveryPriceValues = ["free", "paid"] as const;
@@ -143,4 +145,15 @@ export function sortByProximity(events: DiscoveryEvent[], location: UserLocation
 export function formatDistance(km: number) {
   if (km < 1) return "A menos de 1 km";
   return `A ${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
+}
+
+/** Cucarda sobre el flyer. Una sola por evento. "Sold out" solo si de verdad se vendió todo (no cuando la venta aún no abrió o ya cerró). */
+export type EventBadge = "sold_out" | "last_tickets";
+export const LAST_TICKETS_SOLD_RATIO = 0.8;
+
+export function eventBadge(event: Pick<DiscoveryEvent, "has_availability" | "tickets_total" | "tickets_sold">): EventBadge | null {
+  const total = Number(event.tickets_total);
+  const sold = Number(event.tickets_sold);
+  if (!event.has_availability) return total === 0 || sold >= total ? "sold_out" : null;
+  return total > 0 && sold / total >= LAST_TICKETS_SOLD_RATIO ? "last_tickets" : null;
 }
