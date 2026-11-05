@@ -68,7 +68,7 @@ export const getClubListingSettings = cache(async (organizationId: string): Prom
 export async function getMembershipRequests(organizationId: string): Promise<MembershipRequestRow[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("club_membership_requests")
-    .select("id, first_name, last_name, email, phone, document, message, status, created_at, membership_categories(id, name), divisions(id, name)")
+    .select("id, first_name, last_name, email, phone, document, message, status, created_at, student_first_name, student_last_name, birth_date, membership_categories(id, name), divisions(id, name)")
     .eq("organization_id", organizationId).order("created_at", { ascending: false });
   return (data ?? []).map((row) => {
     const category = row.membership_categories as unknown as { id: string; name: string } | null;
@@ -77,6 +77,7 @@ export async function getMembershipRequests(organizationId: string): Promise<Mem
       id: row.id, categoryId: category?.id ?? null, categoryName: category?.name ?? null, divisionName: division?.name ?? null,
       firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone,
       document: row.document, message: row.message, status: row.status, createdAt: row.created_at,
+      studentName: row.student_first_name ? `${row.student_first_name} ${row.student_last_name ?? ""}`.trim() : null, birthDate: row.birth_date,
     };
   });
 }

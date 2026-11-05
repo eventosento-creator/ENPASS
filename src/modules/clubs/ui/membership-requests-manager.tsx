@@ -17,6 +17,7 @@ function RequestCard({ request, suggestedNumber }: { request: MembershipRequestR
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <p className="font-bold">{request.firstName} {request.lastName}</p>
+        {request.studentName && <p className="mt-0.5 text-sm text-neutral-300">Alumno: <strong>{request.studentName}</strong>{request.birthDate ? ` · nació el ${new Date(`${request.birthDate}T00:00:00`).toLocaleDateString("es-AR")}` : ""} <span className="text-neutral-500">· el tutor es quien solicita</span></p>}
         <p className="mt-0.5 text-xs text-neutral-500">{request.email}{request.phone ? ` · ${request.phone}` : ""}</p>
         <p className="mt-1 text-xs text-neutral-500">Categoría: {request.categoryName ?? "—"}{request.divisionName ? ` · División: ${request.divisionName}` : ""} · {new Date(request.createdAt).toLocaleDateString("es-AR")}</p>
         {request.message && <p className="mt-2 text-sm text-neutral-300">&ldquo;{request.message}&rdquo;</p>}

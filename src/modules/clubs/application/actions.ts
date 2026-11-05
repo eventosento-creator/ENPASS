@@ -12,7 +12,7 @@ import { sendDivisionDueGeneratedEmail, sendDivisionDuePaidEmail, sendDueGenerat
 import type { CustomerCandidate, MemberRow, MembershipDue } from "../domain/club";
 import { getDivisionDues, getNextMemberNumber, searchMembers } from "./queries";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
-import { incrementMemberNumber, mapHeaders, normalizeKey, parseCsv } from "../domain/members-csv";
+import { incrementMemberNumber, mapHeaders, normalizeKey, parseBirthDate, parseCsv } from "../domain/members-csv";
 
 const brandFrom = (row: { brand_logo_url: string | null; brand_name: string | null; brand_accent_color: string | null }) => ({
   logoUrl: row.brand_logo_url, name: row.brand_name, accentColor: row.brand_accent_color,
@@ -334,7 +334,7 @@ export async function recordManualDuePayment(_: ClubActionState, formData: FormD
   const result = data?.[0];
   if (result?.customer_email) {
     await sendDuePaidEmail({
-      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      dueId: parsed.data.dueId, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method, brand: brandFrom(result),
     });
   }
@@ -458,7 +458,7 @@ export async function recordManualDivisionDuePayment(_: ClubActionState, formDat
   const result = data?.[0];
   if (result?.customer_email) {
     await sendDivisionDuePaidEmail({
-      to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
+      dueId: parsed.data.dueId, to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       divisionName: result.division_name, period: result.due_period, amount: result.paid_amount, paymentMethod: result.payment_method,
       brand: brandFrom(result),
     });
@@ -510,7 +510,7 @@ export async function approveMembershipRequest(_: ClubActionState, formData: For
   if (!requestId || !memberNumber) return { error: "Falta el número de socio." };
   const supabase = await createClient();
   // División que pidió la persona al anotarse (si eligió una).
-  const { data: requested } = await supabase.from("club_membership_requests").select("division_id").eq("id", requestId).maybeSingle();
+  const { data: requested } = await supabase.from("club_membership_requests").select("division_id, student_first_name, student_last_name").eq("id", requestId).maybeSingle();
   const { data, error } = await supabase.rpc("approve_club_membership_request", { target_request: requestId, target_member_number: memberNumber });
   if (error) {
     if (error.message?.includes("MEMBER_NUMBER_TAKEN")) return { error: "Ese número de socio ya está en uso." };
@@ -535,6 +535,7 @@ export async function approveMembershipRequest(_: ClubActionState, formData: For
     await sendMembershipWelcomeEmail({
       to: result.customer_email, firstName: result.customer_first_name, organizationName: result.organization_name,
       memberNumber, categoryName: result.category_name, brand: brandFrom(result),
+      studentName: requested?.student_first_name ? `${requested.student_first_name} ${requested.student_last_name ?? ""}`.trim() : undefined,
     });
     if (result.due_id) {
       await sendDueGeneratedEmail({
@@ -605,7 +606,11 @@ export async function importMembersCsv(_: ImportMembersState, formData: FormData
     const categoryId = categoryByName.get(normalizeKey(categoryName));
     const divisions = cell(row, "division").split(/[;|]/).map((name) => name.trim()).filter(Boolean);
     const unknownDivision = divisions.find((name) => !divisionByName.has(normalizeKey(name)));
-    if (!firstName || !lastName) { problems.push({ line, message: "Falta nombre o apellido." }); continue; }
+    const studentFirstName = cell(row, "studentFirstName");
+    const studentLastName = cell(row, "studentLastName");
+    const birthDate = parseBirthDate(cell(row, "birthDate"));
+    if (studentFirstName && (!studentLastName || !birthDate)) { problems.push({ line, message: "Para el alumno falta el apellido o la fecha de nacimiento (dd/mm/aaaa)." }); continue; }
+    if (!firstName || !lastName) { problems.push({ line, message: studentFirstName ? "Falta el nombre o apellido del tutor." : "Falta nombre o apellido." }); continue; }
     if (!z.email().safeParse(email).success) { problems.push({ line, message: `Mail inválido: "${email}".` }); continue; }
     if (!categoryId) { problems.push({ line, message: categoryName ? `La categoría "${categoryName}" no existe o está inactiva. Creala en Categorías.` : "Falta la categoría." }); continue; }
     if (unknownDivision) { problems.push({ line, message: `La división "${unknownDivision}" no existe o está inactiva. Creala en Divisiones.` }); continue; }
@@ -618,6 +623,7 @@ export async function importMembersCsv(_: ImportMembersState, formData: FormData
         target_org: org.id, target_category: categoryId, target_member_number: memberNumber,
         target_first_name: firstName, target_last_name: lastName, target_email: email,
         target_phone: cell(row, "phone") || null, target_document: cell(row, "document") || null, target_customer_id: null,
+        ...(studentFirstName ? { target_student_first_name: studentFirstName, target_student_last_name: studentLastName, target_student_document: cell(row, "studentDocument") || undefined, target_birth_date: birthDate! } : {}),
       });
       if (!error) { membershipId = data?.[0]?.membership_id; break; }
       if (error.message?.includes("MEMBER_NUMBER_TAKEN") && !providedNumber && /^\d+$/.test(memberNumber)) { memberNumber = incrementMemberNumber(memberNumber); continue; }

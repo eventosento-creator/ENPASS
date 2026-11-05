@@ -11,6 +11,7 @@ export function MembersImport() {
     <summary className="cursor-pointer text-sm font-bold">Importar / exportar socios (CSV)</summary>
     <div className="mt-4 grid gap-4">
       <p className="text-sm text-neutral-500">Columnas: <span className="font-mono text-xs">Nº Socio, Nombre, Apellido, DNI, Mail, Celular, Categoria, Division</span>. Si dejás el Nº Socio vacío se completa solo. Las categorías y divisiones tienen que existir antes. Podés poner varias divisiones separadas por &quot;;&quot;. No se manda ningún mail a los socios importados.</p>
+      <p className="text-sm text-neutral-500">Alumnos menores: sumá las columnas opcionales <span className="font-mono text-xs">Nombre Alumno, Apellido Alumno, DNI Alumno, Fecha de Nacimiento</span> (dd/mm/aaaa). En esas filas, Nombre, Apellido, DNI, Mail y Celular son los del <strong>tutor</strong>; un mismo tutor puede aparecer en varias filas.</p>
       <div className="flex flex-wrap gap-2">
         <a className="btn btn-secondary" href="/app/socios/export" download>Exportar socios</a>
         <a className="btn btn-ghost" href="/app/socios/export?plantilla=1" download>Descargar plantilla</a>

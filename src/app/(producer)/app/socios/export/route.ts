@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/shared/database/server";
 import { getCurrentOrganization } from "@/modules/organizations/application/queries";
 import { isClubEnabled } from "@/modules/clubs/application/queries";
-import { MEMBERS_CSV_HEADERS, toCsv } from "@/modules/clubs/domain/members-csv";
+import { MEMBERS_CSV_HEADERS, MEMBERS_CSV_STUDENT_HEADERS, toCsv } from "@/modules/clubs/domain/members-csv";
 import { slugify } from "@/shared/lib/format";
 
 // Exporta el padrón en la misma estructura que acepta la importación (sirve también de plantilla
@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
   if (!org || !["owner", "admin"].includes(org.role) || !(await isClubEnabled(org.id))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const rows: string[][] = [[...MEMBERS_CSV_HEADERS]];
+  const rows: string[][] = [[...MEMBERS_CSV_HEADERS, ...MEMBERS_CSV_STUDENT_HEADERS]];
   if (!request.nextUrl.searchParams.has("plantilla")) {
     const supabase = await createClient();
     const [{ data: memberships }, { data: categories }, { data: enrollments }] = await Promise.all([
-      supabase.from("memberships").select("member_number, customer_id, membership_category_id, id").eq("organization_id", org.id).order("member_number"),
+      supabase.from("memberships").select("member_number, customer_id, membership_category_id, id, student_first_name, student_last_name, student_document, birth_date").eq("organization_id", org.id).order("member_number"),
       supabase.from("membership_categories").select("id, name").eq("organization_id", org.id),
       supabase.from("membership_division_enrollments").select("membership_id, divisions(name)").eq("organization_id", org.id).eq("status", "active"),
     ]);
@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
         membership.member_number, customer?.first_name ?? "", customer?.last_name ?? "", customer?.document ?? "",
         customer?.email ?? "", customer?.phone ?? "", categoryName.get(membership.membership_category_id) ?? "",
         (divisionsByMembership.get(membership.id) ?? []).join("; "),
+        membership.student_first_name ?? "", membership.student_last_name ?? "", membership.student_document ?? "",
+        membership.birth_date ? membership.birth_date.split("-").reverse().join("/") : "",
       ]);
     }
   }

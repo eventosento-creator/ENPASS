@@ -14,6 +14,7 @@ export function MembershipRequestForm({ organizationId, categories, divisions = 
   const [categoryId, setCategoryId] = useState("");
   const [divisionId, setDivisionId] = useState("");
   const [chosen, setChosen] = useState<PlanSelection | null>(null);
+  const [forMinor, setForMinor] = useState(false);
   const firstName = useRef<HTMLInputElement>(null);
 
   // Al tocar una modalidad en "Categorías y cuotas": completa categoría/división, baja al formulario y deja el cursor en el nombre.
@@ -46,6 +47,19 @@ export function MembershipRequestForm({ organizationId, categories, divisions = 
     {chosen && <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/[.05] p-3.5 text-sm" role="status">
       <p><span className="text-neutral-500">Te anotás en </span><b>{chosen.label}</b>{chosen.fee > 0 && <span className="text-neutral-500"> · {formatMoney(chosen.fee, currency)}/mes</span>}</p>
       <button type="button" aria-label="Quitar selección" onClick={() => { setChosen(null); setDivisionId(""); }} className="grid size-8 shrink-0 place-items-center rounded-full text-neutral-500 hover:bg-[var(--surface-strong)]"><X size={15}/></button>
+    </div>}
+    <label className="flex items-start gap-3 rounded-xl border border-white/[.08] p-3.5 text-sm">
+      <input type="checkbox" className="mt-1" checked={forMinor} onChange={(event) => setForMinor(event.target.checked)}/>
+      <span><strong>La inscripción es para un menor</strong><span className="mt-0.5 block text-xs text-neutral-500">Vos sos el tutor: recibís los avisos y pagás las cuotas.</span></span>
+    </label>
+    {forMinor && <div className="grid gap-4 rounded-xl border border-white/[.08] p-4">
+      <p className="text-sm font-bold">Datos del alumno</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="label">Nombre del alumno<input className="field" name="studentFirstName" required maxLength={80}/></label>
+        <label className="label">Apellido del alumno<input className="field" name="studentLastName" required maxLength={80}/></label>
+      </div>
+      <label className="label">Fecha de nacimiento<input className="field" name="birthDate" type="date" required/></label>
+      <p className="text-sm font-bold">Tus datos (tutor)</p>
     </div>}
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="label">Nombre<input ref={firstName} className="field" name="firstName" required maxLength={80}/></label>

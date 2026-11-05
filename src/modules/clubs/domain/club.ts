@@ -151,6 +151,8 @@ export type MembershipRequestRow = {
   phone: string | null;
   document: string | null;
   message: string | null;
+  studentName: string | null;
+  birthDate: string | null;
   status: MembershipRequestStatus;
   createdAt: string;
 };

@@ -16,6 +16,10 @@ const requestSchema = z.object({
   phone: z.string().max(30).optional(),
   document: z.string().max(20).optional(),
   message: z.string().max(500).optional(),
+  studentFirstName: z.string().max(80).optional(),
+  studentLastName: z.string().max(80).optional(),
+  studentDocument: z.string().max(20).optional(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("").transform(() => undefined)),
 });
 
 export async function submitMembershipRequest(_: MembershipRequestState, formData: FormData): Promise<MembershipRequestState> {
@@ -39,9 +43,14 @@ export async function submitMembershipRequest(_: MembershipRequestState, formDat
     target_document: parsed.data.document ?? null,
     target_message: parsed.data.message ?? null,
     target_division: parsed.data.divisionId ?? null,
+    target_student_first_name: parsed.data.studentFirstName?.trim() || null,
+    target_student_last_name: parsed.data.studentFirstName?.trim() ? parsed.data.studentLastName ?? null : null,
+    target_student_document: parsed.data.studentFirstName?.trim() ? parsed.data.studentDocument || null : null,
+    target_birth_date: parsed.data.studentFirstName?.trim() ? parsed.data.birthDate ?? null : null,
   });
   if (error) {
-    if (error.message?.includes("DUPLICATE_REQUEST")) return { error: "Ya tenés una solicitud pendiente con ese email. Esperá a que el club la revise." };
+    if (error.message?.includes("INVALID_STUDENT_DATA")) return { error: "Completá nombre, apellido y fecha de nacimiento del alumno." };
+    if (error.message?.includes("DUPLICATE_REQUEST")) return { error: "Ya tenés una solicitud pendiente para esta persona. Esperá a que el club la revise." };
     if (error.message?.includes("CLUB_NOT_PUBLIC") || error.message?.includes("CATEGORY_NOT_FOUND") || error.message?.includes("DIVISION_NOT_FOUND")) return { error: "No pudimos enviar tu solicitud." };
     return { error: "No pudimos enviar tu solicitud." };
   }

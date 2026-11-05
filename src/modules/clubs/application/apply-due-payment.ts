@@ -47,7 +47,7 @@ export async function applyDuePayment(providerPayment: ProviderPayment) {
       ]);
       if (customer?.email) {
         await sendDuePaidEmail({
-          to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
+          dueId, to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
           period: due.period, amount: providerPayment.grossAmount, paymentMethod: "mercado_pago",
           brand: { logoUrl: settings?.brand_logo_url, name: settings?.brand_name, accentColor: settings?.brand_accent_color },
         });

@@ -48,7 +48,7 @@ export async function applyDivisionDuePayment(providerPayment: ProviderPayment) 
       const { data: customer } = membership ? await admin.from("customers").select("email, first_name").eq("id", membership.customer_id).maybeSingle() : { data: null };
       if (customer?.email) {
         await sendDivisionDuePaidEmail({
-          to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
+          dueId, to: customer.email, firstName: customer.first_name, organizationName: org?.name ?? "",
           divisionName: division?.name ?? "", period: due.period, amount: providerPayment.grossAmount, paymentMethod: "mercado_pago",
           brand: { logoUrl: settings?.brand_logo_url, name: settings?.brand_name, accentColor: settings?.brand_accent_color },
         });
