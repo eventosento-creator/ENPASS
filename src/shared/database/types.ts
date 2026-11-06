@@ -791,7 +791,7 @@ export interface Database {
       admin_sales_by_day: { Args: { target_from: string; target_to: string }; Returns: { day: string; sales_amount: number; fee_amount: number; orders_count: number }[] };
       admin_pending_digest: { Args: Record<string, never>; Returns: Json };
       admin_overview: { Args: { target_from: string; target_to: string }; Returns: Json };
-      admin_list_events: { Args: { target_scope?: string; target_search?: string | null; target_org?: string | null; target_limit?: number }; Returns: { event_id: string; event_name: string; event_slug: string; status: string; starts_at: string; organization_id: string; organization_name: string; is_club: boolean; capacity: number; tickets_sold: number; sales_amount: number; fee_amount: number }[] };
+      admin_list_events: { Args: { target_scope?: string; target_search?: string | null; target_org?: string | null; target_limit?: number; target_from?: string | null; target_to?: string | null }; Returns: { event_id: string; event_name: string; event_slug: string; status: string; starts_at: string; organization_id: string; organization_name: string; is_club: boolean; capacity: number; tickets_sold: number; sales_amount: number; fee_amount: number }[] };
       admin_event_detail: { Args: { target_event: string }; Returns: Json };
       admin_clubs_overview: { Args: Record<string, never>; Returns: { organization_id: string; club_name: string; slug: string; members_active: number; members_overdue: number; listing_status: string | null; collection_mode: string; requests_pending: number; payouts_pending_amount: number }[] };
       admin_club_detail: { Args: { target_org: string }; Returns: Json };

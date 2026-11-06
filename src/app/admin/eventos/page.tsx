@@ -1,23 +1,27 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { getAdminEvents, getAdminProducers } from "@/modules/admin/application/queries";
+import { customPeriodRange } from "@/modules/admin/domain/custom-range";
+import { DateRangePicker } from "@/modules/admin/ui/date-range-picker";
 import { formatMoneyCompact, formatShortDate } from "@/modules/admin/ui/format";
 
 const scopes = [{ value: "upcoming", label: "Próximos" }, { value: "past", label: "Pasados" }, { value: "all", label: "Todos" }] as const;
 const kinds = [{ value: "todos", label: "Todos" }, { value: "productor", label: "Productores" }, { value: "club", label: "Clubes" }] as const;
 const statusLabels: Record<string, string> = { draft: "Borrador", published: "Publicado", sold_out: "Agotado", finished: "Finalizado", cancelled: "Cancelado" };
 
-export default async function AdminEventsPage({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string; org?: string; tipo?: string }> }) {
+export default async function AdminEventsPage({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string; org?: string; tipo?: string; desde?: string; hasta?: string }> }) {
   const query = await searchParams;
   const scope = query.ver === "past" || query.ver === "all" ? query.ver : "upcoming";
   const search = (query.q ?? "").slice(0, 80);
   const kind = query.tipo === "club" || query.tipo === "productor" ? query.tipo : "todos";
   const organizationId = /^[0-9a-f-]{36}$/.test(query.org ?? "") ? (query.org as string) : null;
-  const [events, producers] = await Promise.all([getAdminEvents(scope, search, organizationId), getAdminProducers()]);
+  const range = customPeriodRange(query.desde, query.hasta);
+  const [events, producers] = await Promise.all([getAdminEvents(scope, search, organizationId, range), getAdminProducers()]);
   const rows = events.filter((event) => kind === "todos" || (kind === "club") === event.is_club);
   const href = (patch: Record<string, string | null>) => {
     const params = new URLSearchParams();
-    const next = { ver: scope, q: search, org: organizationId, tipo: kind === "todos" ? null : kind, ...patch };
+    // Elegir Próximos/Pasados/Todos suelta el rango de fechas; el resto de los filtros se conserva.
+    const next = { ver: scope, q: search, org: organizationId, tipo: kind === "todos" ? null : kind, desde: range?.desde ?? null, hasta: range?.hasta ?? null, ...patch };
     for (const [key, value] of Object.entries(next)) if (value && !(key === "ver" && value === "upcoming")) params.set(key, value);
     const text = params.toString();
     return (text ? `/admin/eventos?${text}` : "/admin/eventos") as never;
@@ -27,7 +31,7 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
     <header><p className="eyebrow">Administración</p><h1 className="page-title mt-1">Eventos</h1><p className="mt-2 text-sm text-neutral-500">Todos los eventos de la plataforma, de productores y de clubes.</p></header>
 
     <form action="/admin/eventos" className="mt-6 flex flex-wrap items-center gap-2" role="search">
-      <input type="hidden" name="ver" value={scope}/>{kind !== "todos" && <input type="hidden" name="tipo" value={kind}/>}
+      <input type="hidden" name="ver" value={scope}/>{range && <><input type="hidden" name="desde" value={range.desde}/><input type="hidden" name="hasta" value={range.hasta}/></>}{kind !== "todos" && <input type="hidden" name="tipo" value={kind}/>}
       <label className="sr-only" htmlFor="ev-q">Buscar evento o productor</label>
       <input id="ev-q" name="q" defaultValue={search} placeholder="Buscar evento o productor" className="field min-w-0 flex-1 sm:max-w-xs"/>
       <label className="sr-only" htmlFor="ev-org">Productor</label>
@@ -36,11 +40,11 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
     </form>
 
     <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-      <nav aria-label="Cuándo" className="flex gap-1.5">{scopes.map((option) => <Pill key={option.value} href={href({ ver: option.value })} active={option.value === scope}>{option.label}</Pill>)}</nav>
+      <nav aria-label="Cuándo" className="flex gap-1.5">{scopes.map((option) => <Pill key={option.value} href={href({ ver: option.value, desde: null, hasta: null })} active={!range && option.value === scope}>{option.label}</Pill>)}<DateRangePicker action="/admin/eventos" range={range} keep={{ ver: scope, ...(search ? { q: search } : {}), ...(organizationId ? { org: organizationId } : {}), ...(kind !== "todos" ? { tipo: kind } : {}) }}/></nav>
       <nav aria-label="Tipo" className="flex gap-1.5">{kinds.map((option) => <Pill key={option.value} href={href({ tipo: option.value === "todos" ? null : option.value })} active={kind === option.value}>{option.label}</Pill>)}</nav>
     </div>
 
-    <div className="mt-5 flex justify-end"><a className="text-xs font-bold text-neutral-500 underline" href={`/admin/eventos/export?${new URLSearchParams({ ver: scope, q: search, ...(organizationId ? { org: organizationId } : {}), ...(kind !== "todos" ? { tipo: kind } : {}) }).toString()}`}>Descargar esta lista (CSV)</a></div>
+    <div className="mt-5 flex justify-end"><a className="text-xs font-bold text-neutral-500 underline" href={`/admin/eventos/export?${new URLSearchParams({ ver: scope, q: search, ...(organizationId ? { org: organizationId } : {}), ...(kind !== "todos" ? { tipo: kind } : {}), ...(range ? { desde: range.desde, hasta: range.hasta } : {}) }).toString()}`}>Descargar esta lista (CSV)</a></div>
     <div className="mt-2 overflow-x-auto rounded-2xl border border-[var(--border)]">
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-[var(--surface-strong)] text-xs font-bold text-neutral-500"><tr><th className="px-4 py-3">Evento</th><th className="px-4 py-3">Organiza</th><th className="px-4 py-3">Fecha</th><th className="px-4 py-3 text-right">Entradas</th><th className="px-4 py-3 text-right">Ventas</th><th className="px-4 py-3 text-right">Cargo ENPASS</th></tr></thead>

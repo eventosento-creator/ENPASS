@@ -69,9 +69,9 @@ export async function getAdminOverview(period: AdminPeriod | null, custom: { fro
   return (data ?? null) as AdminOverview | null;
 }
 
-export async function getAdminEvents(scope: "upcoming" | "past" | "all", search: string, organizationId: string | null) {
+export async function getAdminEvents(scope: "upcoming" | "past" | "all", search: string, organizationId: string | null, range: { from: string; to: string } | null = null) {
   const supabase = await requireAdmin();
-  const { data } = await supabase.rpc("admin_list_events", { target_scope: scope, target_search: search || null, target_org: organizationId, target_limit: 150 });
+  const { data } = await supabase.rpc("admin_list_events", { target_scope: scope, target_search: search || null, target_org: organizationId, target_limit: 150, target_from: range?.from ?? null, target_to: range?.to ?? null });
   return data ?? [];
 }
 
