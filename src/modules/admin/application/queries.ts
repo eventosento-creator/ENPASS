@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/shared/database/server";
 import { isPlatformAdmin } from "@/modules/organizations/application/queries";
 import { customPeriodRange } from "../domain/custom-range";
+import { monthFirstDay, type FinanceMonth } from "../domain/finance";
 
 export type AdminPeriod = "hoy" | "7d" | "mes";
 export const adminPeriods: { value: AdminPeriod; label: string }[] = [{ value: "hoy", label: "Hoy" }, { value: "7d", label: "7 días" }, { value: "mes", label: "Este mes" }];
@@ -107,4 +108,10 @@ export async function getAdminSalesByDay(days = 14) {
   const from = Date.UTC(arNow.getUTCFullYear(), arNow.getUTCMonth(), arNow.getUTCDate() - (days - 1)) + AR_OFFSET_MS;
   const { data } = await supabase.rpc("admin_sales_by_day", { target_from: new Date(from).toISOString(), target_to: now.toISOString() });
   return data ?? [];
+}
+
+export async function getFinanceMonth(month: string) {
+  const supabase = await requireAdmin();
+  const { data } = await supabase.rpc("admin_finance_month", { target_month: monthFirstDay(month) });
+  return (data ?? null) as FinanceMonth | null;
 }

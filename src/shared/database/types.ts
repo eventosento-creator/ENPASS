@@ -581,6 +581,8 @@ export interface Database {
       scanner_sessions: { Row: ScannerSession; Insert: never; Update: never; Relationships: [] };
       scanner_activation_rate_limits: { Row: { fingerprint_hash: string; window_started_at: string; failed_attempts: number; blocked_until: string | null; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       checkins: { Row: CheckIn; Insert: never; Update: never; Relationships: [] };
+      platform_expenses: { Row: { id: string; expense_date: string; concept: string; category: string; amount_cents: number; kind: "fijo" | "variable"; notes: string | null; created_by: string | null; created_at: string }; Insert: { id?: string; expense_date: string; concept: string; category: string; amount_cents: number; kind?: "fijo" | "variable"; notes?: string | null; created_by?: string | null }; Update: Partial<{ expense_date: string; concept: string; category: string; amount_cents: number; kind: "fijo" | "variable"; notes: string | null }>; Relationships: [] };
+      platform_recurring_expenses: { Row: { id: string; concept: string; category: string; amount_cents: number; starts_on: string; ends_on: string | null; created_by: string | null; created_at: string }; Insert: { id?: string; concept: string; category: string; amount_cents: number; starts_on: string; ends_on?: string | null; created_by?: string | null }; Update: Partial<{ concept: string; category: string; amount_cents: number; starts_on: string; ends_on: string | null }>; Relationships: [] };
       audit_logs: { Row: { id: number; organization_id: string; actor_user_id: string | null; action: string; entity_type: string; entity_id: string | null; before_data: Json | null; after_data: Json | null; created_at: string }; Insert: { organization_id: string; actor_user_id?: string | null; action: string; entity_type: string; entity_id?: string | null; before_data?: Json | null; after_data?: Json | null; created_at?: string }; Update: never; Relationships: [] };
       legal_documents: { Row: LegalDocument; Insert: never; Update: never; Relationships: [] };
       legal_acceptances: { Row: LegalAcceptance; Insert: never; Update: never; Relationships: [] };
@@ -790,6 +792,7 @@ export interface Database {
       cancel_transfer_payout: { Args: { target_payout: string }; Returns: undefined };
       admin_sales_by_day: { Args: { target_from: string; target_to: string }; Returns: { day: string; sales_amount: number; fee_amount: number; orders_count: number }[] };
       admin_pending_digest: { Args: Record<string, never>; Returns: Json };
+      admin_finance_month: { Args: { target_month: string }; Returns: Json };
       admin_overview: { Args: { target_from: string; target_to: string }; Returns: Json };
       admin_list_events: { Args: { target_scope?: string; target_search?: string | null; target_org?: string | null; target_limit?: number; target_from?: string | null; target_to?: string | null }; Returns: { event_id: string; event_name: string; event_slug: string; status: string; starts_at: string; organization_id: string; organization_name: string; is_club: boolean; capacity: number; tickets_sold: number; sales_amount: number; fee_amount: number }[] };
       admin_event_detail: { Args: { target_event: string }; Returns: Json };

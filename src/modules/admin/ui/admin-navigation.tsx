@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Banknote, Building2, CalendarDays, LayoutDashboard, RefreshCw, Users2, Wallet } from "lucide-react";
+import { Banknote, Building2, CalendarDays, LayoutDashboard, ReceiptText, RefreshCw, Users2, Wallet } from "lucide-react";
 
 type Item = { href: string; label: string; icon: typeof LayoutDashboard; badge?: number };
 
@@ -17,6 +17,7 @@ export function AdminNavigation({ transfersPending = 0, mobile = false }: { tran
   const money: Item[] = [
     { href: "/admin/transferencias", label: "Transferencias", icon: Banknote, badge: transfersPending },
     { href: "/admin/liquidaciones", label: "Liquidaciones", icon: Wallet },
+    { href: "/admin/gastos", label: "Gastos", icon: ReceiptText },
     { href: "/admin/pagos", label: "Reprocesar pago", icon: RefreshCw },
   ];
   const active = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
