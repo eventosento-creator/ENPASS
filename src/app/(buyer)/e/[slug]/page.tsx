@@ -89,7 +89,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
   const startingPrice = payable.length ? Math.min(...payable) : 0;
   const hasPurchase = types.length > 0 || tables.length > 0 || seats.length > 0;
   const counts = countsResult.data?.[0];
-  const badge = eventBadge({ has_availability: types.some((type) => type.sale_open) || tables.length > 0 || seats.length > 0, tickets_total: counts?.tickets_total ?? 0, tickets_sold: counts?.tickets_sold ?? 0 });
+  const badge = eventBadge({ has_availability: types.some((type) => type.sale_open) || tables.length > 0 || seats.length > 0, tickets_total: counts?.tickets_total ?? 0, tickets_sold: counts?.tickets_sold ?? 0, starts_at: event.starts_at, timezone: tz });
   const mapsUrl = googleMapsUrl({ name: venue.name, address: venue.address, city: venue.city });
   // Solo campos que existen de verdad; si no hay ninguno, la tarjeta no se muestra.
   const infoRows: Array<{ icon: typeof Clock; label: string; value: string }> = [

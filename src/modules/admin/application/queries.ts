@@ -3,6 +3,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { createClient } from "@/shared/database/server";
 import { isPlatformAdmin } from "@/modules/organizations/application/queries";
+import { customPeriodRange } from "../domain/custom-range";
 
 export type AdminPeriod = "hoy" | "7d" | "mes";
 export const adminPeriods: { value: AdminPeriod; label: string }[] = [{ value: "hoy", label: "Hoy" }, { value: "7d", label: "7 días" }, { value: "mes", label: "Este mes" }];
@@ -53,9 +54,17 @@ export async function requireAdmin() {
   return createClient();
 }
 
-export async function getAdminOverview(period: AdminPeriod) {
+/** Período elegido: uno de los botones, o fechas "desde/hasta" cuando vienen válidas en la dirección. */
+export function resolvePeriod(params: { p?: string; desde?: string; hasta?: string }) {
+  const custom = customPeriodRange(params.desde, params.hasta);
+  if (custom) return { period: null, range: custom };
+  const period = parsePeriod(params.p);
+  return { period, range: null };
+}
+
+export async function getAdminOverview(period: AdminPeriod | null, custom: { from: string; to: string } | null = null) {
   const supabase = await requireAdmin();
-  const { from, to } = periodRange(period);
+  const { from, to } = custom ?? periodRange(period ?? "mes");
   const { data } = await supabase.rpc("admin_overview", { target_from: from, target_to: to });
   return (data ?? null) as AdminOverview | null;
 }

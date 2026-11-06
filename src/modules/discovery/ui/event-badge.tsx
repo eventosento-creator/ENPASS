@@ -4,6 +4,8 @@ import type { EventBadge } from "../domain/discovery";
 const badges: Record<EventBadge, { label: string; className: string }> = {
   sold_out: { label: "Sold out", className: "bg-red-600" },
   last_tickets: { label: "Últimas entradas", className: "bg-amber-500" },
+  today: { label: "¡Es hoy!", className: "bg-emerald-600" },
+  tomorrow: { label: "Mañana", className: "bg-sky-600" },
 };
 
 /** Cucarda que va sobre el flyer; el contenedor la posiciona. */

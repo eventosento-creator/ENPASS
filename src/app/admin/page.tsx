@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { AlertTriangle, Building2, Landmark, Users2, Wallet } from "lucide-react";
-import { adminPeriods, getAdminOverview, getAdminSalesByDay, parsePeriod } from "@/modules/admin/application/queries";
+import { adminPeriods, getAdminOverview, getAdminSalesByDay, resolvePeriod } from "@/modules/admin/application/queries";
 import { SalesChart } from "@/modules/admin/ui/sales-chart";
 import { formatMoneyCompact, formatShortDate, percentChange } from "@/modules/admin/ui/format";
 
 const methodLabels = { mercado_pago: "Mercado Pago", transferencia: "Transferencia", caja: "Caja" } as const;
 const methodColors = { mercado_pago: "#378ADD", transferencia: "#1D9E75", caja: "#B4B2A9" } as const;
 
-export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
-  const period = parsePeriod((await searchParams).p);
-  const [overview, salesByDay] = await Promise.all([getAdminOverview(period), getAdminSalesByDay(14)]);
+/** "2026-10-24" → "24/10" (la fecha ya viene validada). */
+const shortDay = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ p?: string; desde?: string; hasta?: string }> }) {
+  const { period, range } = resolvePeriod(await searchParams);
+  const [overview, salesByDay] = await Promise.all([getAdminOverview(period, range), getAdminSalesByDay(14)]);
   if (!overview) return <p className="text-sm text-neutral-500">No pudimos cargar el resumen. Probá de nuevo en un rato.</p>;
   const change = percentChange(overview.sales, overview.sales_prev);
   const methodsTotal = overview.methods.reduce((sum, method) => sum + method.amount, 0);
@@ -25,9 +28,17 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
   return <>
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="eyebrow">Administración</p><h1 className="page-title mt-1">Resumen</h1></div>
-      <nav aria-label="Período" className="flex gap-1.5">
+      <nav aria-label="Período" className="flex flex-wrap items-center gap-1.5">
         {adminPeriods.map((option) => <Link key={option.value} href={(option.value === "mes" ? "/admin" : `/admin?p=${option.value}`) as never} aria-current={option.value === period ? "page" : undefined}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-bold ${option.value === period ? "border-transparent bg-[var(--accent)] text-[var(--on-accent)]" : "border-[var(--border-strong)] text-neutral-500"}`}>{option.label}</Link>)}
+        <details className="relative">
+          <summary className={`cursor-pointer list-none rounded-full border px-3.5 py-1.5 text-xs font-bold ${range ? "border-transparent bg-[var(--accent)] text-[var(--on-accent)]" : "border-[var(--border-strong)] text-neutral-500"}`}>{range ? `${shortDay(range.desde)} – ${shortDay(range.hasta)}` : "Fechas"}</summary>
+          <form action="/admin" method="get" className="card mt-2 flex flex-wrap items-end gap-2 p-3 sm:absolute sm:right-0 sm:z-10 sm:w-max sm:shadow-lg">
+            <label className="grid gap-1 text-xs font-bold text-neutral-500">Desde<input type="date" name="desde" required defaultValue={range?.desde} className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"/></label>
+            <label className="grid gap-1 text-xs font-bold text-neutral-500">Hasta<input type="date" name="hasta" required defaultValue={range?.hasta} className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"/></label>
+            <button type="submit" className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-bold text-[var(--on-accent)]">Ver</button>
+          </form>
+        </details>
       </nav>
     </header>
 

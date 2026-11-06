@@ -147,13 +147,22 @@ export function formatDistance(km: number) {
   return `A ${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
 }
 
-/** Cucarda sobre el flyer. Una sola por evento. "Sold out" solo si de verdad se vendió todo (no cuando la venta aún no abrió o ya cerró). */
-export type EventBadge = "sold_out" | "last_tickets";
+/** Cucarda sobre el flyer. Una sola por evento, la más importante primero. "Sold out" solo si de verdad se vendió todo (no cuando la venta aún no abrió o ya cerró). */
+export type EventBadge = "sold_out" | "last_tickets" | "today" | "tomorrow";
 export const LAST_TICKETS_SOLD_RATIO = 0.8;
 
-export function eventBadge(event: Pick<DiscoveryEvent, "has_availability" | "tickets_total" | "tickets_sold">): EventBadge | null {
+export function eventBadge(
+  event: Pick<DiscoveryEvent, "has_availability" | "tickets_total" | "tickets_sold" | "starts_at" | "timezone">,
+  now = new Date(),
+): EventBadge | null {
   const total = Number(event.tickets_total);
   const sold = Number(event.tickets_sold);
   if (!event.has_availability) return total === 0 || sold >= total ? "sold_out" : null;
-  return total > 0 && sold / total >= LAST_TICKETS_SOLD_RATIO ? "last_tickets" : null;
+  if (total > 0 && sold / total >= LAST_TICKETS_SOLD_RATIO) return "last_tickets";
+  // Día calendario en la zona del evento: a las 23:50 de hoy, "mañana" ya es el día siguiente.
+  const day = (date: Date) => formatInTimeZone(date, event.timezone, "yyyy-MM-dd");
+  const eventDay = day(new Date(event.starts_at));
+  if (eventDay === day(now)) return "today";
+  if (eventDay === day(new Date(now.getTime() + 86_400_000))) return "tomorrow";
+  return null;
 }

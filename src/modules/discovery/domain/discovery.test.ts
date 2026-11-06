@@ -88,17 +88,28 @@ describe("cercanía", () => {
 
 describe("cucardas", () => {
   it("avisa 'últimas entradas' desde el 80% vendido", () => {
-    expect(eventBadge({ has_availability: true, tickets_total: 100, tickets_sold: 79 })).toBeNull();
-    expect(eventBadge({ has_availability: true, tickets_total: 100, tickets_sold: 80 })).toBe("last_tickets");
+    expect(eventBadge({ ...base, tickets_total: 100, tickets_sold: 79 }, new Date("2026-08-01T12:00:00Z"))).toBeNull();
+    expect(eventBadge({ ...base, has_availability: true, tickets_total: 100, tickets_sold: 80 })).toBe("last_tickets");
   });
   it("marca sold out solo si se vendió todo", () => {
-    expect(eventBadge({ has_availability: false, tickets_total: 100, tickets_sold: 100 })).toBe("sold_out");
-    expect(eventBadge({ has_availability: false, tickets_total: 0, tickets_sold: 0 })).toBe("sold_out");
+    expect(eventBadge({ ...base, has_availability: false, tickets_total: 100, tickets_sold: 100 })).toBe("sold_out");
+    expect(eventBadge({ ...base, has_availability: false, tickets_total: 0, tickets_sold: 0 })).toBe("sold_out");
   });
   it("sin cucarda si la venta todavía no abrió o ya cerró", () => {
-    expect(eventBadge({ has_availability: false, tickets_total: 100, tickets_sold: 20 })).toBeNull();
+    expect(eventBadge({ ...base, has_availability: false, tickets_total: 100, tickets_sold: 20 })).toBeNull();
   });
   it("viene como texto desde la base y lo entiende igual", () => {
-    expect(eventBadge({ has_availability: true, tickets_total: "100" as unknown as number, tickets_sold: "85" as unknown as number })).toBe("last_tickets");
+    expect(eventBadge({ ...base, has_availability: true, tickets_total: "100" as unknown as number, tickets_sold: "85" as unknown as number })).toBe("last_tickets");
+  });
+  it("avisa 'hoy' y 'mañana' según el día en la zona del evento", () => {
+    // starts_at base: 21/08 00:00 en Mendoza (03:00Z) = 20/08 a las 00:00 hora local.
+    const event = { ...base, starts_at: "2026-08-21T01:00:00.000Z" }; // 20/08 22:00 en Mendoza
+    expect(eventBadge(event, new Date("2026-08-20T15:00:00Z"))).toBe("today");
+    expect(eventBadge(event, new Date("2026-08-19T15:00:00Z"))).toBe("tomorrow");
+    expect(eventBadge(event, new Date("2026-08-10T15:00:00Z"))).toBeNull();
+  });
+  it("lo vendido pesa más que la fecha", () => {
+    const event = { ...base, starts_at: "2026-08-21T01:00:00.000Z", tickets_total: 100, tickets_sold: 90 };
+    expect(eventBadge(event, new Date("2026-08-20T15:00:00Z"))).toBe("last_tickets");
   });
 });
