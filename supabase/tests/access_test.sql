@@ -101,7 +101,7 @@ select is(
     repeat('a', 64),
     encode(extensions.digest(convert_to('NLOS1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC', 'UTF8'), 'sha256'), 'hex'),
     'a3f00000-0000-4000-8000-000000000107'
-  )), 'too_early', 'a Ticket before valid_from is rejected'
+  )), 'valid', 'a Ticket scanned before its valid_from is accepted (only the closing time limits it)'
 );
 select is(
   (select result::text from public.check_in_ticket(
